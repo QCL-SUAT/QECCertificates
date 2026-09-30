@@ -198,7 +198,12 @@ jobs:
           # since the start, spaced out because GitHub publishes only a handful of
           # annotations per step and a chatty heartbeat would use them all up.
           start=$(date +%s)
-          env -u LEAN_PATH lake build $targets > build.log 2>&1 &
+          # One module at a time.  lake builds as many modules in parallel as there
+          # are cores, and the memory of a build is the sum over the modules in
+          # flight: four cores times a module that peaks near the budget is how a
+          # fifteen-gigabyte runner dies with no error of its own.  The scope's
+          # budget is a per-module number, so the job builds the modules one by one.
+          env -u LEAN_PATH lake build -j1 $targets > build.log 2>&1 &
           lake_pid=$!
           for m in 60 300 900 2700 5400; do
             while kill -0 "$lake_pid" 2>/dev/null; do
@@ -206,7 +211,8 @@ jobs:
               sleep 10
             done
             if kill -0 "$lake_pid" 2>/dev/null; then
-              echo "::notice title=build heartbeat::${m} s in, still building; ram used $(free -g | awk 'NR==2{print $3}') of $(free -g | awk 'NR==2{print $2}') GiB; disk free $(df -h / | awk 'NR==2{print $4}')"
+              last=$(tail -1 build.log | tr -d '\r' | tr '\n' ' ' | sed 's/%/%25/g' | cut -c1-140)
+              echo "::notice title=build heartbeat ($(( $(date +%s) - start )) s)::ram used $(free -g | awk 'NR==2{print $3}') of $(free -g | awk 'NR==2{print $2}') GiB, disk free $(df -h / | awk 'NR==2{print $4}'); last: ${last}"
               echo "  ${m} s in; ram $(free -g | awk 'NR==2{print $3}') GiB; disk $(df -h / | awk 'NR==2{print $4}') free; last line: $(tail -1 build.log | cut -c1-120)"
             else
               break
