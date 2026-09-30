@@ -61,7 +61,8 @@ jobs:
             fi
             if git -C "$dir" fetch --depth 1 origin build-cache \
                && git -C "$dir" checkout --quiet FETCH_HEAD -- .lake; then
-              echo "replayed the prebuilt cache of $1"
+              n=$(find "$dir/.lake/build/lib/lean" -name '*.olean' 2>/dev/null | wc -l)
+              echo "replayed the prebuilt cache of $1: $n olean(s) in place"
             else
               echo "cache replay skipped for $1 (branch unreachable or moved)"
             fi
@@ -83,6 +84,12 @@ jobs:
             echo "::group::the tail of the build log"
             tail -60 build.log
             echo "::endgroup::"
+            # A failure has to say what it was in the checks view: reading a log is
+            # a download away, and a failure that needs one is a failure nobody acts
+            # on.  The first error line goes into the annotation.
+            msg=$(grep -m1 -E 'error[(:]' build.log | tr -d '\r' | cut -c1-400 \
+                  | sed 's/%/%25/g')
+            echo "::error title=the build failed::${msg:-no error line in build.log}"
             exit 1
           fi
           errs=$(grep -cE 'error[(:]' build.log || true)
