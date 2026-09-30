@@ -3,6 +3,9 @@
 **Certified code parameters and fault distances for quantum error correction.**
 A Lean 4 library that replaces "trust the solver" with "check the certificate".
 
+Repository: <https://github.com/QCL-SUAT/QECCertificates> (Apache-2.0, anonymous clone).
+Version 0.1.0 is tagged, and the two companion developments pin a full commit.
+
 ## Why this exists
 
 Code parameters are found by search, and a search ends in a solver's verdict. The
