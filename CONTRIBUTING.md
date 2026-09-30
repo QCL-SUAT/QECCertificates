@@ -10,7 +10,22 @@ fetched by `lake`; nothing is vendored.
 env -u LEAN_PATH lake build
 ```
 
-## The gate every change has to pass
+## The gates every change has to pass
+
+The static gates cost seconds and need no toolchain, so they run first, in continuous
+integration and on your machine alike:
+
+```bash
+python3 tools/check_portability.py      # machine-coupled paths, tracked build residue
+python3 tools/check_readme_pair.py      # the two READMEs, section for section
+python3 tools/check_audit_coverage.py   # every non-private theorem has an audit line
+python3 tools/ci_scope.py --check       # every module has a measured memory peak
+```
+
+Each takes `--self-test` as well, and a gate that has only ever printed PASS is an
+assumption, so run that too.
+
+Then the build and the audit, on a machine with the memory for it:
 
 ```bash
 env -u LEAN_PATH lake build > build.log 2>&1
@@ -34,7 +49,10 @@ before running it.
 3. append its `#print axioms` lines to the audit region at the end of that file, one
    commented section per module;
 4. add a row for it to the module table in the root module's docstring;
-5. add a row to `README.md` if it opens a new layer, and rebuild.
+5. measure it and record the peak in `tools/ci_scope.py`, because the scope of the
+   continuous-integration build is computed from that table and a module with no entry
+   fails the scope gate;
+6. add a row to `README.md` if it opens a new layer, and rebuild.
 
 Step 2 is not optional: the gate audits what the build printed, so a module that is never
 compiled is never audited, and nothing else would notice.

@@ -10,6 +10,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The static gates come first: they cost seconds, and they are the ones that
+      # a fresh clone can fail for reasons that have nothing to do with Lean -- a
+      # machine-coupled path, a control byte folded into a source file, the two
+      # READMEs drifting, a theorem whose audit line was forgotten.  Each runs its
+      # own self-test too, because a gate that only ever printed PASS is an
+      # assumption.
+      - name: Portability gate
+        run: |
+          python3 tools/check_portability.py --self-test
+          python3 tools/check_portability.py
+
+      - name: README pair gate
+        run: |
+          python3 tools/check_readme_pair.py --self-test
+          python3 tools/check_readme_pair.py
+
+      - name: Audit-coverage gate
+        run: |
+          python3 tools/check_audit_coverage.py --self-test
+          python3 tools/check_audit_coverage.py
+
+      - name: CI scope gate
+        run: |
+          python3 tools/ci_scope.py --self-test
+          python3 tools/ci_scope.py --check
+
       - name: Install elan (Lean toolchain manager)
         run: |
           curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
@@ -41,10 +67,19 @@ jobs:
             fi
           done
 
-      - name: Build (0 error, 0 warning in this package)
+      # The modules that a hosted runner can afford, and no others.  One of this
+      # library's modules closes its statement by kernel reduction over a large
+      # object and peaks near 45 GB, so a job that asks for the whole library dies at
+      # the tail with a killed process and no error of ours to show.  The scope is
+      # measured, recorded and gated by tools/ci_scope.py; the README states what it
+      # leaves out, and the log of every run repeats it.
+      - name: Build the modules in scope (0 error, 0 warning in this package)
         run: |
           set -o pipefail
-          if ! env -u LEAN_PATH lake build 2>&1 | tee build.log; then
+          python3 tools/ci_scope.py
+          targets=$(python3 tools/ci_scope.py --lake-targets)
+          echo "building $(echo "$targets" | wc -l) module(s) of 56"
+          if ! env -u LEAN_PATH lake build $targets 2>&1 | tee build.log; then
             echo "::group::the tail of the build log"
             tail -60 build.log
             echo "::endgroup::"
@@ -64,23 +99,19 @@ jobs:
           test "$errs" = "0"
           test "$warns" = "0"
 
-      - name: Axiom audit (three standard axioms only)
-        run: python3 tools/check_axioms.py build.log
-
-      # Portability first, before the build: it is the one gate that a fresh clone
-      # can fail for reasons that have nothing to do with Lean -- a machine-coupled
-      # path, a tracked file missing from the checkout, a control byte folded into a
-      # source file.  Its own self-test runs too, because a gate that only ever
-      # printed PASS is an assumption.
-      - name: Portability gate
+      # The audit region lives in the root module, and the root module imports the
+      # whole library, so this step runs when -- and only when -- the scope above
+      # reaches it.  Saying so is the point: a badge that hid the difference between
+      # "audited here" and "audited elsewhere" would be the wrong kind of green.
+      - name: Axiom audit, when the scope covers the audit region
         run: |
-          python3 tools/check_portability.py --self-test
-          python3 tools/check_portability.py
-
-      # The two READMEs are one document in two languages; the repository shows the
-      # English one and links the Chinese one, which is only worth doing while they
-      # say the same thing section for section.
-      - name: README pair gate
-        run: |
-          python3 tools/check_readme_pair.py --self-test
-          python3 tools/check_readme_pair.py
+          if python3 tools/ci_scope.py --lake-targets | grep -qxF 'QECCertificates'; then
+            python3 tools/check_axioms.py build.log
+          else
+            echo "Not run in this job.  The audit region is the root module, which"
+            echo "imports the whole library; the modules outside this runner's memory"
+            echo "budget are listed by tools/ci_scope.py.  Build the library on a"
+            echo "machine with the memory the README asks for and run the audit there:"
+            echo "  env -u LEAN_PATH lake build > build.log 2>&1"
+            echo "  python3 tools/check_axioms.py build.log"
+          fi

@@ -59,6 +59,20 @@ machine that already has a global Lean checkout, [`setup_links.sh`](setup_links.
 it. The script selects layers by the revisions in `lake-manifest.json` rather than by
 directory names, and verifies the result, which saves a download and a dependency build.
 
+Eleven of this package's own modules close their statements by kernel reduction over an
+object large enough to need more memory than a runner can give one process; the budget is
+ten gigabytes, which leaves a 16 GB runner room for the toolchain and the system, and the
+largest module, the separation instances, peaks at **77 GiB**. Continuous integration
+therefore builds **25 of the 56 modules**: every module whose measured peak fits the
+budget, together with everything those modules import, since lake cannot build one without
+the other.
+[`tools/ci_scope.py`](tools/ci_scope.py) holds the measured peak of every module, computes
+that set, and fails when the tree and the table disagree, so a module has to be measured
+before continuous integration will build it. The audit region is the root module, which
+imports the whole library, so the axiom audit is run on a machine with the memory for a
+full build, as under Verify below, and not in the runner; every run prints what it left
+out.
+
 ## Verify
 
 ```bash
