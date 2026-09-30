@@ -198,12 +198,35 @@ jobs:
           # since the start, spaced out because GitHub publishes only a handful of
           # annotations per step and a chatty heartbeat would use them all up.
           start=$(date +%s)
-          # One module at a time.  lake builds as many modules in parallel as there
-          # are cores, and the memory of a build is the sum over the modules in
-          # flight: four cores times a module that peaks near the budget is how a
-          # fifteen-gigabyte runner dies with no error of its own.  The scope's
-          # budget is a per-module number, so the job builds the modules one by one.
-          env -u LEAN_PATH lake build -j1 $targets > build.log 2>&1 &
+          # One module at a time, one lake call per module.  This toolchain's lake has
+          # no jobs option -- `-j1` and `--jobs 1` are both rejected, which the build
+          # itself said in the annotation of the last run -- so the only place the
+          # parallelism can be turned down is here, where the targets are asked for one
+          # by one.  It matters because the scope's budget is what one process needs:
+          # lake keeps as many modules in flight as the runner has cores, and four
+          # modules at a few gigabytes each is how a fifteen-gigabyte machine dies
+          # leaving no error of its own.
+          (
+            level=0
+            for _ in $(seq 1 1080); do
+              sleep 10
+              tot=$(ps -eo rss=,comm= | awk '$2=="lean"{s+=$1} END{print int(s/1048576)}')
+              n=$(ps -eo comm= | grep -c '^lean$' || true)
+              while [ "${tot:-0}" -ge $(( level * 3 + 6 )) ]; do
+                thr=$(( level * 3 + 6 ))
+                level=$(( level + 1 ))
+                last=$(tail -1 build.log 2>/dev/null | tr -d '\r' | tr '\n' ' ' | sed 's/%/%25/g' | cut -c1-120)
+                echo "::notice title=lean memory at ${thr} GiB::${n} lean process(es) in flight, ${tot} GiB resident; last log line: ${last}"
+              done
+            done
+          ) &
+          sampler=$!
+          (
+            for t in $targets; do
+              echo "=== $t"
+              env -u LEAN_PATH lake build "$t" || exit 1
+            done
+          ) > build.log 2>&1 &
           lake_pid=$!
           for m in 60 300 900 2700 5400; do
             while kill -0 "$lake_pid" 2>/dev/null; do
