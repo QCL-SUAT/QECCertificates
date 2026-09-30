@@ -173,6 +173,28 @@ jobs:
             fi
           done
 
+      # The scope's budget is what one module needs, and lake keeps as many modules
+      # in flight as the runner has cores: the last run measured nineteen gigabytes
+      # resident across three of them on a fifteen gigabyte machine, and the kernel
+      # ended the job without an error of ours.  The disk has most of a hundred
+      # gigabytes free, so the overflow gets somewhere to go instead.
+      - name: Give the runner somewhere to put memory it cannot hold
+        run: |
+          source "$RUNNER_TEMP/fail.sh"
+          if sudo -n fallocate -l 16G /mnt/swap 2>/dev/null \
+             || sudo -n dd if=/dev/zero of=/mnt/swap bs=1M count=16384 status=none 2>/dev/null; then
+            sudo -n chmod 600 /mnt/swap
+            if sudo -n mkswap /mnt/swap >/dev/null && sudo -n swapon /mnt/swap; then
+              echo "::notice title=swap::sixteen gigabytes on /mnt, so a build that asks for more memory than the runner has can spill instead of being killed"
+            else
+              echo "::warning title=swap::swapon failed, so the build runs with the runner's memory alone"
+            fi
+          else
+            echo "::warning title=swap::no swap file could be created, so the build runs with the runner's memory alone"
+          fi
+          swapon --show || true
+          free -h || true
+
       # The modules that a hosted runner can afford, and no others.  One of this
       # library's modules closes its statement by kernel reduction over a large
       # object and peaks near 45 GB, so a job that asks for the whole library dies at
@@ -224,7 +246,11 @@ jobs:
           (
             for t in $targets; do
               echo "=== $t"
-              env -u LEAN_PATH lake build "$t" || exit 1
+              # Line buffered, because a redirected log is block buffered: the
+              # heartbeat's report of the last line came back as the workspace
+              # warning lake prints before it starts, which said nothing about what
+              # was being built when the memory ran out.
+              env -u LEAN_PATH stdbuf -oL -eL lake build "$t" || exit 1
             done
           ) > build.log 2>&1 &
           lake_pid=$!
