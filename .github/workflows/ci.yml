@@ -16,17 +16,51 @@ jobs:
             | sh -s -- -y --default-toolchain none
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
 
-      - name: Fetch the prebuilt mathlib cache
-        run: lake exe cache get
+      - name: Fetch the prebuilt caches (mathlib, and the two upstream libraries)
+        run: |
+          lake exe cache get
+          # Best effort, and deliberately not fatal.  The two upstream libraries ship
+          # prebuilt olean trees on a `build-cache` branch; replaying them is the
+          # difference between a job that finishes and one that compiles ten thousand
+          # modules from source and runs into the six-hour limit.  If a branch has
+          # moved or the fetch fails, the loop says so and the build below compiles
+          # them instead, which is where we were before this step existed.
+          env -u LEAN_PATH lake build --no-build >/dev/null 2>&1 || true
+          for spec in "LeanQEC QCL-SUAT/Lean-QEC" "QEC QCL-SUAT/QECLean"; do
+            set -- $spec
+            dir=".lake/packages/$1"
+            if [ ! -e "$dir/.git" ]; then
+              echo "no checkout for $1 yet, skipping its cache"
+              continue
+            fi
+            if git -C "$dir" fetch --depth 1 origin build-cache \
+               && git -C "$dir" checkout --quiet FETCH_HEAD -- .lake; then
+              echo "replayed the prebuilt cache of $1"
+            else
+              echo "cache replay skipped for $1 (branch unreachable or moved)"
+            fi
+          done
 
       - name: Build (0 error, 0 warning in this package)
         run: |
           set -o pipefail
-          env -u LEAN_PATH lake build 2>&1 | tee build.log
+          if ! env -u LEAN_PATH lake build 2>&1 | tee build.log; then
+            echo "::group::the tail of the build log"
+            tail -60 build.log
+            echo "::endgroup::"
+            exit 1
+          fi
           errs=$(grep -cE 'error[(:]' build.log || true)
-          warns=$(grep 'warning:' build.log | grep -c 'QECCertificates/' || true)
+          # A warning counts against this package only when it names a file of it.
+          # The dependencies warn too -- deprecation notices, aesop on a goal it
+          # cannot close -- and on the runner their paths sit under a directory called
+          # QECCertificates, so matching a bare "QECCertificates/" counts them.
+          warns=$(grep -E '^warning: (QECCertificates\.lean|QECCertificates/)' build.log | wc -l)
           echo "error lines: $errs (want 0)"
           echo "package warning lines: $warns (want 0)"
+          if [ "$warns" != "0" ]; then
+            grep -E '^warning: (QECCertificates\.lean|QECCertificates/)' build.log
+          fi
           test "$errs" = "0"
           test "$warns" = "0"
 
