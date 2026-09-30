@@ -1,10 +1,19 @@
 # QECCertificates
 
+[![build](https://github.com/QCL-SUAT/QECCertificates/actions/workflows/ci.yml/badge.svg)](https://github.com/QCL-SUAT/QECCertificates/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+![Lean](https://img.shields.io/badge/Lean-v4.34.0-blueviolet)
+
 **Certified code parameters and fault distances for quantum error correction.**
 A Lean 4 library that replaces "trust the solver" with "check the certificate".
 
 Repository: <https://github.com/QCL-SUAT/QECCertificates> (Apache-2.0, anonymous clone).
 Version 0.1.0 is tagged, and the two companion developments pin a full commit.
+
+**Contents:** [Why this exists](#why-this-exists) ·
+[What is here](#what-is-here) · [Guarantees](#guarantees) ·
+[Build](#build) · [Verify](#verify) · [Roadmap](#roadmap) ·
+[Paper](#paper) · [Provenance](#provenance) · [License and citation](#license-and-citation)
 
 ## Why this exists
 
@@ -30,7 +39,7 @@ rests on.
 | `QECCertificates/Pauli/` | the operator-tree ↔ symplectic-representation translation |
 | `QECCertificates/Reflect/` | the certificate framework: a kernel-checked LRAT/RUP checker with its soundness theorem, encoding faithfulness in both directions — a model of the CNF **is** a light logical operator — symmetry breaking that preserves unsatisfiability, and the worked replays of the solver certificates used here |
 | `QECCertificates/Codes/` | the code-theoretic layer: stabilizer, CSS and subsystem codes; gauging and measurement-protocol representations; the shared instance families (Bacon–Shor, BB, HGP, lifted product) |
-| `tools/check_axioms.py` | reads a build log and refuses any declaration whose `#print axioms` line is not exactly the three standard axioms |
+| [`tools/check_axioms.py`](tools/check_axioms.py) | reads a build log and refuses any declaration whose `#print axioms` line is not exactly the three standard axioms |
 
 **55 modules**, and the audit region covers **every** non-private `theorem`/`lemma` in
 the package — this repository has no un-audited corner.
@@ -53,7 +62,7 @@ env -u LEAN_PATH lake build     # fetches mathlib, Lean-QEC and QECLean at the p
 
 The pinned dependencies are heavy; a full build wants a machine with a large memory
 budget (the audit region alone elaborates every theorem in the library). On a machine
-that already has a global Lean checkout, `./setup_links.sh` links the project to it —
+that already has a global Lean checkout, [`setup_links.sh`](setup_links.sh) links the project to it —
 it selects layers by the revisions in `lake-manifest.json`, not by directory names,
 and verifies the result — which saves a download and a dependency build.
 
@@ -81,7 +90,7 @@ next version, followed by a white paper reporting its end-to-end results.
 
 ## Paper
 
-`paper/main.tex` is the draft of that white paper: what the library contains, what is
+[`paper/main.tex`](paper/main.tex) is the draft of that white paper: what the library contains, what is
 machine-checked about it, how the two companion developments use it, and what it
 deliberately does not do. It builds with `latexmk -pdf main.tex` and cites the
 companion manuscripts, Lean-QEC and the qLDPC Challenge schema.
@@ -97,4 +106,4 @@ other side contributed into it.
 
 ## License and citation
 
-Apache-2.0; see `LICENSE` and `NOTICE`. Citation metadata is in `CITATION.cff`.
+Apache-2.0; see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE). Citation metadata is in [`CITATION.cff`](CITATION.cff).
