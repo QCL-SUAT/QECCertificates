@@ -1,0 +1,17 @@
+QECCertificates
+Copyright 2026 The QECCertificates Authors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product consumes, as pinned git dependencies, software developed by others.
+Neither dependency is vendored in this repository; both are fetched by `lake` at
+the revisions pinned in lakefile.toml.
+
+* mathlib4 — the Lean mathematical library
+  https://github.com/leanprover-community/mathlib4
+  Apache License 2.0
+
+* Lean-QEC — end-to-end formalization of quantum error correction
+  upstream: https://github.com/VerifiedQC/Lean-QEC
+  v4.34 port consumed here: https://github.com/QCL-SUAT/Lean-QEC
+  Apache License 2.0 (the upstream distribution carries its own NOTICE)

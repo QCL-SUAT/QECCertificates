@@ -1,0 +1,14 @@
+# Line endings are LF, in the repository and in every checkout, on every OS.
+#
+# Without this, a Windows checkout (core.autocrlf=true) writes CRLF into the
+# working tree while the blobs stay LF, and every cross-machine diff turns into
+# a phantom whole-file rewrite.  Portability is a hard requirement here: the
+# same bytes must come out of a macOS, Linux and Windows checkout alike.
+* text=auto eol=lf
+
+# Content that must stay byte-exact.
+*.pdf    binary
+*.png    binary
+*.olean  binary
+*.ilean  binary
+*.trace  binary

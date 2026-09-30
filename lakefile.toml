@@ -1,0 +1,33 @@
+name = "QECCertificates"
+version = "0.1.0"
+keywords = ["math", "quantum-error-correction", "formal-verification", "certificates"]
+defaultTargets = ["QECCertificates"]
+
+[leanOptions]
+pp.unicode.fun = true
+relaxedAutoImplicit = false
+maxSynthPendingDepth = 3
+
+# ── 依赖：mathlib（git 依赖，pin 40 位完整 SHA1；与 lake-manifest 逐字一致）──
+# 不写 tag：tag 只存在于创建它的那个 checkout，且会让工具联网重新解析。
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "5ed2965256430c3649e86755f9576b54eca72435"
+
+# ── 依赖：LeanQEC（稳定子码 BSR 层；GF2 层复用它已验证的 rowSpace 与桥引理）──
+# 与两篇支撑论文仓同 pin，便于三仓互相引用时版本一致。
+[[require]]
+name = "LeanQEC"
+git = "https://github.com/QCL-SUAT/Lean-QEC.git"
+rev = "a0855f8a6374c1dda2097bbf07f33ba53760fdcd"
+
+# ── 依赖：QECLean（QEC）——BB144 的内核内下界走它的 Gross 形式化 ─────────────
+# 与两篇支撑论文仓同 pin；它是公开仓（QCL-SUAT/QECLean）。
+[[require]]
+name = "QEC"
+git = "https://github.com/QCL-SUAT/QECLean.git"
+rev = "3f782c999c97eba5c2462b0bcaed0778a6544bb8"
+
+[[lean_lib]]
+name = "QECCertificates"

@@ -1,0 +1,26 @@
+# Lean 构建产物（可由 `lake build` 再生）
+.lake/
+*.olean
+*.ilean
+*.trace
+
+# Python
+__pycache__/
+*.pyc
+
+# 证书链的运行期产物（可再生产物：CNF / DRAT / LRAT / 求解日志；体积大、平台相关）
+tools/**/*.drat
+tools/**/*.lrat
+tools/**/validate_*.cnf
+tools/**/cadical_*.log
+
+# 沉积包（由 tools/package_deposit.py 再生：dist/<名>.zip、.sha256、.DEPOSIT.md）
+dist/
+
+# 机器本地配置（~/.claude/bin/ctxprofile.py 按项目类型写就；不进交付面）
+.claude/
+
+# 系统与编辑器
+.DS_Store
+._*
+*.log
