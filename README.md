@@ -6,13 +6,6 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-**Certified code parameters and fault distances for quantum error correction.**
-A Lean 4 library that replaces "trust the solver" with "check the certificate".
-
-**Contents:** [Why this exists](#why-this-exists) ·
-[What is here](#what-is-here) · [Guarantees](#guarantees) ·
-[Build](#build) · [Verify](#verify) · [Citation](#citation) · [License](#license)
-
 ## Why this exists
 
 Code parameters are found by search, and a search ends in a solver's verdict. The public
