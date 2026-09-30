@@ -65,9 +65,10 @@ ten gigabytes, which leaves a 16 GB runner room for the toolchain and the system
 largest module, the separation instances, peaks at **77 GiB**. Continuous integration
 therefore builds **25 of the 56 modules**: every module whose measured peak fits the
 budget, together with everything those modules import, since lake cannot build one without
-the other. It builds them one at a time, because the budget is what one process needs and
-lake would otherwise keep as many modules in flight as the runner has cores, which is how a
-job dies of memory with no error line of its own.
+the other. It builds them one at a time and in import order, because the budget is what one
+process needs: with a module's imports already built, the call that builds it has nothing
+else to schedule, and lake would otherwise keep as many modules in flight as the runner has
+cores, which is how a job dies of memory with no error line of its own.
 [`tools/ci_scope.py`](tools/ci_scope.py) holds the measured peak of every module, computes
 that set, and fails when the tree and the table disagree, so a module has to be measured
 before continuous integration will build it. The audit region is the root module, which

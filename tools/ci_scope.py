@@ -34,7 +34,8 @@ as the maximum resident set size.  The sampler reads the peak of every lean
 process on the machine, so a second build running at the same time inflates it.
 
 Modes: --report (the table), --lake-targets (the CI command's argument list),
---check (fail when the tree and the table disagree), --self-test.
+--build-order (the same modules, each one's imports before it), --check (fail when
+the tree and the table disagree), --self-test.
 
 Exit: 0 = the scope is complete and consistent; 1 = the tree changed under it.
 """
@@ -172,6 +173,35 @@ def scope(root):
     return covered, sorted(excluded), unrecorded
 
 
+def build_order(root):
+    """The covered modules, each one's imports before it.
+
+    Continuous integration asks for these one at a time, and this order is what
+    makes "one at a time" mean one process.  With a module's imports already
+    built, the call that builds it has nothing else to schedule; asking instead
+    for a module whose closure is unbuilt lets lake compile several of them at
+    once, and the memory a build needs is the sum over the modules in flight.  The
+    scope is closed under imports, so every dependency of a covered module is
+    itself covered and appears here before it.
+    """
+    covered, _, _ = scope(root)
+    covered_set = set(covered)
+    graph = {m: sorted(imports_of(root, m) & covered_set) for m in covered}
+    order, seen = [], set()
+
+    def visit(m):
+        if m in seen:
+            return
+        seen.add(m)
+        for dep in graph[m]:
+            visit(dep)
+        order.append(m)
+
+    for m in sorted(covered):
+        visit(m)
+    return order
+
+
 def findings(root):
     """Problem strings; empty means the recorded scope matches the tree."""
     covered, excluded, unrecorded = scope(root)
@@ -240,6 +270,38 @@ def self_test():
             bad = 1
         else:
             print("  ok control 3: a stale table entry is reported")
+
+        # control 4: the build order is the covered set, imports first.  The
+        # property, not a fixed sequence, is what continuous integration needs:
+        # a module built before its imports makes one lake call schedule several
+        # compilations at once, which is how the memory ran out.
+        PEAK_MIB.pop(MODULE_DIR + "/L/Gone.lean")
+        PEAK_MIB[MODULE_DIR + "/L/C.lean"] = 100
+        order = build_order(tmp)
+        covered, _, _ = scope(tmp)
+        pos = {p: i for i, p in enumerate(order)}
+
+        def out_of_order(seq):
+            at = {p: i for i, p in enumerate(seq)}
+            return [(d, m) for m in seq for d in imports_of(tmp, m)
+                    if d in at and at[d] > at[m]]
+
+        if sorted(order) != sorted(covered):
+            print("  x control 4: the build order is not the covered set",
+                  file=sys.stderr)
+            bad = 1
+        elif out_of_order(order):
+            print("  x control 4: an import comes after its module: %s"
+                  % out_of_order(order), file=sys.stderr)
+            bad = 1
+        elif not out_of_order(list(reversed(order))):
+            # The check has to be able to fail, or it is decoration.
+            print("  x control 4: the order check passed on a reversed order",
+                  file=sys.stderr)
+            bad = 1
+        else:
+            print("  ok control 4: the build order is the covered set, imports "
+                  "first, and the check catches a reversed order")
     finally:
         PEAK_MIB.clear()
         PEAK_MIB.update(saved)
@@ -255,6 +317,10 @@ def main():
     problems, covered, excluded = findings(ROOT_DIR)
     if "--lake-targets" in argv:
         for m in covered:
+            print(module_name(m))
+        return 1 if problems else 0
+    if "--build-order" in argv:
+        for m in build_order(ROOT_DIR):
             print(module_name(m))
         return 1 if problems else 0
     if "--check" in argv:

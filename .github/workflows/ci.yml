@@ -212,8 +212,8 @@ jobs:
           trap 'echo "::error title=the build step was signalled::the step received TERM or INT, so no handler of ours ran"' TERM INT
           echo "::notice title=build step::starting; $(df -h / | awk 'NR==2{print $2" total, "$4" free on /"}'), $(nproc) cpu, $(free -g | awk 'NR==2{print $2" GiB ram"}')"
           python3 tools/ci_scope.py
-          targets=$(python3 tools/ci_scope.py --lake-targets)
-          echo "building $(echo "$targets" | wc -l) module(s) of 56"
+          order=$(python3 tools/ci_scope.py --build-order)
+          echo "building $(echo "$order" | wc -l) module(s) of 56, each after the modules it imports"
           # The build runs in the background and a heartbeat reports it, because a
           # step that is killed rather than failed runs no handler of ours and would
           # otherwise leave nothing behind but a red cross.  The marks are seconds
@@ -244,12 +244,19 @@ jobs:
           ) &
           sampler=$!
           (
-            for t in $targets; do
+            # In import order, one call per module: with a module's imports already
+            # built, the call that builds it has nothing else to schedule, so one
+            # call means one process.  In any other order lake compiles a batch of
+            # modules at once -- it keeps as many in flight as the runner has cores,
+            # and no option of this toolchain's lake turns that down -- and the
+            # memory of the batch is what overflowed fifteen gigabytes.
+            #
+            # Line buffered, because a redirected log is block buffered: the
+            # heartbeat's report of the last line came back as the workspace warning
+            # lake prints before it starts, which said nothing about what was being
+            # built when the memory ran out.
+            for t in $order; do
               echo "=== $t"
-              # Line buffered, because a redirected log is block buffered: the
-              # heartbeat's report of the last line came back as the workspace
-              # warning lake prints before it starts, which said nothing about what
-              # was being built when the memory ran out.
               env -u LEAN_PATH stdbuf -oL -eL lake build "$t" || exit 1
             done
           ) > build.log 2>&1 &
