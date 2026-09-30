@@ -210,6 +210,9 @@ jobs:
           # notices are the trail: they are readable from outside, and they say how
           # far the step got and what the disk looked like when it started.
           trap 'echo "::error title=the build step was signalled::the step received TERM or INT, so no handler of ours ran"' TERM INT
+          # Every exit reports its code, so a step that fails without a reason of ours
+          # says at least whether it failed at all.
+          trap 'rc=$?; echo "::notice title=the build step exits with code ${rc}::after $(( $(date +%s) - ${start:-$(date +%s)} )) s"' EXIT
           echo "::notice title=build step::starting; $(df -h / | awk 'NR==2{print $2" total, "$4" free on /"}'), $(nproc) cpu, $(free -m | awk 'NR==2{print $2" MiB ram, "$7" available"}'), swap $(free -m | awk 'NR==3{print $2}') MiB, cgroup memory.max $(cat /sys/fs/cgroup/memory.max 2>/dev/null || cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null || echo none)"
           python3 tools/ci_scope.py
           order=$(python3 tools/ci_scope.py --build-order)
@@ -279,6 +282,12 @@ jobs:
           build_rc=0
           wait "$lake_pid" || build_rc=$?
           echo "$(date +%s) build finished with status $build_rc after $(( $(date +%s) - start )) s" >> build.log
+          # The sampler outlives the build by design -- it runs for three hours -- and
+          # a step that ends with a process of its own still writing to the log is a
+          # step the runner has to clean up after.  Reap it here so the step ends with
+          # nothing of ours running.
+          kill "$sampler" 2>/dev/null || true
+          wait "$sampler" 2>/dev/null || true
           if [ "$build_rc" != "0" ]; then
             echo "::warning title=the build was interrupted::the process died without an error line of ours. A death by memory shows up in dmesg, not in the log."
             fail "the build failed" build.log
