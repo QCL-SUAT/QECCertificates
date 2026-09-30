@@ -15,7 +15,7 @@
 **目录：** [为什么有它](#为什么有它) ·
 [这里有什么](#这里有什么) · [保证](#保证) ·
 [构建](#构建) · [验证](#验证) · [路线图](#路线图) ·
-[白皮书](#白皮书) · [由来](#由来) · [许可与引用](#许可与引用)
+[白皮书](#白皮书) · [由来](#由来) · [引用](#引用) · [许可](#许可)
 
 ## 为什么有它
 
@@ -49,6 +49,9 @@ work"——而介于两者之间的产物，用 schema 自己的话说，是证�
 
 ## 构建
 
+Lean `v4.34.0`（钉在 `lean-toolchain` 里）与 `lakefile.toml` 中钉住 revision 的 mathlib
+都由 `lake` 取：
+
 ```bash
 env -u LEAN_PATH lake build     # 按钉住的 revision 取 mathlib、Lean-QEC 与 QECLean
 ```
@@ -65,9 +68,9 @@ env -u LEAN_PATH lake build > build.log 2>&1
 python3 tools/check_axioms.py build.log   # 逐条受审计声明，只允许三条标准公理
 ```
 
-给在干净克隆上跑的人一句提醒：**全缓存**构建不会重放 `#print axioms` 输出，而这道审计门禁
-**把"一条都没审计到"判成失败而不是通过**。若脚本报零条声明，删掉根模块的 `.olean`
-（或 touch 它的源文件）再编一次。
+这道门禁拒绝任何超出三条标准公理的声明，并且**把"一条都没审计到"判成失败而不是通过**。
+后一条在干净克隆上要紧：**全缓存**构建不会重放 `#print axioms` 输出，所以若脚本报零条
+声明，删掉根模块的 `.olean`（或 touch 它的源文件）再编一次。
 
 ## 路线图
 
@@ -87,8 +90,36 @@ v0.1 是形式化层本身；共享它的两个配套开发如今把它当依赖
 
 本包的共享内核合并自两个配套开发：它们的 GF(2) 与 Pauli 层曾逐文件地互为副本。合并逐文件
 记录在那两个仓库的历史里，它们的两篇论文都把本包引作这一层的家。**所有陈述的搬迁没有重写
-任何一条证明**——合并表逐文件写明每个模块取自哪一侧、另一侧又贡献了什么。
+任何一条证明**。
 
-## 许可与引用
+## 引用
 
-Apache-2.0；见 [`LICENSE`](LICENSE) 与 [`NOTICE`](NOTICE)。引用元数据在 [`CITATION.cff`](CITATION.cff)。
+若在学术工作中使用本库，请引用归档后的那个 release。[`CITATION.cff`](CITATION.cff) 用机器可读
+的形式写着同一份信息。
+
+```bibtex
+@software{qeccertificates,
+  title     = {{QECCertificates}: certified code parameters and fault distances},
+  author    = {An, Shuoming},
+  year      = {2026},
+  version   = {0.1.0},
+  doi       = {10.5281/zenodo.XXXXXXX},
+  url       = {https://github.com/QCL-SUAT/QECCertificates}
+}
+```
+
+上面的 DOI 是占位符，等第一个 release 归档后替换。它由 Zenodo 从 GitHub release 铸出，
+而且会给两个号：一个**版本 DOI**（解析到那一个 release）与一个**概念 DOI**（解析到最新
+版）。要指准某个具体产物时用版本 DOI，要指整个项目时用概念 DOI。
+
+归档一个 release（维护者）：
+
+1. 用 GitHub 登录 [Zenodo](https://zenodo.org)，打开 **Settings → GitHub**，把本仓库的开关打开；
+2. 建一个 GitHub release，例如打在 tag `v0.1.0` 上；Zenodo 会归档那个 tag 并铸出 DOI；
+3. 把上面的 BibTeX 块与 `CITATION.cff`（那行被注释掉的 `doi:`）里的占位符换成版本 DOI。
+
+## 许可
+
+Apache-2.0；见 [`LICENSE`](LICENSE) 与 [`NOTICE`](NOTICE)。三个依赖（mathlib、Lean-QEC、
+QECLean）都由 `lake` 按钉住的 revision 取用，本仓库一个都不 vendored。如何贡献见
+[`CONTRIBUTING.md`](CONTRIBUTING.md)。

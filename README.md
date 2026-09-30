@@ -108,7 +108,7 @@ Every statement moved without a single proof being rewritten.
 
 ## Citation
 
-If you use this library in academic work, cite the archived release. `CITATION.cff`
+If you use this library in academic work, cite the archived release. [`CITATION.cff`](CITATION.cff)
 carries the same information in machine-readable form.
 
 ```bibtex
