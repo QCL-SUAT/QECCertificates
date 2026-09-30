@@ -17,6 +17,16 @@ tools/**/cadical_*.log
 # 沉积包（由 tools/package_deposit.py 再生：dist/<名>.zip、.sha256、.DEPOSIT.md）
 dist/
 
+# LaTeX 中间产物（`paper/` 下由 latexmk 再生；**main.pdf 要入库**，故不忽略 *.pdf）
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.out
+paper/*.toc
+paper/*.synctex.gz
+
 # 机器本地配置（~/.claude/bin/ctxprofile.py 按项目类型写就；不进交付面）
 .claude/
 

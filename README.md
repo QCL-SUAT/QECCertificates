@@ -68,11 +68,20 @@ module's `.olean` (or touch its source) and rebuild.
 
 ## Roadmap
 
-v0.1 is the formal layer. The certificate toolchain next to it — the CNF encoder for
-distance lower bounds with its known-value gate, the LRAT/RUP checkers in Python and C,
-and the adapters that turn a check matrix into a certified bound — lands as
-`python/` in the next version, together with the two companion developments that adopt
-this library as their shared core.
+v0.1 is the formal layer, and the two companion developments that share it now consume
+it as a dependency: their GF(2), Pauli and shared code modules were deleted in favour of
+imports pinned to a full revision, so the same statements build from one source. The
+certificate toolchain next to the formal layer — the CNF encoder for distance lower
+bounds with its known-value gate, the LRAT/RUP checkers in Python and C, and the
+adapters that turn a check matrix into a certified bound — lands as `python/` in the
+next version, followed by a white paper reporting its end-to-end results.
+
+## Paper
+
+`paper/main.tex` is the draft of that white paper: what the library contains, what is
+machine-checked about it, how the two companion developments use it, and what it
+deliberately does not do. It builds with `latexmk -pdf main.tex` and cites the
+companion manuscripts, Lean-QEC and the qLDPC Challenge schema.
 
 ## Provenance
 
