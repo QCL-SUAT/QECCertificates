@@ -210,7 +210,7 @@ jobs:
           # notices are the trail: they are readable from outside, and they say how
           # far the step got and what the disk looked like when it started.
           trap 'echo "::error title=the build step was signalled::the step received TERM or INT, so no handler of ours ran"' TERM INT
-          echo "::notice title=build step::starting; $(df -h / | awk 'NR==2{print $2" total, "$4" free on /"}'), $(nproc) cpu, $(free -g | awk 'NR==2{print $2" GiB ram"}')"
+          echo "::notice title=build step::starting; $(df -h / | awk 'NR==2{print $2" total, "$4" free on /"}'), $(nproc) cpu, $(free -m | awk 'NR==2{print $2" MiB ram, "$7" available"}'), swap $(free -m | awk 'NR==3{print $2}') MiB, cgroup memory.max $(cat /sys/fs/cgroup/memory.max 2>/dev/null || cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null || echo none)"
           python3 tools/ci_scope.py
           order=$(python3 tools/ci_scope.py --build-order)
           echo "building $(echo "$order" | wc -l) module(s) of 56, each after the modules it imports"
@@ -257,7 +257,9 @@ jobs:
             # built when the memory ran out.
             for t in $order; do
               echo "=== $t"
+              echo "$t" > "$RUNNER_TEMP/last_module"
               env -u LEAN_PATH stdbuf -oL -eL lake build "$t" || exit 1
+              echo "$t" >> "$RUNNER_TEMP/modules_done"
             done
           ) > build.log 2>&1 &
           lake_pid=$!
@@ -320,3 +322,17 @@ jobs:
             echo "  env -u LEAN_PATH lake build > build.log 2>&1"
             echo "  python3 tools/check_axioms.py build.log"
           fi
+
+      # A step that is killed runs no handler and says nothing.  This one runs
+      # whatever happened to the steps above, so its notice is the discriminator: if
+      # a failing run has no notice from it, then the runner ended the job rather
+      # than a step of ours failing, and the reason is at the level of the machine,
+      # not of the build.
+      - name: Where the build got to, whatever happened
+        if: always()
+        run: |
+          done=$(wc -l < "$RUNNER_TEMP/modules_done" 2>/dev/null || echo 0)
+          last=$(cat "$RUNNER_TEMP/last_module" 2>/dev/null || echo "none")
+          loglines=$(wc -l < build.log 2>/dev/null || echo 0)
+          echo "::notice title=the build finished $done module(s)::the last module it started was ${last}; ${loglines} lines of build log; cgroup memory.peak $(cat /sys/fs/cgroup/memory.peak 2>/dev/null || echo unreadable)"
+          tail -5 "$RUNNER_TEMP/modules_done" 2>/dev/null || true
