@@ -117,6 +117,7 @@ jobs:
           source "$RUNNER_TEMP/fail.sh"
           echo "disk before the cache download:"
           df -h / "$HOME" /mnt 2>/dev/null | sed 's/^/  /'
+          echo "::notice title=disk before the cache download::$(df -h / | awk 'NR==2{print $2" total, "$4" free"}')"
           # The cache program keeps one archive per module under ~/.cache/mathlib and
           # unpacks it into the mathlib checkout, so the download and the unpacked
           # oleans both compete for the same small root filesystem.  The runner has a
@@ -146,6 +147,7 @@ jobs:
           mathlib=$(find .lake/packages/mathlib/.lake/build/lib/lean -name '*.olean' 2>/dev/null | wc -l)
           echo "mathlib oleans in place: $mathlib"
           echo "::notice title=mathlib cache::$mathlib olean(s) in place"
+          echo "::notice title=disk after the unpack::$(df -h / | awk 'NR==2{print $2" total, "$4" free, "$5" used"}')"
           # The archives have done their work; the build below needs the room.  A
           # second `cache get` in the same job would re-download them, and there is
           # no second call.
@@ -181,13 +183,43 @@ jobs:
         run: |
           set -o pipefail
           source "$RUNNER_TEMP/fail.sh"
+          # A step that is killed rather than failed runs no handler and so leaves
+          # no annotation, which is exactly what the last two runs did.  These two
+          # notices are the trail: they are readable from outside, and they say how
+          # far the step got and what the disk looked like when it started.
+          trap 'echo "::error title=the build step was signalled::the step received TERM or INT, so no handler of ours ran"' TERM INT
+          echo "::notice title=build step::starting; $(df -h / | awk 'NR==2{print $2" total, "$4" free on /"}'), $(nproc) cpu, $(free -g | awk 'NR==2{print $2" GiB ram"}')"
           python3 tools/ci_scope.py
           targets=$(python3 tools/ci_scope.py --lake-targets)
           echo "building $(echo "$targets" | wc -l) module(s) of 56"
-          if ! env -u LEAN_PATH lake build $targets 2>&1 | tee build.log; then
+          # The build runs in the background and a heartbeat reports it, because a
+          # step that is killed rather than failed runs no handler of ours and would
+          # otherwise leave nothing behind but a red cross.  The marks are seconds
+          # since the start, spaced out because GitHub publishes only a handful of
+          # annotations per step and a chatty heartbeat would use them all up.
+          start=$(date +%s)
+          env -u LEAN_PATH lake build $targets > build.log 2>&1 &
+          lake_pid=$!
+          for m in 60 300 900 2700 5400; do
+            while kill -0 "$lake_pid" 2>/dev/null; do
+              if [ $(( $(date +%s) - start )) -ge "$m" ]; then break; fi
+              sleep 10
+            done
+            if kill -0 "$lake_pid" 2>/dev/null; then
+              echo "::notice title=build heartbeat::${m} s in, still building; ram used $(free -g | awk 'NR==2{print $3}') of $(free -g | awk 'NR==2{print $2}') GiB; disk free $(df -h / | awk 'NR==2{print $4}')"
+              echo "  ${m} s in; ram $(free -g | awk 'NR==2{print $3}') GiB; disk $(df -h / | awk 'NR==2{print $4}') free; last line: $(tail -1 build.log | cut -c1-120)"
+            else
+              break
+            fi
+          done
+          build_rc=0
+          wait "$lake_pid" || build_rc=$?
+          echo "$(date +%s) build finished with status $build_rc after $(( $(date +%s) - start )) s" >> build.log
+          if [ "$build_rc" != "0" ]; then
             echo "::warning title=the build was interrupted::the process died without an error line of ours. A death by memory shows up in dmesg, not in the log."
             fail "the build failed" build.log
           fi
+          tail -3 build.log
           errs=$(grep -cE 'error[(:]' build.log || true)
           echo "error lines: $errs (want 0)"
           # A warning counts against this package only when it names a file of it.
