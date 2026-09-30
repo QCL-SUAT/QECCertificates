@@ -9,13 +9,9 @@
 **Certified code parameters and fault distances for quantum error correction.**
 A Lean 4 library that replaces "trust the solver" with "check the certificate".
 
-Repository: <https://github.com/QCL-SUAT/QECCertificates> (Apache-2.0, anonymous clone).
-Version 0.1.0 is tagged, and the two companion developments pin a full commit.
-
 **Contents:** [Why this exists](#why-this-exists) ·
 [What is here](#what-is-here) · [Guarantees](#guarantees) ·
-[Build](#build) · [Verify](#verify) · [Roadmap](#roadmap) · [Paper](#paper) ·
-[Provenance](#provenance) · [Citation](#citation) · [License](#license)
+[Build](#build) · [Verify](#verify) · [Citation](#citation) · [License](#license)
 
 ## Why this exists
 
@@ -82,30 +78,6 @@ audited" as a failure rather than a pass. That last part matters on a fresh clon
 cached build does not replay `#print axioms` output, so if the script reports zero
 declarations, delete the root module's `.olean` or touch its source and build again.
 
-## Roadmap
-
-v0.1 is the formal layer, and the two companion developments that share it now consume
-it as a dependency: their GF(2), Pauli and shared code modules were deleted in favour of
-imports pinned to a full revision, so the same statements build from one source. The
-certificate toolchain next to the formal layer — the CNF encoder for distance lower
-bounds with its known-value gate, the LRAT/RUP checkers in Python and C, and the
-adapters that turn a check matrix into a certified bound — lands as `python/` in the
-next version, followed by a white paper reporting its end-to-end results.
-
-## Paper
-
-[`paper/main.tex`](paper/main.tex) is the draft of that white paper: what the library contains, what is
-machine-checked about it, how the two companion developments use it, and what it
-deliberately does not do. It builds with `latexmk -pdf main.tex` and cites the
-companion manuscripts, Lean-QEC and the qLDPC Challenge schema.
-
-## Provenance
-
-The shared core of this package was merged from two companion developments whose GF(2) and
-Pauli layers had been duplicated between them. The merge is recorded in the two
-repositories' histories, and their papers cite this package as the home of that layer.
-Every statement moved without a single proof being rewritten.
-
 ## Citation
 
 If you use this library in academic work, cite the archived release. [`CITATION.cff`](CITATION.cff)
@@ -116,7 +88,6 @@ carries the same information in machine-readable form.
   title     = {{QECCertificates}: certified code parameters and fault distances},
   author    = {An, Shuoming},
   year      = {2026},
-  version   = {0.1.0},
   doi       = {10.5281/zenodo.XXXXXXX},
   url       = {https://github.com/QCL-SUAT/QECCertificates}
 }
@@ -131,8 +102,7 @@ Archiving a release (maintainers):
 
 1. sign in to [Zenodo](https://zenodo.org) with GitHub, open **Settings → GitHub**, and
    switch this repository on;
-2. create a GitHub release, for example at tag `v0.1.0`; Zenodo archives that tag and
-   mints the DOI;
+2. create a GitHub release; Zenodo archives the tagged revision and mints the DOI;
 3. replace the placeholder in the BibTeX block above and in `CITATION.cff` (the commented
    `doi:` line) with the version DOI.
 
