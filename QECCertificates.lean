@@ -56,6 +56,7 @@ import QECCertificates.Reflect.FaithfulCircuit
 import QECCertificates.Reflect.LRAT
 import QECCertificates.Reflect.LRATData
 import QECCertificates.Reflect.LRATDataCircuit
+import QECCertificates.Reflect.LexComplete
 import QECCertificates.Reflect.LexLeader
 import QECCertificates.Reflect.SBAssembly
 import QECCertificates.Reflect.SymmetryBreak
@@ -126,6 +127,7 @@ rests on exactly the three standard axioms.
 | `QECCertificates.Reflect.LRAT` | the in-kernel LRAT checker and its soundness theorem |
 | `QECCertificates.Reflect.LRATData` | **in-kernel replay** of the package's SAT certificates |
 | `QECCertificates.Reflect.LRATDataCircuit` | in-kernel replay of the **circuit-side** (timelike) SAT certificates |
+| `QECCertificates.Reflect.LexComplete` | completeness of the lexicographic-comparator clauses (soundness is not enough: too tight is not UNSAT) |
 | `QECCertificates.Reflect.LexLeader` | soundness of the lexicographic-comparator clauses (the CNF layer of the symmetry break) |
 | `QECCertificates.Reflect.SBAssembly` | assembly of the broken-symmetry CNF: `buildPair` and `lexClauses` |
 | `QECCertificates.Reflect.SymmetryBreak` | faithfulness of symmetry breaking: unsatisfiability after breaking implies unsatisfiability of the original |
@@ -1226,6 +1228,11 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.LRAT.mem_constraint
 #print axioms QECCertificates.LRAT.eVar_spec
 #print axioms QECCertificates.LRAT.lexClauses_sat
+-- QECCertificates.Reflect.LexComplete
+#print axioms QECCertificates.LRAT.eVal_spec
+#print axioms QECCertificates.LRAT.eVal_succ
+#print axioms QECCertificates.LRAT.lexExtend_eVar
+#print axioms QECCertificates.LRAT.lexClauses_complete
 -- QECCertificates.Reflect.SBAssembly
 #print axioms QECCertificates.LRAT.lexHead_length
 #print axioms QECCertificates.LRAT.lexStep_length
