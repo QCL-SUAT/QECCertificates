@@ -16,12 +16,13 @@ repository-code: "https://github.com/QCL-SUAT/QECCertificates"
 license: Apache-2.0
 version: "0.1.0"
 date-released: "2026-09-30"
-# Uncomment the line below once Zenodo has minted the DOI for the v0.1.0 release;
-# the same number goes into the BibTeX block of README.md.
-# doi: 10.5281/zenodo.XXXXXXX
-# identifiers:
-#   - type: doi
-#     value: 10.5281/zenodo.XXXXXXX
+doi: 10.5281/zenodo.23056679
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23056679
+  - type: doi
+    value: 10.5281/zenodo.23056680
+    description: "the archived artifact for this version"
 keywords:
   - quantum error correction
   - formal verification

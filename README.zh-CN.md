@@ -78,20 +78,14 @@ python3 tools/check_axioms.py build.log   # 逐条受审计声明，只允许三
   title     = {{QECCertificates}: certified code parameters and fault distances},
   author    = {An, Shuoming},
   year      = {2026},
-  doi       = {10.5281/zenodo.XXXXXXX},
+  doi       = {10.5281/zenodo.23056679},
   url       = {https://github.com/QCL-SUAT/QECCertificates}
 }
 ```
 
-上面的 DOI 是占位符，等第一个 release 归档后替换。它由 Zenodo 从 GitHub release 铸出，
-而且会给两个号：一个**版本 DOI**（解析到那一个 release）与一个**概念 DOI**（解析到最新
-版）。要指准某个具体产物时用版本 DOI，要指整个项目时用概念 DOI。
-
-归档一个 release（维护者）：
-
-1. 用 GitHub 登录 [Zenodo](https://zenodo.org)，打开 **Settings → GitHub**，把本仓库的开关打开；
-2. 建一个 GitHub release；Zenodo 会归档被打上 tag 的那个版本并铸出 DOI；
-3. 把上面的 BibTeX 块与 `CITATION.cff`（那行被注释掉的 `doi:`）里的占位符换成版本 DOI。
+一次归档，Zenodo 会给两个号：上面这个**概念 DOI**（永远解析到最新版），以及每个已归档
+产物各自的 DOI（最先归档的那一份是 10.5281/zenodo.23056680）。机器可读的那份在
+[`CITATION.cff`](CITATION.cff)。
 
 ## 许可
 

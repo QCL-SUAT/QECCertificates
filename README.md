@@ -88,23 +88,14 @@ carries the same information in machine-readable form.
   title     = {{QECCertificates}: certified code parameters and fault distances},
   author    = {An, Shuoming},
   year      = {2026},
-  doi       = {10.5281/zenodo.XXXXXXX},
+  doi       = {10.5281/zenodo.23056679},
   url       = {https://github.com/QCL-SUAT/QECCertificates}
 }
 ```
 
-The DOI above is a placeholder until the first release is archived. Zenodo mints it from
-the GitHub release, and it mints two numbers: a version DOI that resolves to that one
-release, and a concept DOI that resolves to the latest one. Cite the version DOI when the
-exact artifact matters, and the concept DOI when pointing at the project as a whole.
-
-Archiving a release (maintainers):
-
-1. sign in to [Zenodo](https://zenodo.org) with GitHub, open **Settings → GitHub**, and
-   switch this repository on;
-2. create a GitHub release; Zenodo archives the tagged revision and mints the DOI;
-3. replace the placeholder in the BibTeX block above and in `CITATION.cff` (the commented
-   `doi:` line) with the version DOI.
+Zenodo mints two numbers from one deposit: this concept DOI, which always resolves to
+the newest version, and a DOI for each archived artifact in it (10.5281/zenodo.23056680
+for the artifact deposited first). The machine-readable form is in [`CITATION.cff`](CITATION.cff).
 
 ## License
 
