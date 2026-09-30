@@ -1,40 +1,46 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Codes.Gauging
 
 /-!
-# C1–C4 分离条件的判定层（逻辑测量容错距离）
+# A decision layer for the C1–C4 separation conditions
 
-本模块的交付物是"两分量分离条件判定定理"：文献 [12] 的
-时空故障距离定理以四条显式条件为主干（本包记作 C1–C4），本包**逐条钉到承重环节**、
-给出**可计算的条件清单**与**判定定理**，并给出 C1 边界的**双侧反例**。
+This module provides the judgment theorem for the two-component separation conditions.
+The spacetime fault-distance theorem of the companion paper has four explicit conditions
+as its backbone, written C1–C4 here. This module ties each of them to the step that
+carries the weight, gives a **checkable condition list** and a **judgment theorem**, and
+supplies **counterexamples on both sides** of the C1 boundary.
 
-| 条件 | 内容 | 承重环节 | 本模块的处理 |
+| Condition | Content | Step that carries the weight | Treatment here |
 |---|---|---|---|
-| **C1** | 辅助图膨胀 $h(G)\ge 1$ | 空间型引理的 $\min(h(G),1)\cdot d$ 因子 | **可计算谓词** `HasExpansionOne`（逐割判定）+ 判定定理里的数值形态 `1 ≤ η` |
-| **C2** | 变形轮数 $t_o-t_i\ge d$ | 时间型引理（时间型分量恰为轮数 $t_o-t_i$） | **定理**（`exists_logicalFault_of_rounds_lt`，带读出泛函；不带读出的形态 `exists_undetectable_of_rounds_lt`）：轮数不足 ⟹ 存在更轻的**不可探测逻辑故障** ⟹ **C2 必要** |
-| **C3** | 首末轮稳定子测量完美 | 出版版 SI Lemma 3 的边界约定（Remark 3） | 记为技术约定（`perfectEnds`），判定定理不承重 |
-| **C4** | 单时间片内无空间型局部探测器 | 探测器生成引理的结构假设（出版版 SI Remark 2） | 同上（`noLocalDetector`） |
+| **C1** | ancilla graph expansion $h(G)\ge 1$ | the $\min(h(G),1)\cdot d$ factor of the spacelike lemma | **decidable predicate** `HasExpansionOne`, checked cut by cut, plus the numeric form `1 ≤ η` in the judgment theorem |
+| **C2** | number of deformed rounds $t_o-t_i\ge d$ | the timelike lemma, where the timelike component is exactly the number of rounds $t_o-t_i$ | **theorem** (`exists_logicalFault_of_rounds_lt`, with a readout functional; without a readout, `exists_undetectable_of_rounds_lt`): too few rounds implies a lighter **undetectable logical fault**, hence **C2 is necessary** |
+| **C3** | the stabilizer measurements of the first and last rounds are perfect | the boundary convention of Lemma 3 of the published supplement (Remark 3) | recorded as a technical convention (`perfectEnds`); not load-bearing for the judgment theorem |
+| **C4** | no spacelike local detector within a single time slice | the structural hypothesis of the detector-generation lemma (Remark 2 of the published supplement) | as above (`noLocalDetector`) |
 
-## 判定定理的作用
+## What the judgment theorem does
 
-`separation_judgment` 把两条分量界合成时空故障距离下界：
-空间型用论文 Lemma 2 的界 $\min(\eta,1)\cdot d$（$\eta\ge1$ 即 C1，作为具名假设——
-本条属数学负责人主导的锐化对象，本侧不重证），**时间型用本库定理**
-（`Codes/Gauging.lean` 的 `timeLike_weight_eq`：最小不可探测重量 = 轮数），
-C2 把轮数与 $d$ 接起来。合起来
+`separation_judgment` combines the two component bounds into a lower bound on the
+spacetime fault distance. The spacelike part uses the bound $\min(\eta,1)\cdot d$
+of Lemma 2 of the companion paper, where $\eta\ge1$ is C1 taken as a named
+hypothesis; that statement is the subject of a sharpening pursued elsewhere and is not
+reproved here. The **timelike part uses a theorem of this library** (`timeLike_weight_eq`
+in `Codes/Gauging.lean`: the minimum undetectable weight equals the number of rounds),
+and C2 connects the number of rounds to $d$. Together
 
-$$\min(\text{空间型},\ \text{时间型}) \;\ge\; d .$$
+$$\min(\text{spacelike},\ \text{timelike}) \;\ge\; d .$$
 
-## C1 的双侧反例（可计算实例）
+## Counterexamples on both sides of C1 (computable instances)
 
-* `not_expansionOne_path` / `expansionOne_complete`：小图上 C1 的**可计算判定**
-  （路径图 $P_4$：$h<1$；完全图 $K_4$：$h\ge1$）——C1 不是形式条件，而是逐割可核的谓词。
-* 失效侧与保距侧的**码级实例**见 `Codes/SeparationInstances`（gauging 变形码的
-  显式校验矩阵 + 内核枚举）。
+* `not_expansionOne_path` / `expansionOne_complete`: a **decidable decision** for C1 on
+  small graphs (the path graph $P_4$ has $h<1$, the complete graph $K_4$ has $h\ge1$).
+  C1 is not a formal condition but a predicate checkable cut by cut.
+* Code-level instances on the failing side and on the distance-preserving side are in
+  `Codes/SeparationInstances`: explicit parity-check matrices of gauged deformed codes,
+  enumerated by the kernel.
 -/
 
 namespace QECCertificates
@@ -43,55 +49,61 @@ open scoped BigOperators
 
 variable {k : ℕ}
 
-/-! ## 一、辅助图与 C1（可计算谓词） -/
+/-! ## 1. Ancilla graph and C1 (decidable predicate) -/
 
-/-- 辅助图的**割大小**：恰有一个端点落在 `S` 中的边数。 -/
+/-- **Cut size** of the ancilla graph: the number of edges with exactly one endpoint in `S`. -/
 def cutSize (edges : List (Fin k × Fin k)) (S : Finset (Fin k)) : ℕ :=
   (edges.filter (fun e => decide (e.1 ∈ S) != decide (e.2 ∈ S))).length
 
-/-- **C1：辅助图膨胀 $h(G)\ge1$**——每个割的割边数不小于两侧顶点数的较小者
-（即 Cheeger 常数 $\ge1$；孤立点 ⟹ 取单点为割即违反）。
+/-- **C1: ancilla graph expansion $h(G)\ge1$**: for every cut, the number of cut
+edges is at least the smaller of the two vertex counts (that is, the Cheeger constant is
+$\ge1$; an isolated vertex violates it by taking that single vertex as the cut).
 
-用 `abbrev` 以便 `decide` 在具体小图上直接判定（`def` 半可还原，实例搜索不展开）。 -/
+Stated with `abbrev` so that `decide` can settle it directly on small concrete graphs;
+`def` is semireducible, so instance search would not unfold it. -/
 abbrev HasExpansionOne (edges : List (Fin k × Fin k)) : Prop :=
   ∀ S : Finset (Fin k), min S.card (k - S.card) ≤ cutSize edges S
 
-/-- **C1 判定（完全图）**：$K_4$ 的膨胀 $\ge1$。 -/
+/-- **C1 decision (complete graph)**: $K_4$ has expansion $\ge1$. -/
 theorem expansionOne_complete :
     HasExpansionOne ([(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)] :
       List (Fin 4 × Fin 4)) := by decide
 
-/-- **C1 判定（路径图）**：$P_4$（3 条边的路径）的膨胀 $<1$——取中间两点为割
-即违反（割边 1 < min(2,2) = 2）；这是 C1 的**失效侧图例**。 -/
+/-- **C1 decision (path graph)**: $P_4$, the path with 3 edges, has expansion $<1$;
+taking the two middle vertices as the cut violates it, since there is one cut edge and
+1 < min(2,2) = 2. This is the **graph-side example on the failing side** of C1. -/
 theorem not_expansionOne_path :
     ¬ HasExpansionOne ([(0, 1), (1, 2), (2, 3)] : List (Fin 4 × Fin 4)) := by decide
 
-/-- **C1 判定（圈图）**：$C_4$ 的膨胀 $\ge1$。 -/
+/-- **C1 decision (cycle graph)**: $C_4$ has expansion $\ge1$. -/
 theorem expansionOne_cycle :
     HasExpansionOne ([(0, 1), (1, 2), (2, 3), (3, 0)] : List (Fin 4 × Fin 4)) := by decide
 
-/-- **C1 判定（两条不相交的边）**：膨胀 $<1$（一条边自身即割、割边数为 0）。 -/
+/-- **C1 decision (two disjoint edges)**: expansion $<1$, since a single edge is itself a cut with no cut edges. -/
 theorem not_expansionOne_two_edges :
     ¬ HasExpansionOne ([(0, 1), (2, 3)] : List (Fin 4 × Fin 4)) := by decide
 
-/-! ## 二、条件清单 C1–C4 -/
+/-! ## 2. The condition list C1–C4 -/
 
-/-- **分离条件清单 C1–C4**（判定层的输入；`η` 是 C1 的数值形态：`1 ≤ η` ⟺ 膨胀 $\ge1$）。
+/-- **The separation condition list C1–C4** (the input of the decision layer; `η` is
+the numeric form of C1, since `1 ≤ η` is equivalent to expansion $\ge1$).
 
-`perfectEnds`/`noLocalDetector` 是 C3/C4 的布尔标记——原文自陈二者为可放宽的
-技术约定（arXiv v2 的 Remark 5 / Remark 4，即出版版 SI 的 Remark 3 / Remark 2），
-本模块把它们的**作用与可去性**写在文档里，判定定理只承重 C1 与 C2。 -/
+`perfectEnds` and `noLocalDetector` are the Boolean flags for C3 and C4. The companion
+paper itself states that both are relaxable technical conventions (Remark 5 and Remark 4
+of arXiv v2, that is Remark 3 and Remark 2 of the published supplement). The
+documentation here records **what they do and that they can be dropped**; the judgment
+judgment theorem takes only C1 and C2 as load-bearing. -/
 abbrev Conditions (edges : List (Fin k × Fin k)) (η rounds d : ℕ)
     (perfectEnds noLocalDetector : Bool) : Prop :=
   HasExpansionOne edges ∧ 1 ≤ η ∧ d ≤ rounds ∧ perfectEnds = true ∧
     noLocalDetector = true
 
-/-! ## 三、C2 的必要性（时间型分量恰为轮数） -/
+/-! ## 3. Necessity of C2 (the timelike component is exactly the number of rounds) -/
 
-/-- 时间型链上的**全一算符**（每轮取一个数据比特）。 -/
+/-- The **all-ones operator** on the timelike chain: one data bit per round. -/
 def timeLikeVec (S : ℕ) : Vec (S + 1) := fun _ => 1
 
-/-- 全一算符与相邻对校验正交（校验的支撑是两点，模 2 权重为偶）。 -/
+/-- The all-ones operator is orthogonal to the adjacent-pair checks, each check being supported on two points, an even weight modulo 2. -/
 theorem timeLikeVec_repCheck (S : ℕ) (i : Fin S) :
     repCheck S i ⬝ᵥ timeLikeVec S = 0 := by
   have hone : ∀ a : Fin (S + 1), unitVec a ⬝ᵥ timeLikeVec S = 1 := by
@@ -106,13 +118,13 @@ theorem timeLikeVec_repCheck (S : ℕ) (i : Fin S) :
   rw [repCheck, add_dotProduct, hone, hone]
   exact CharTwo.add_self_eq_zero 1
 
-/-- 全一算符非零（它在第 $0$ 位取 $1$）。 -/
+/-- The all-ones operator is nonzero: it takes the value $1$ at position $0$. -/
 theorem timeLikeVec_ne_zero (S : ℕ) : timeLikeVec S ≠ 0 := by
   intro hzero
   have h0 := congrFun hzero 0
   simp [timeLikeVec] at h0
 
-/-- 全一算符的重量 = 轮数。 -/
+/-- The weight of the all-ones operator equals the number of rounds. -/
 theorem hammingNorm_timeLikeVec (S : ℕ) : hammingNorm (timeLikeVec S) = S + 1 := by
   have hone : ∀ a : Fin (S + 1), timeLikeVec S a ≠ 0 := fun a => one_ne_zero
   have hfilter : (Finset.univ.filter (fun i : Fin (S + 1) => timeLikeVec S i ≠ 0))
@@ -120,23 +132,28 @@ theorem hammingNorm_timeLikeVec (S : ℕ) : hammingNorm (timeLikeVec S) = S + 1 
   show (Finset.univ.filter (fun i : Fin (S + 1) => timeLikeVec S i ≠ 0)).card = S + 1
   rw [hfilter, Finset.card_univ, Fintype.card_fin]
 
-/-- **C2 的必要性（不带读出的形态）**：轮数 $T = S+1$ 小于 $d$ 时，时间型链上存在
-**重量 $= T < d$** 的非零、与所有时间校验正交的向量（全一算符）。
+/-- **Necessity of C2, form without a readout**: when the number of rounds
+$T = S+1$ is less than $d$, the timelike chain carries a nonzero vector **of weight
+$= T < d$** that is orthogonal to every timelike check, namely the all-ones operator.
 
-**口径**：这条给的是"不可探测"，**不是**"不可探测的**逻辑**故障"——后者还要翻转一个
-读出泛函。带读出的完整形态见下面的 `exists_logicalFault_of_rounds_lt`；两者共用同一个
-见证，差别只在多出来的那一条点积。 -/
+**Note**: this gives "undetectable", **not** "undetectable **logical** fault"; the latter
+additionally requires flipping a readout functional. The full form with a readout is
+`exists_logicalFault_of_rounds_lt` below; the two share the same witness and differ only
+in the extra dot product. -/
 theorem exists_undetectable_of_rounds_lt {S d : ℕ} (h : S + 1 < d) :
     ∃ x : Vec (S + 1), x ≠ 0 ∧ (∀ i : Fin S, repCheck S i ⬝ᵥ x = 0) ∧
       hammingNorm x < d :=
   ⟨timeLikeVec S, timeLikeVec_ne_zero S, fun i => timeLikeVec_repCheck S i,
    by rw [hammingNorm_timeLikeVec]; exact h⟩
 
-/-- **C2 的必要性（完整形态：带读出泛函）**：只要读出让全一算子取值 $1$，同一个见证
-就同时是**不可探测的逻辑故障**——非零、与每条时间校验正交、翻转读出、且重量 $<d$。
+/-- **Necessity of C2, full form with a readout functional**: as soon as the readout
+assigns the value $1$ to the all-ones operator, the same witness is at once an
+**undetectable logical fault**: nonzero, orthogonal to every timelike check, flipping
+the readout, and of weight $<d$.
 
-`Codes/BaconShorMeasurement.lean` 的 `bsMeasure2_lt_d` 是这条在 Bacon--Shor 上的实例：
-读出泛函取某一轮的支撑指示向量，它与全一算子的点积恰为 $1$。 -/
+`bsMeasure2_lt_d` in `Codes/BaconShorMeasurement.lean` is the Bacon--Shor instance of
+this statement; the readout functional is the support indicator vector of one round, and
+its dot product with the all-ones operator is exactly $1$. -/
 theorem exists_logicalFault_of_rounds_lt {S d : ℕ} (h : S + 1 < d)
     (w : Vec (S + 1)) (hw : w ⬝ᵥ timeLikeVec S = 1) :
     ∃ x : Vec (S + 1), x ≠ 0 ∧ (∀ i : Fin S, repCheck S i ⬝ᵥ x = 0) ∧
@@ -144,8 +161,7 @@ theorem exists_logicalFault_of_rounds_lt {S d : ℕ} (h : S + 1 < d)
   ⟨timeLikeVec S, timeLikeVec_ne_zero S, fun i => timeLikeVec_repCheck S i, hw,
    by rw [hammingNorm_timeLikeVec]; exact h⟩
 
-/-- **C2 的判定形态**：轮数 $\ge d$ 时，时间型链上不存在重量 $< d$ 的不可探测非零算符
-（即时间型分量 $\ge d$）——正是 `timeLike_weight_eq` 的直接翻译。 -/
+/-- **The decision form of C2**: when the number of rounds is $\ge d$, the timelike chain carries no undetectable nonzero operator of weight $< d$, that is, the timelike component is $\ge d$. This is a direct translation of `timeLike_weight_eq`. -/
 theorem no_light_undetectable_of_rounds_ge {S d : ℕ} (h : d ≤ S + 1) :
     ¬ ∃ x : Vec (S + 1), x ≠ 0 ∧ (∀ i : Fin S, repCheck S i ⬝ᵥ x = 0) ∧
       hammingNorm x < d := by
@@ -153,17 +169,20 @@ theorem no_light_undetectable_of_rounds_ge {S d : ℕ} (h : d ≤ S + 1) :
   rw [timeLike_weight_eq horth hx] at hw
   omega
 
-/-! ## 四、判定定理（组装层） -/
+/-! ## 4. The judgment theorem (assembly layer) -/
 
-/-- **两分量分离条件判定定理**：C1（膨胀 $\eta\ge1$）与 C2（轮数 $\ge d$）把
-两条分量界合成时空故障距离下界 $d$：
+/-- **The two-component separation judgment theorem**: C1 (expansion
+$\eta\ge1$) and C2 (number of rounds $\ge d$) combine the two component bounds
+into the spacetime fault distance lower bound $d$:
 
-* 空间型：论文 Lemma 2 的界 $\min(\eta,1)\cdot d \le \text{空间型分量}$
-  （C1 的作用就是让 $\min(\eta,1)=1$，界退化为 $d$）；
-* 时间型：本库定理（`timeLike_weight_eq`）给出"时间型分量 = 轮数"，
-  再由 C2 得 $\ge d$。
+* spacelike: the bound $\min(\eta,1)\cdot d \le \text{spacelike component}$ of
+  Lemma 2 of the companion paper, where the role of C1 is to make
+  $\min(\eta,1)=1$, so that the bound degenerates to $d$;
+* timelike: a theorem of this library (`timeLike_weight_eq`) gives "timelike component =
+  number of rounds", and C2 then yields $\ge d$.
 
-C3/C4 是原文自陈可放宽的技术约定（Remark 5 / Remark 4），不进入这条组装。 -/
+C3 and C4 are the technical conventions that the companion paper states to be relaxable
+(Remark 5 and Remark 4) and do not enter this assembly. -/
 theorem separation_judgment {d η rounds spaceDist timeDist : ℕ}
     (hC1 : 1 ≤ η) (hC2 : d ≤ rounds)
     (hSpace : min η 1 * d ≤ spaceDist)
@@ -173,21 +192,20 @@ theorem separation_judgment {d η rounds spaceDist timeDist : ℕ}
   rw [hmin, one_mul] at hSpace
   exact le_min hSpace (le_trans hC2 hTime)
 
-/-! ## 五、条件间的蕴含 / 独立结构（小实例，`decide`） -/
+/-! ## 5. Implication and independence between the conditions (small instances, `decide`) -/
 
-/-- **C2 不蕴含 C1**：轮数充足（C2 成立）但辅助图为路径（C1 不成立）。 -/
+/-- **C2 does not imply C1**: the number of rounds is sufficient, so C2 holds, while the ancilla graph is a path, so C1 fails. -/
 theorem C2_not_C1 :
     ¬ HasExpansionOne ([(0, 1), (1, 2), (2, 3)] : List (Fin 4 × Fin 4)) ∧
       (3 : ℕ) ≤ 3 := ⟨not_expansionOne_path, le_refl 3⟩
 
-/-- **C1 不蕴含 C2**：完全图（C1 成立）但轮数不足（C2 不成立）。 -/
+/-- **C1 does not imply C2**: the graph is complete, so C1 holds, while the number of rounds is insufficient, so C2 fails. -/
 theorem C1_not_C2 :
     HasExpansionOne ([(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)] :
       List (Fin 4 × Fin 4)) ∧ ¬ ((3 : ℕ) ≤ 2) :=
   ⟨expansionOne_complete, by decide⟩
 
-/-- **C3/C4 与 C1/C2 独立**：四项条件在同一实例上可任意取值
-（C3/C4 是布尔标记，取其否定即可）——故判定定理只让 C1、C2 承重。 -/
+/-- **C3 and C4 are independent of C1 and C2**: on one and the same instance the four conditions can take arbitrary values, since C3 and C4 are Boolean flags and it suffices to negate them. Hence the judgment theorem makes only C1 and C2 load-bearing. -/
 theorem C3_C4_independent :
     ¬ (Conditions ([(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)] :
         List (Fin 4 × Fin 4)) 1 3 3 false true) ∧

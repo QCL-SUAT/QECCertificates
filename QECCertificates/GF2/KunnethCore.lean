@@ -1,33 +1,40 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.HGPCleaningDual
 
 /-!
-# 子空间张量交：`{X : 列 ⊆ U ∧ 行 ⊆ W}` 的维数（ 收官）
+# The tensor intersection of subspaces: the dimension of `{X : columns ⊆ U ∧ rows ⊆ W}`
 
-维数张量公式 $k = k_1k_2 + k_1^\top k_2^\top$ 的全部难度集中在下述事实：
-**列落在 $U$ 中、行落在 $W$ 中的矩阵构成的空间，维数恰为 $\dim U\cdot\dim W$**
-（“子空间张量交”的维数计数，即 $U\otimes W$ 的维数）。
+The whole difficulty of the dimension tensor formula $k = k_1k_2 + k_1^\top k_2^\top$ is
+concentrated in one fact: **the space of matrices whose columns lie in $U$ and whose rows
+lie in $W$ has dimension exactly $\dim U\cdot\dim W$** (the dimension count of a subspace
+tensor intersection, that is, the dimension of $U\otimes W$).
 
-本模块把它一次性证成（`finrank_colsRows`），路线是**显式等价**而非维数论证：
+This module proves it in one go (`finrank_colsRows`), by an **explicit equivalence**
+rather than a dimension argument:
 
-* 取 $U$ 的一组基 $u$ 与 `Fin a → Vec p` 上的**坐标读回**线性映射 $L$
-  （独立族的左逆，`exists_leftInverse_of_linearIndependent`）；
-* 系数展开 `vee`（$a\times s$ 系数 ↦ $p\times s$ 矩阵）与坐标提取 `wedge`
-  （$p\times s$ 矩阵 ↦ $a\times s$ 系数）互为逆；
-* 关键一步：**行条件在 `wedge` 下不变**——`wedge` 把“行都在 $W$ 中”翻译成
-  “行都在 $W$ 中”，于是 $\{列\subseteq U,\ 行\subseteq W\}\cong \{\text{行}\subseteq W\}$，
-  而后者同构于 `Fin a → W`，维数 $a\cdot\dim W$。
+* take a basis $u$ of $U$ together with the **coordinate read-back** linear map $L$ on
+  `Fin a → Vec p` (a left inverse of an independent family,
+  `exists_leftInverse_of_linearIndependent`);
+* the coefficient expansion `vee` ($a\times s$ coefficients ↦ $p\times s$ matrices) and
+  the coordinate extraction `wedge` ($p\times s$ matrices ↦ $a\times s$ coefficients) are
+  mutually inverse;
+* the key step: **the row condition is unaffected by `wedge`**, which translates "the
+  rows all lie in $W$" into "the rows all lie in $W$", so
+  $\{columns\subseteq U,\ rows\subseteq W\}\cong \{\text{rows}\subseteq W\}$, and the
+  latter is isomorphic to `Fin a → W`, of dimension $a\cdot\dim W$.
 
-前两条辅助事实（列空间 / 行空间的维数）是 `finrank_colsSub` / `finrank_rowsSub`。
+The first two auxiliary facts (the dimensions of the column- and row-constrained spaces)
+are `finrank_colsSub` / `finrank_rowsSub`.
 
-## 索引约定
+## Index conventions
 
-矩阵一律写成**乘积索引** `VMat p s = Fin p × Fin s → ZMod 2`（与 `hgpHX` 的行类型一致），
-不拍平成 `Fin`——结构定理因此零换标。
+Matrices are always written with **product indexing**,
+`VMat p s = Fin p × Fin s → ZMod 2` (the same row type as `hgpHX`), and are never
+flattened into `Fin`; the structural theorem therefore needs no relabelling.
 -/
 
 namespace QECCertificates
@@ -38,15 +45,15 @@ open scoped BigOperators
 
 variable {p q r s a b : ℕ}
 
-/-! ## 一、乘积索引矩阵与两个"约束子空间" -/
+/-! ## 1. Product-indexed matrices and the two constrained subspaces -/
 
-/-- 乘积索引矩阵：行 `Fin p`、列 `Fin s`。 -/
+/-- A product-indexed matrix: rows `Fin p`, columns `Fin s`. -/
 abbrev VMat (p s : ℕ) := Fin p × Fin s → ZMod 2
 
-/-- 第 `j` 列（作为 `Vec p`）。 -/
+/-- Column `j` (as a `Vec p`). -/
 def colOf {p s : ℕ} (X : VMat p s) (j : Fin s) : Vec p := fun i => X (i, j)
 
-/-- 第 `i` 行（作为 `Vec s`）。 -/
+/-- Row `i` (as a `Vec s`). -/
 def rowOf {p s : ℕ} (X : VMat p s) (i : Fin p) : Vec s := fun j => X (i, j)
 
 @[simp] lemma colOf_apply {X : VMat p s} {j : Fin s} {i : Fin p} : colOf X j i = X (i, j) := rfl
@@ -63,7 +70,7 @@ def rowOf {p s : ℕ} (X : VMat p s) (i : Fin p) : Vec s := fun j => X (i, j)
 @[simp] lemma rowOf_smul {c : ZMod 2} {X : VMat p s} {i : Fin p} :
     rowOf (c • X) i = c • rowOf X i := rfl
 
-/-- **列约束子空间**：所有列都落在 `U` 中的矩阵。 -/
+/-- **The column-constrained subspace**: the matrices all of whose columns lie in `U`. -/
 def colsSub (U : Submodule (ZMod 2) (Vec p)) : Submodule (ZMod 2) (VMat p s) where
   carrier := {X | ∀ j, colOf X j ∈ U}
   zero_mem' := fun j => U.zero_mem
@@ -72,7 +79,7 @@ def colsSub (U : Submodule (ZMod 2) (Vec p)) : Submodule (ZMod 2) (VMat p s) whe
   smul_mem' := fun c {X} hX => fun j => by
     rw [colOf_smul]; exact U.smul_mem c (hX j)
 
-/-- **行约束子空间**：所有行都落在 `W` 中的矩阵。 -/
+/-- **The row-constrained subspace**: the matrices all of whose rows lie in `W`. -/
 def rowsSub (W : Submodule (ZMod 2) (Vec s)) : Submodule (ZMod 2) (VMat p s) where
   carrier := {X | ∀ i, rowOf X i ∈ W}
   zero_mem' := fun i => W.zero_mem
@@ -89,9 +96,10 @@ def rowsSub (W : Submodule (ZMod 2) (Vec s)) : Submodule (ZMod 2) (VMat p s) whe
     X ∈ rowsSub W ↔ ∀ i, rowOf X i ∈ W :=
   ⟨fun h => h, fun h => h⟩
 
-/-! ## 二、列约束 / 行约束空间的维数 -/
+/-! ## 2. The dimensions of the column- and row-constrained spaces -/
 
-/-- 列都在 `U` 中的矩阵与 `Fin s → U` 的显式线性等价（按列读）。 -/
+/-- An explicit linear equivalence between the matrices with all columns in `U` and
+`Fin s → U` (reading column by column). -/
 noncomputable def colsSubEquiv (U : Submodule (ZMod 2) (Vec p)) :
     ↥(colsSub (s := s) U) ≃ₗ[ZMod 2] (Fin s → U) where
   toFun X := fun j => ⟨colOf X.1 j, X.2 j⟩
@@ -101,7 +109,8 @@ noncomputable def colsSubEquiv (U : Submodule (ZMod 2) (Vec p)) :
   map_add' X Y := by ext j i; rfl
   map_smul' c X := by ext j i; rfl
 
-/-- 行都在 `W` 中的矩阵与 `Fin p → W` 的显式线性等价（按行读）。 -/
+/-- An explicit linear equivalence between the matrices with all rows in `W` and
+`Fin p → W` (reading row by row). -/
 noncomputable def rowsSubEquiv (W : Submodule (ZMod 2) (Vec s)) :
     ↥(rowsSub (p := p) (s := s) W) ≃ₗ[ZMod 2] (Fin p → W) where
   toFun X := fun i => ⟨rowOf X.1 i, X.2 i⟩
@@ -111,23 +120,26 @@ noncomputable def rowsSubEquiv (W : Submodule (ZMod 2) (Vec s)) :
   map_add' X Y := by ext i j; rfl
   map_smul' c X := by ext i j; rfl
 
-/-- **列约束空间的维数**：$\dim\{X : \mathrm{col}\,X\subseteq U\} = s\cdot\dim U$。 -/
+/-- **The dimension of the column-constrained space**:
+$\dim\{X : \mathrm{col}\,X\subseteq U\} = s\cdot\dim U$. -/
 theorem finrank_colsSub (U : Submodule (ZMod 2) (Vec p)) :
     Module.finrank (ZMod 2) (colsSub (s := s) U) = s * Module.finrank (ZMod 2) U := by
   rw [(colsSubEquiv (s := s) U).finrank_eq, Module.finrank_pi_fintype, Finset.sum_const,
     Finset.card_univ, Fintype.card_fin]
   simp
 
-/-- **行约束空间的维数**：$\dim\{X : \mathrm{row}\,X\subseteq W\} = p\cdot\dim W$。 -/
+/-- **The dimension of the row-constrained space**:
+$\dim\{X : \mathrm{row}\,X\subseteq W\} = p\cdot\dim W$. -/
 theorem finrank_rowsSub (W : Submodule (ZMod 2) (Vec s)) :
     Module.finrank (ZMod 2) (rowsSub (p := p) W) = p * Module.finrank (ZMod 2) W := by
   rw [(rowsSubEquiv (p := p) W).finrank_eq, Module.finrank_pi_fintype, Finset.sum_const,
     Finset.card_univ, Fintype.card_fin]
   simp
 
-/-! ## 三、独立族的坐标读回（左逆） -/
+/-! ## 3. Coordinate read-back of an independent family (left inverse) -/
 
-/-- 线性映射在标准基下的矩阵表示：`L x = Σ_i x_i · L(e_i)`。 -/
+/-- The matrix representation of a linear map in the standard basis:
+`L x = Σ_i x_i · L(e_i)`. -/
 lemma linearMap_apply_eq_sum_single (L : Vec p →ₗ[ZMod 2] (Fin a → ZMod 2)) (x : Vec p) :
     L x = fun k => ∑ i, x i * L (Pi.single i (1 : ZMod 2)) k := by
   conv_lhs => rw [show x = ∑ i, x i • (Pi.single i (1 : ZMod 2)) from by
@@ -136,11 +148,14 @@ lemma linearMap_apply_eq_sum_single (L : Vec p →ₗ[ZMod 2] (Fin a → ZMod 2)
   funext k
   simp only [map_sum, Finset.sum_apply, map_smul, Pi.smul_apply, smul_eq_mul]
 
-/-- **独立族的左逆**：`u : Fin a → Vec p` 线性无关时，存在线性映射 `L` 把任意
-组合 $\sum_k c_k u_k$ 读回系数 $c$。
+/-- **Left inverse of an independent family**: when `u : Fin a → Vec p` is linearly
+independent, there is a linear map `L` that reads the coefficients $c$ back from any
+combination $\sum_k c_k u_k$.
 
-构造：组合映射 $\varphi(c)=\sum_k c_k u_k$ 由无关性单射，取其在全空间上的左逆
-（`LinearMap.exists_leftInverse_of_injective`，向量空间上任一单射线性映射都有左逆）。 -/
+The construction: the combination map $\varphi(c)=\sum_k c_k u_k$ is injective by
+independence, and one takes a left inverse of it on the whole space
+(`LinearMap.exists_leftInverse_of_injective`: over a vector space every injective linear
+map has a left inverse). -/
 theorem exists_leftInverse_of_linearIndependent {u : Fin a → Vec p}
     (hu : LinearIndependent (ZMod 2) u) :
     ∃ L : Vec p →ₗ[ZMod 2] (Fin a → ZMod 2), ∀ c : Fin a → ZMod 2, L (∑ k, c k • u k) = c := by
@@ -160,10 +175,10 @@ theorem exists_leftInverse_of_linearIndependent {u : Fin a → Vec p}
   obtain ⟨L, hL⟩ := φ.exists_leftInverse_of_injective hker
   exact ⟨L, fun c => LinearMap.congr_fun hL c⟩
 
-/-! ## 四、系数展开 `vee` 与坐标提取 `wedge` -/
+/-! ## 4. Coefficient expansion `vee` and coordinate extraction `wedge` -/
 
-/-- **系数展开**：把 `a×s` 的系数矩阵按 `U` 的基向量展开成 `p×s` 矩阵
-（第 `j` 列 = $\sum_k C_{kj}u_k$）。 -/
+/-- **Coefficient expansion**: expands an `a×s` coefficient matrix along the basis vectors
+of `U` into a `p×s` matrix (column `j` is $\sum_k C_{kj}u_k$). -/
 noncomputable def vee (u : Fin a → Vec p) : VMat a s →ₗ[ZMod 2] VMat p s where
   toFun C := fun ij => ∑ k, C (k, ij.2) * u k ij.1
   map_add' C D := by
@@ -173,7 +188,8 @@ noncomputable def vee (u : Fin a → Vec p) : VMat a s →ₗ[ZMod 2] VMat p s w
     ext ⟨i, j⟩
     simp only [Pi.smul_apply, smul_eq_mul, RingHom.id_apply, mul_assoc, Finset.mul_sum]
 
-/-- **坐标提取**：用左逆 `L` 把 `p×s` 矩阵的每一列读成系数。 -/
+/-- **Coordinate extraction**: reads each column of a `p×s` matrix as coefficients, through
+the left inverse `L`. -/
 noncomputable def wedge (L : Vec p →ₗ[ZMod 2] (Fin a → ZMod 2)) : VMat p s →ₗ[ZMod 2] VMat a s where
   toFun X := fun kj => L (colOf X kj.2) kj.1
   map_add' X Y := by
@@ -190,7 +206,8 @@ noncomputable def wedge (L : Vec p →ₗ[ZMod 2] (Fin a → ZMod 2)) : VMat p s
 @[simp] lemma wedge_apply (L : Vec p →ₗ[ZMod 2] (Fin a → ZMod 2)) (X : VMat p s)
     (k : Fin a) (j : Fin s) : wedge L X (k, j) = L (colOf X j) k := rfl
 
-/-- `wedge` 之后 `vee` 还原（在列约束空间上）：`vee` 是 `wedge` 的左逆。 -/
+/-- `vee` after `wedge` is the identity (on the column-constrained space): `vee` is a left
+inverse of `wedge`. -/
 lemma vee_wedge_of_coords {u : Fin a → Vec p} {L : Vec p →ₗ[ZMod 2] (Fin a → ZMod 2)}
     {U : Submodule (ZMod 2) (Vec p)}
     (hcoords : ∀ x ∈ U, ∑ k, L x k • u k = x) {X : VMat p s} (hX : ∀ j, colOf X j ∈ U) :
@@ -200,7 +217,8 @@ lemma vee_wedge_of_coords {u : Fin a → Vec p} {L : Vec p →ₗ[ZMod 2] (Fin a
   have h := congrFun (hcoords (colOf X j) (hX j)) i
   simpa using h
 
-/-- `vee` 之后 `wedge` 还原（处处）：`vee` 是 `wedge` 的右逆。 -/
+/-- `wedge` after `vee` is the identity (everywhere): `vee` is a right inverse of
+`wedge`. -/
 lemma wedge_vee {u : Fin a → Vec p} {L : Vec p →ₗ[ZMod 2] (Fin a → ZMod 2)}
     (hleft : ∀ c : Fin a → ZMod 2, L (∑ k, c k • u k) = c) (C : VMat a s) :
     wedge L (vee u C) = C := by
@@ -212,10 +230,11 @@ lemma wedge_vee {u : Fin a → Vec p} {L : Vec p →ₗ[ZMod 2] (Fin a → ZMod 
     exact Finset.sum_congr rfl fun k _ => by rw [Pi.smul_apply, smul_eq_mul]
   rw [hcol, hleft]
 
-/-! ## 五、行条件在 `wedge` 下的对应 -/
+/-! ## 5. The row condition under `wedge` -/
 
-/-- **行条件前推**：`X` 的行都在 `W` 中 ⟹ `wedge L X` 的行都在 `W` 中
-（把 `L` 的矩阵表示 `L x = Σ_i x_i · L(e_i)` 代进 `wedge` 的逐行和式）。 -/
+/-- **The row condition pushes forward**: if the rows of `X` all lie in `W`, then so do the
+rows of `wedge L X` (substituting the matrix representation `L x = Σ_i x_i · L(e_i)` into
+the row sums of `wedge`). -/
 lemma rowOf_wedge_mem {L : Vec p →ₗ[ZMod 2] (Fin a → ZMod 2)}
     {W : Submodule (ZMod 2) (Vec s)} {X : VMat p s} (hX : ∀ i, rowOf X i ∈ W) :
     ∀ k, rowOf (wedge L X) k ∈ W := by
@@ -230,8 +249,10 @@ lemma rowOf_wedge_mem {L : Vec p →ₗ[ZMod 2] (Fin a → ZMod 2)}
   rw [hrow]
   exact Submodule.sum_mem _ fun i _ => Submodule.smul_mem _ _ (hX i)
 
-/-- **行条件回推**：`wedge L X` 的行都在 `W` 且 `X` 的列都在 `U` 中 ⟹ `X` 的行都在 `W` 中
-（用 `vee_wedge_of_coords` 把 `X` 的行写成 `wedge L X` 的行的组合）。 -/
+/-- **The row condition pulls back**: if the rows of `wedge L X` all lie in `W` and the
+columns of `X` all lie in `U`, then the rows of `X` all lie in `W` (using
+`vee_wedge_of_coords` to write the rows of `X` as combinations of the rows of
+`wedge L X`). -/
 lemma rowOf_mem_of_wedge_rowOf_mem {u : Fin a → Vec p} {L : Vec p →ₗ[ZMod 2] (Fin a → ZMod 2)}
     {U : Submodule (ZMod 2) (Vec p)} {W : Submodule (ZMod 2) (Vec s)}
     (hcoords : ∀ x ∈ U, ∑ k, L x k • u k = x) {X : VMat p s}
@@ -248,18 +269,20 @@ lemma rowOf_mem_of_wedge_rowOf_mem {u : Fin a → Vec p} {L : Vec p →ₗ[ZMod 
   rw [hrow]
   exact Submodule.sum_mem _ fun k _ => Submodule.smul_mem _ _ (hY k)
 
-/-! ## 六、主定理：子空间张量交的维数 -/
+/-! ## 6. Main theorem: the dimension of the tensor intersection -/
 
-/-- **子空间张量交的维数**：列落在 `U` 中、行落在 `W` 中的矩阵空间，维数恰为
-$\dim U\cdot\dim W$。
+/-- **The dimension of the tensor intersection**: the space of matrices with columns in
+`U` and rows in `W` has dimension exactly $\dim U\cdot\dim W$.
 
-这是维数张量公式 $k=k_1k_2+k_1^\top k_2^\top$ 的**唯一**非平凡维数输入
-（$U\otimes W$ 的维数在矩阵语言下的形态）。证明走显式等价：
+This is the **only** nontrivial dimension input to the tensor formula
+$k=k_1k_2+k_1^\top k_2^\top$ (the dimension of $U\otimes W$ in the language of matrices).
+The proof goes through an explicit equivalence:
 
 $$\{X:\mathrm{col}\,X\subseteq U,\ \mathrm{row}\,X\subseteq W\}\;\cong\;\mathrm{Fin}\,a\to W,
 \qquad a=\dim U,$$
 
-前向 = 坐标提取 `wedge` 后取行，反向 = 用系数行的 `W`-组合做 `vee`。 -/
+the forward map extracting coordinates with `wedge` and then taking rows, the backward map
+forming `vee` from the `W`-combinations of the coefficient rows. -/
 theorem finrank_colsRows (U : Submodule (ZMod 2) (Vec p)) (W : Submodule (ZMod 2) (Vec s)) :
     Module.finrank (ZMod 2) ↥(colsSub (s := s) U ⊓ rowsSub (s := s) W)
       = Module.finrank (ZMod 2) U * Module.finrank (ZMod 2) W := by

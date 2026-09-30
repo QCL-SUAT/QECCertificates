@@ -1,33 +1,40 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.HGPCleaning
 
 /-!
-# HGP 第三片（对偶侧）：Z 距离下界（转置码运输）
+# HGP, part three (the dual side): the Z-distance lower bound, by transporting the
+transpose code
 
-X 侧（`GF2/HGPCleaning`）证了 $v\in\ker H_X$、$v\notin\mathrm{row}H_Z$
-$\Longrightarrow \min(d_1,d_2^\top)\le|v|$。本模块给出对偶陈述
+The X side (`GF2/HGPCleaning`) proves that $v\in\ker H_X$, $v\notin\mathrm{row}H_Z$
+$\Longrightarrow \min(d_1,d_2^\top)\le|v|$. This module gives the dual statement
 
 $$v\in\ker H_Z,\; v\notin\mathrm{row}H_X \;\Longrightarrow\;
 \min(d_1^\top,\, d_2) \le |v|,\qquad
 d_1^\top=\min\ker H_1^\top,\; d_2=\min\ker H_2 .$$
 
-**路线：转置码运输。** 第二片已证（`hgpHZ_transpose_inputs_apply`）
-$$H_Z(H_1^\top,H_2^\top)\ \text{的第 }x\text{ 行}
-= \big(H_X(H_1,H_2)\ \text{的第 }x\text{ 行}\big)\circ(\text{分块交换}),$$
-即两个矩阵**逐条目相同、只差列的分块交换**。于是：
+**The route: transporting the transpose code.** Part two already proves
+(`hgpHZ_transpose_inputs_apply`) that
+$$\text{row }x\text{ of }H_Z(H_1^\top,H_2^\top)
+= \big(\text{row }x\text{ of }H_X(H_1,H_2)\big)\circ(\text{block swap}),$$
+that is, the two matrices are **entrywise identical and differ only by the block swap of
+their columns**. Hence:
 
-* `hgpHZ_row_eq_swap`：行恒等式（逐条目，直接来自第二片的转置码关系）；
-* `mulVec_swap_eq` / `hgpHZ_mulVec_eq_zero_iff_swap`：$v\in\ker H_Z(H_1,H_2)$ ⟺
-  交换后的 $v$ 落在 $\ker H_X(H_1^\top,H_2^\top)$——**两个点积逐行相等**，不只是"同时为零"；
-* `mem_rowSpace_X_of_swap_mem_rowSpace_Z`：行空间的对应（生成元逐条对应 + 子空间归纳）；
-* `hammingNorm_swapBlocks`：分块交换保重量。
+* `hgpHZ_row_eq_swap`: the row identity, entrywise, straight from the transpose-code
+  relation of part two;
+* `mulVec_swap_eq` / `hgpHZ_mulVec_eq_zero_iff_swap`: $v\in\ker H_Z(H_1,H_2)$ exactly when
+  the swapped $v$ lies in $\ker H_X(H_1^\top,H_2^\top)$, with **the two dot products equal
+  row by row**, not merely vanishing together;
+* `mem_rowSpace_X_of_swap_mem_rowSpace_Z`: the correspondence of row spaces, generator by
+  generator and then by subspace induction;
+* `hammingNorm_swapBlocks`: the block swap preserves weight.
 
-四条合起来，**Z 侧定理直接是 X 侧定理在转置输入上的实例**（`hgp_Z_distance_ge`）：
-清洗论证不必重做一遍——这正是"转置码"一词在距离分析里的作用。
+Together, the four make **the Z-side theorem a direct instance of the X-side theorem on
+transposed inputs** (`hgp_Z_distance_ge`): the cleaning argument need not be reworked. That
+is what the phrase "transpose code" does for the distance analysis.
 -/
 
 namespace QECCertificates
@@ -38,23 +45,23 @@ open scoped BigOperators
 
 variable {r₁ n₁ r₂ n₂ : ℕ}
 
-/-! ## 一、分块交换 -/
+/-! ## 1. The block swap -/
 
-/-- **分块交换**（自逆）：$\alpha\oplus\beta \to \beta\oplus\alpha$
-——正是 `hgpHZ_transpose_inputs_apply` 里的 `Equiv.sumComm`。 -/
+/-- **The block swap**, an involution: $\alpha\oplus\beta \to \beta\oplus\alpha$. It is
+exactly the `Equiv.sumComm` appearing in `hgpHZ_transpose_inputs_apply`. -/
 def swapBlocks {α β : Type*} : α ⊕ β → β ⊕ α := Sum.swap
 
-/-- 分块交换自逆。 -/
+/-- The block swap is an involution. -/
 lemma swapBlocks_swapBlocks {α β : Type*} (c : α ⊕ β) : swapBlocks (swapBlocks c) = c := by
   rcases c with ab | st <;> rfl
 
-/-- 分块交换是单射。 -/
+/-- The block swap is injective. -/
 lemma swapBlocks_injective {α β : Type*} : Function.Injective (swapBlocks (α := α) (β := β)) := by
   intro a b hab
   have h := congrArg (swapBlocks (α := β) (β := α)) hab
   simpa only [swapBlocks_swapBlocks] using h
 
-/-- **分块交换保重量**。 -/
+/-- **The block swap preserves weight**. -/
 lemma hammingNorm_swapBlocks
     (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) :
     hammingNorm (fun c => v (swapBlocks c)) = hammingNorm v := by
@@ -69,10 +76,11 @@ lemma hammingNorm_swapBlocks
     simpa only [swapBlocks_swapBlocks] using h
   exact le_antisymm h₁ h₂
 
-/-! ## 二、行恒等式与核的对应 -/
+/-! ## 2. The row identity and the correspondence of kernels -/
 
-/-- **行恒等式**：$H_Z(H_1^\top,H_2^\top)$ 的第 $x$ 行 = $H_X(H_1,H_2)$ 的第 $x$ 行
-再作分块交换（逐条目，直接来自第二片的转置码关系）。 -/
+/-- **The row identity**: row $x$ of $H_Z(H_1^\top,H_2^\top)$ is row $x$ of
+$H_X(H_1,H_2)$ followed by the block swap, entrywise, straight from the transpose-code
+relation of part two. -/
 lemma hgpHZ_row_eq_swap (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)) (x : Fin n₁ × Fin r₂) :
     hgpHZ H₁ H₂ x = fun c => hgpHX H₁.transpose H₂.transpose x (swapBlocks c) := by
@@ -83,7 +91,8 @@ lemma hgpHZ_row_eq_swap (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
   · have h := hgpHZ_transpose_inputs_apply H₁.transpose H₂.transpose x (Sum.inr st)
     simpa only [Equiv.sumComm_apply, swapBlocks, Matrix.transpose_transpose] using h
 
-/-- **点积的行恒等式**：两个核条件逐行相等（不只是"同时为零"）。 -/
+/-- **The row identity for the dot products**: the two kernel conditions are equal row by
+row, not merely vanishing together. -/
 theorem mulVec_swap_eq (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) (x : Fin n₁ × Fin r₂) :
@@ -102,7 +111,8 @@ theorem mulVec_swap_eq (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
   · intro c _
     rw [swapBlocks_swapBlocks]
 
-/-- **核的对应**：$v\in\ker H_Z(H_1,H_2)$ ⟺ 交换后的 $v$ 落在 $\ker H_X(H_1^\top,H_2^\top)$。 -/
+/-- **The correspondence of kernels**: $v\in\ker H_Z(H_1,H_2)$ exactly when the swapped
+$v$ lies in $\ker H_X(H_1^\top,H_2^\top)$. -/
 theorem hgpHZ_mulVec_eq_zero_iff_swap (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) :
@@ -114,9 +124,10 @@ theorem hgpHZ_mulVec_eq_zero_iff_swap (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod
   · funext x
     rw [mulVec_swap_eq H₁ H₂ v x, congrFun h x]
 
-/-- **行空间的对应**：交换后落在 $H_Z(H_1^\top,H_2^\top)$ 行空间中的向量 $w$，
-其"再交换一次"落在 $H_X(H_1,H_2)$ 的行空间中——对 $v := w\circ\text{swap}$ 即
-$v\in\mathrm{row}H_X(H_1,H_2)$。 -/
+/-- **The correspondence of row spaces**: for a vector $w$ that after the swap lies in the
+row space of $H_Z(H_1^\top,H_2^\top)$, swapping once more puts it in the row space of
+$H_X(H_1,H_2)$; for $v := w\circ\text{swap}$ this says
+$v\in\mathrm{row}H_X(H_1,H_2)$. -/
 theorem mem_rowSpace_X_of_swap_mem_rowSpace_Z (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -169,14 +180,16 @@ theorem mem_rowSpace_X_of_swap_mem_rowSpace_Z (H₁ : Matrix (Fin r₁) (Fin n�
   have := hclosure (fun c => v (swapBlocks c)) h
   simpa only [swapBlocks_swapBlocks] using this
 
-/-! ## 三、Z 距离下界（X 侧定理的转置实例） -/
+/-! ## 3. The Z-distance lower bound, a transposed instance of the X-side theorem -/
 
-/-- **HGP 的 Z 距离下界**：不在 `H_X` 行空间中的非零 Z 型算符重量至少是
-$\min(d_1^\top, d_2)$——**转置码距离**与右码距的较小者。
+/-- **The Z-distance lower bound for HGP**: a nonzero Z-type operator outside the row
+space of `H_X` has weight at least $\min(d_1^\top, d_2)$, the smaller of the **transpose-code
+distance** and the distance of the right code.
 
-证明：把 $v$ 作分块交换后套用 X 侧定理（输入取 $(H_1^\top,H_2^\top)$）——
-转置把 $d_1\leftrightarrow d_1^\top$、$d_2^\top\leftrightarrow d_2$ 互换，
-故 X 侧的 $\min(d_1,d_2^\top)$ 在这里正是 $\min(d_1^\top,d_2)$。 -/
+The proof swaps the blocks of $v$ and applies the X-side theorem to the inputs
+$(H_1^\top,H_2^\top)$. Transposition interchanges $d_1\leftrightarrow d_1^\top$ and
+$d_2^\top\leftrightarrow d_2$, so the $\min(d_1,d_2^\top)$ of the X side is
+$\min(d_1^\top,d_2)$ here. -/
 theorem hgp_Z_distance_ge (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -193,19 +206,24 @@ theorem hgp_Z_distance_ge (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (fun w hw hw0 => hd₂ w hw (by simpa [Matrix.transpose_transpose] using hw0))
   rwa [hammingNorm_swapBlocks] at hmain
 
-/-! ## 四、四条"清洗步可卸"的 Z 侧版本（X 侧定理的转置实例）
+/-! ## 4. The Z-side versions of the four "cleaning step can be dropped" lemmas
+(transposed instances of the X-side theorems)
 
-X 侧（`GF2/HGPCleaning` §六）证了清洗下界的两步**各自可以换成一条核条件**，于是下界只剩
-一个因子。本节把四条逐条搬到 Z 侧——**论证一字未改**，只做与 `hgp_Z_distance_ge` 相同的
-三步运输（核的对应、行空间的对应、保重量）。两条"行清洁可卸"的搬成 $d_2\le|v|$、
-两条"列清洁可卸"的搬成 $d_1^\top\le|v|$：
+The X side (`GF2/HGPCleaning` §6) proves that **each** of the two steps of the cleaning
+lower bound can be replaced by a single kernel condition, leaving only one factor in the
+bound. This section transports the four lemmas to the Z side **without changing a single
+argument**, performing the same three-step transport as in `hgp_Z_distance_ge`: the
+correspondence of kernels, the correspondence of row spaces, and preservation of weight. The
+two "row cleaning can be dropped" lemmas become $d_2\le|v|$ and the two "column cleaning can
+be dropped" lemmas become $d_1^\top\le|v|$:
 
-| X 侧（核条件 → 只剩的因子） | Z 侧 |
+| X side (kernel condition → remaining factor) | Z side |
 |---|---|
-| $\ker H_1=0$（或 $\ker H_2=0$）$\Rightarrow d_2^\top$ | $\ker H_1^\top=0$（或 $\ker H_2^\top=0$）$\Rightarrow d_2$ |
-| $\ker H_1^\top=0$（或 $\ker H_2^\top=0$）$\Rightarrow d_1$ | $\ker H_1=0$（或 $\ker H_2=0$）$\Rightarrow d_1^\top$ | -/
+| $\ker H_1=0$ (or $\ker H_2=0$) $\Rightarrow d_2^\top$ | $\ker H_1^\top=0$ (or $\ker H_2^\top=0$) $\Rightarrow d_2$ |
+| $\ker H_1^\top=0$ (or $\ker H_2^\top=0$) $\Rightarrow d_1$ | $\ker H_1=0$ (or $\ker H_2=0$) $\Rightarrow d_1^\top$ | -/
 
-/-- **$d_Z$ 的下界（$\ker H_1=0$ 支）**：$H_1$ 单射时 $d_1^\top$ 一个因子就够。 -/
+/-- **A lower bound on $d_Z$, the $\ker H_1=0$ branch**: when $H_1$ is injective, the
+single factor $d_1^\top$ suffices. -/
 theorem hgp_Z_distance_ge_of_H1Ker_trivial
     (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -222,7 +240,8 @@ theorem hgp_Z_distance_ge_of_H1Ker_trivial
     (fun u hu => by simpa [Matrix.transpose_transpose] using hT u hu)
   rwa [hammingNorm_swapBlocks] at hmain
 
-/-- **$d_Z$ 的下界（$\ker H_2^\top=0$ 支）**：$H_2^\top$ 单射时 $d_2$ 一个因子就够。 -/
+/-- **A lower bound on $d_Z$, the $\ker H_2^\top=0$ branch**: when $H_2^\top$ is
+injective, the single factor $d_2$ suffices. -/
 theorem hgp_Z_distance_ge_of_H2TKer_trivial
     (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -239,7 +258,8 @@ theorem hgp_Z_distance_ge_of_H2TKer_trivial
     hT
   rwa [hammingNorm_swapBlocks] at hmain
 
-/-- **$d_Z$ 的下界（$\ker H_1^\top=0$ 支）**：$H_1^\top$ 单射时 $d_2$ 一个因子就够。 -/
+/-- **A lower bound on $d_Z$, the $\ker H_1^\top=0$ branch**: when $H_1^\top$ is
+injective, the single factor $d_2$ suffices. -/
 theorem hgp_Z_distance_ge_of_H1TKer_trivial
     (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -256,7 +276,8 @@ theorem hgp_Z_distance_ge_of_H1TKer_trivial
     hT
   rwa [hammingNorm_swapBlocks] at hmain
 
-/-- **$d_Z$ 的下界（$\ker H_2=0$ 支）**：$H_2$ 单射时 $d_1^\top$ 一个因子就够。 -/
+/-- **A lower bound on $d_Z$, the $\ker H_2=0$ branch**: when $H_2$ is injective, the
+single factor $d_1^\top$ suffices. -/
 theorem hgp_Z_distance_ge_of_H2Ker_trivial
     (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}

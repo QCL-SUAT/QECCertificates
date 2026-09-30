@@ -1,46 +1,57 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Codes.MeasurementProtocol
 import QECCertificates.Codes.BaconShor
 
 /-!
-# Bacon–Shor $[[9,1,3]]$ 横向测量的两分量（内核内实例）
+# The two components of transversal measurement for Bacon–Shor $[[9,1,3]]$ (kernel-checked instances)
 
-`Codes/BaconShor.lean` 给了这个码的**静态**结构（$k=1$、$d_X=d_Z=3$），
-`Codes/MeasurementProtocol.lean` 给了**测量协议**的表示层（单轮故障模式、
-跨轮拼接、时间轴律 $T\cdot s$）。本模块把两者接起来，在两个坐标系统里各给一个
-内核内实例。
+`Codes/BaconShor.lean` gives the **static** structure of this code ($k=1$, $d_X=d_Z=3$),
+and `Codes/MeasurementProtocol.lean` gives the representation layer of the **measurement
+protocol** (single-round fault patterns, concatenation across rounds, the timelike law
+$T\cdot s$). This module joins the two, giving one kernel-checked instance in each of two
+coordinate systems.
 
-## 协议
+## The protocol
 
-X 型裸逻辑是 $\bar X = $ 单列的全 $X$（重量 $3$，`bstXW`）。它是**逐比特算符之积**，
-故可以被**横向测量**：对支撑上的每个比特各测一次 $X$，逻辑读出值就是三个结果的乘积。
-两个问题各对应一个分量：
+The bare X-type logical operator is $\bar X = $ all $X$ on a single column (weight $3$,
+`bstXW`). It is a **product of single-bit operators**, so it can be **measured
+transversally**: measure $X$ once on each bit of the support, and the logical readout is
+the product of the three outcomes. The two questions correspond to the two components:
 
-* **空间轴**——一轮之内，逻辑读出只是**一个经典比特**。若只测这三个比特，没有任何
-  校验能发现其中一个结果报错（`bare_noLightFault`：单轮故障距离 $=1$）。
-  若把**整个 $3\times3$ 阵列**都测 $X$，则码的两条 X 型稳定子（相邻两列之积，重量 $6$）
-  成了轮内校验——此时单轮故障距离跳到 $3=d$（§一）。
-* **时间轴**——只测支撑时唯一的保护是**重复并比较各轮读出**。$\S$二 把这一条
-  算成精确值：$T$ 轮的时空故障距离恰为 $T$（§三）。取 $T=d=3$ 即得两分量都 $\ge d$。
+* **Spacelike component.** Within one round the logical readout is only **one classical
+  bit**. If only those three bits are measured, no check can detect that one of the
+  outcomes is wrong (`bare_noLightFault`: single-round fault distance $=1$). If instead
+  the **whole $3\times3$ array** is measured in $X$, the two X-type stabilizers of the
+  code (products of adjacent columns, weight $6$) become within-round checks, and the
+  single-round fault distance jumps to $3=d$ (Section 1).
+* **Timelike component.** When only the support is measured, the sole protection is to
+  **repeat and compare the round readouts**. Section 2 evaluates this exactly: the
+  spacetime fault distance over $T$ rounds is exactly $T$ (Section 3). Taking $T=d=3$
+  gives $\ge d$ for both components.
 
-## 两个坐标系统，同一个协议
+## Two coordinate systems, one protocol
 
-$\S$二 用**扁平坐标**：$9$ 个比特编号 $3t+i$（第 $t$ 轮、支撑比特 $i$），跨轮校验写成
-一条显式的 $2\times9$ 校验矩阵 `bsCrossChecks`——与 `Codes/CaseMatrix.lean` 的码实例同形，
-可直接 `by decide`。$\S$四 用**分层坐标** `Fin 3 → Vec 3`，把 `MeasurementProtocol` 的
-时间轴律实例化。两者给出同一个数 $3$，互为对账。
+Section 2 uses **flat coordinates**: the $9$ bits are numbered $3t+i$ (round $t$, support
+bit $i$), and the cross-round checks are written as an explicit $2\times9$ parity-check
+matrix `bsCrossChecks`, of the same shape as the code instances of
+`Codes/CaseMatrix.lean` and directly amenable to `by decide`. Section 4 uses **layered
+coordinates** `Fin 3 → Vec 3` and instantiates the timelike law of
+`MeasurementProtocol`. The two give the same number $3$, each a check on the other.
 
-## 逃逸模式的几何
+## The geometry of the escape patterns
 
-$\S$一 的核刻画值得单独说：躲过两条 X 型稳定子的故障模式，恰好是"三列奇偶性相同"的
-那些（`bsCrossChecks_ker_iff` 的空间轴版本）——而"三列全奇"的那一半正是
-$\text{Z 型裸逻辑} + \text{Z 型规范群}$（见 `tools/probeA/bs_measure_probe.py` 的逐条核对）。
-最小实现是**单行全 X**（$=$ 码的 Z 型裸逻辑 `bstZW`）：横向测量的逻辑翻转故障，
-在空间轴上就是码的一个逻辑算符。
+The kernel characterization of Section 1 deserves a word of its own: the fault patterns
+that evade both X-type stabilizers are exactly those whose three columns have equal
+parity (the spacelike version of `bsCrossChecks_ker_iff`), and the half in which all three
+columns are odd is exactly $\text{Z-type bare logical} + \text{Z-type gauge group}$ (an
+independent implementation of the same route checks this entry by entry). The minimum
+representative is **one full row of $X$** ($=$ the code's Z-type bare logical `bstZW`): on
+the spacelike component, the logical-flip fault of a transversal measurement is one of the
+code's own logical operators.
 -/
 
 namespace QECCertificates
@@ -52,123 +63,147 @@ open scoped BigOperators
 set_option maxRecDepth 100000
 set_option maxHeartbeats 8000000
 
-/-! ## 一、空间轴：单轮，整个阵列测 X（轮内校验 = 码的 X 型稳定子） -/
+/-! ## 1. Spacelike component: one round, the whole array measured in X (within-round checks = the X-type stabilizers of the code) -/
 
-/-- **横向测量的单轮读出泛函**（逻辑支撑上三个比特的奇偶性）。
+/-- **The single-round readout functional of a transversal measurement** (the parity of the
+three bits of the logical support).
 
-$3$ 个比特、每个各测一次 $X$、逻辑读出 $=$ 三个结果的乘积——这就是横向测量的全部内容。 -/
+Three bits, $X$ measured once on each, and the logical readout $=$ the product of the
+three outcomes: that is the whole content of a transversal measurement. -/
 def bsColumnReadout : Vec 3 := fun _ => 1
 
-/-- 第二条 X 型稳定子：相邻两列 $\{1,2\}$ 的全 $X$（重量 $6$）。
-第一条就是 `Codes/BaconShor.lean` 里的 `bstSX`（列 $\{0,1\}$）。 -/
+/-- The second X-type stabilizer: all $X$ on the adjacent columns $\{1,2\}$ (weight $6$).
+The first one is `bstSX` in `Codes/BaconShor.lean` (columns $\{0,1\}$). -/
 def bsCol12 : Vec 9 := e 1 + e 2 + e 4 + e 5 + e 7 + e 8
 
-/-- **单轮的轮内校验**：把整个阵列都测 $X$ 才能抽出的两条 X 型稳定子。 -/
+/-- **The within-round checks of a single round**: the two X-type stabilizers that can be
+extracted only when the whole array is measured in $X$. -/
 def bsStabChecks : Matrix (Fin 2) (Fin 9) (ZMod 2) := Matrix.of ![bstSX, bsCol12]
 
-/-- **单轮故障距离 $=3=d$**：躲过两条 X 型稳定子又翻转逻辑读出的故障模式，重量至少 $3$。
+/-- **Single-round fault distance $=3=d$**: a fault pattern that evades both X-type
+stabilizers and flips the logical readout has weight at least $3$.
 
-证书是重量限定枚举（`faultCand`，候选 $46$ 个）为空——故"三个结果里任一个错都会被
-发现"，要翻转逻辑得在**每一列**各放奇数个错。 -/
+The certificate is that a weight-bounded enumeration (`faultCand`, $46$ candidates) is
+empty, so a single wrong outcome among the three is detected, and flipping the logic
+requires an odd number of faults **in every column**. -/
 theorem bsSingleRound_noLightFault : NoLightFault bsStabChecks bstXW 3 :=
   noLightFault_of_faultCand_nil bsStabChecks bstXW (by decide)
 
-/-- **见证**：单行的全 $X$（$=$ 码的 Z 型裸逻辑 `bstZW`）躲过两条 X 型稳定子、
-却翻转逻辑读出，重量恰为 $3$。
+/-- **Witness**: all $X$ on a single row ($=$ the code's Z-type bare logical `bstZW`)
+evades both X-type stabilizers and yet flips the logical readout, with weight exactly $3$.
 
-故"逃逸模式"不是抽象的：它就是码自己的一个逻辑算符，横向搬到测量结果上。 -/
+So the escape pattern is not abstract: it is one of the code's own logical operators,
+carried across to the measurement outcomes. -/
 theorem bsSingleRound_witness :
     inKerB bsStabChecks bstZW = true ∧ bstXW ⬝ᵥ bstZW = 1 ∧ hammingNorm bstZW = 3 :=
   ⟨by decide, by decide, by decide⟩
 
-/-- **空间轴的两向夹逼**：单轮故障距离恰为 $3$——下界是上面那条，上界是 `bstZW` 的见证。 -/
+/-- **The two-sided bracket for the spacelike component**: the single-round fault distance
+is exactly $3$, the lower bound being the statement above and the upper bound the witness
+`bstZW`. -/
 theorem bsSingleRound_eq_d :
     (NoLightFault bsStabChecks bstXW 3) ∧
       (∃ f : Vec 9, inKerB bsStabChecks f = true ∧ bstXW ⬝ᵥ f = 1 ∧ hammingNorm f = 3) :=
   ⟨bsSingleRound_noLightFault, bstZW, bsSingleRound_witness.1, bsSingleRound_witness.2.1,
     bsSingleRound_witness.2.2⟩
 
-/-! ## 二、时间轴：只测支撑，重复 $T$ 轮（扁平坐标，显式校验矩阵）
+/-! ## 2. Timelike component: only the support measured, repeated over $T$ rounds (flat coordinates, explicit parity-check matrix)
 
-比特编号 $3t+i$（第 $t$ 轮、支撑比特 $i$，$t<3$、$i<3$）。跨轮校验是"第 $t$ 轮与第 $t+1$ 轮
-的全部比特"——两条相邻轮读出相等则校验为零，故这 $2$ 条校验**恰是"各轮读出全同"**。 -/
+Bits are numbered $3t+i$ (round $t$, support bit $i$, with $t<3$ and $i<3$). A cross-round
+check covers all bits of rounds $t$ and $t+1$: the check vanishes exactly when the readouts
+of two adjacent rounds agree, so these $2$ checks **say precisely that all round readouts
+are equal**. -/
 
-/-- 第 $t$ 轮的读出（该轮三个比特的指示向量）。 -/
+/-- The readout of round $0$ (the indicator vector of that round's three bits). -/
 def bsRound0 : Vec 9 := e 0 + e 1 + e 2
 
-/-- 第 $1$ 轮的读出。 -/
+/-- The readout of round $1$. -/
 def bsRound1 : Vec 9 := e 3 + e 4 + e 5
 
-/-- 第 $2$ 轮的读出。 -/
+/-- The readout of round $2$. -/
 def bsRound2 : Vec 9 := e 6 + e 7 + e 8
 
-/-- **跨轮校验矩阵**（$T=3$）：第 $0$ 行是第 $0,1$ 轮的全部比特，第 $1$ 行是第 $1,2$ 轮的全部比特。 -/
+/-- **The cross-round parity-check matrix** ($T=3$): row $0$ covers all bits of rounds
+$0,1$ and row $1$ those of rounds $1,2$. -/
 def bsCrossChecks : Matrix (Fin 2) (Fin 9) (ZMod 2) :=
   Matrix.of ![
     e 0 + e 1 + e 2 + e 3 + e 4 + e 5,
     e 3 + e 4 + e 5 + e 6 + e 7 + e 8
   ]
 
-/-- **跨轮校验的核刻画**：校验全零 $\iff$ 三轮读出全同——这就是"跨轮校验"的全部内容。 -/
+/-- **Kernel characterization of the cross-round checks**: all checks vanish $\iff$ the
+three round readouts agree, which is the entire content of the cross-round comparison. -/
 theorem bsCrossChecks_ker_iff :
     ∀ f : Vec 9, inKerB bsCrossChecks f = true ↔
       (bsRound0 ⬝ᵥ f = bsRound1 ⬝ᵥ f ∧ bsRound1 ⬝ᵥ f = bsRound2 ⬝ᵥ f) := by
   decide
 
-/-- **见证**：每一轮都把**同一个**比特的结果报错（重量 $3=T$）——三轮读出一致地翻转，
-跨轮比较看不出任何异常。 -/
+/-- **Witness**: the outcome of the **same** bit is reported wrongly in every round (weight
+$3=T$). The three round readouts flip consistently, so the cross-round comparison sees
+nothing wrong. -/
 def bsMeasureW : Vec 9 := e 0 + e 3 + e 6
 
-/-- 见证三事实：在校验核里（三轮读出全同且全为 $1$）、逻辑读出被翻转、重量 $=3=T$。 -/
+/-- The three witness facts: in the kernel of the checks (all three round readouts agree
+and all are $1$), the logical readout is flipped, and the weight is $=3=T$. -/
 theorem bsMeasureW_witness :
     inKerB bsCrossChecks bsMeasureW = true ∧ bsRound0 ⬝ᵥ bsMeasureW = 1 ∧
       hammingNorm bsMeasureW = 3 :=
   ⟨by decide, by decide, by decide⟩
 
-/-- **时间轴分量 $=3=T=d$（下界）**：躲过跨轮校验又翻转逻辑读出的故障模式，重量至少 $3$。
+/-- **Timelike component $=3=T=d$ (lower bound)**: a fault pattern that evades the
+cross-round checks and flips the logical readout has weight at least $3$.
 
-即"三轮里每一轮都必须各自不可探测地翻转一次"——一轮不同就暴露。 -/
+That is, each of the three rounds must carry its own undetectable flip: one round
+differing from the others is exposed. -/
 theorem bsMeasure_noLightFault : NoLightFault bsCrossChecks bsRound0 3 :=
   noLightFault_of_faultCand_nil bsCrossChecks bsRound0 (by decide)
 
-/-- **时间轴分量的两向夹逼**：$T=3$ 轮的横向测量，时空故障距离恰为 $3$——
-下界见 `bsMeasure_noLightFault`，上界是 `bsMeasureW` 的见证。取 $T=d=3$ 即两分量都 $\ge d$。 -/
+/-- **The two-sided bracket for the timelike component**: for a transversal measurement
+over $T=3$ rounds the spacetime fault distance is exactly $3$, the lower bound being
+`bsMeasure_noLightFault` and the upper bound the witness `bsMeasureW`. With $T=d=3$ both
+components are $\ge d$. -/
 theorem bsMeasure_eq_T :
     (NoLightFault bsCrossChecks bsRound0 3) ∧
       (∃ f : Vec 9, inKerB bsCrossChecks f = true ∧ bsRound0 ⬝ᵥ f = 1 ∧ hammingNorm f = 3) :=
   ⟨bsMeasure_noLightFault, bsMeasureW, bsMeasureW_witness.1, bsMeasureW_witness.2.1,
     bsMeasureW_witness.2.2⟩
 
-/-! ## 三、C2 的锐性：$T=2$ 时距离只有 $2<d$
+/-! ## 3. Sharpness of C2: at $T=2$ the distance is only $2<d$
 
-"轮数 $\ge d$"不是一条宽松的充分条件，而是**恰好**的门槛：同一协议取 $T=2$ 时，
-同样的构造给出距离 $2<3=d$——故 $T\ge d$ 是必要条件方向也成立的那条线。 -/
+A round count $\ge d$ is not a loose sufficient condition but **exactly** the threshold:
+at $T=2$ the same protocol, by the same construction, gives the distance $2<3=d$, so the
+converse direction holds as well. -/
 
-/-- $T=2$ 的跨轮校验矩阵：一行，两根轮的比特。 -/
+/-- The cross-round parity-check matrix for $T=2$: one row, covering the bits of the two
+rounds. -/
 def bsCrossChecks2 : Matrix (Fin 1) (Fin 6) (ZMod 2) :=
   Matrix.of (fun _ => (e 0 + e 1 + e 2 + e 3 + e 4 + e 5 : Vec 6))
 
-/-- $T=2$ 时第 $0$ 轮的读出。 -/
+/-- The readout of round $0$ when $T=2$. -/
 def bsRound0of2 : Vec 6 := e 0 + e 1 + e 2
 
-/-- **$T=2$ 时故障距离 $=2$**（下界）。 -/
+/-- **Fault distance $=2$ when $T=2$** (lower bound). -/
 theorem bsMeasure2_noLightFault : NoLightFault bsCrossChecks2 bsRound0of2 2 :=
   noLightFault_of_faultCand_nil bsCrossChecks2 bsRound0of2 (by decide)
 
-/-- **C2 的锐性**：$T=2$ 的同一协议给出重量恰好 $2$ 的不可探测逻辑故障，而 $2<3=d$。
-故"轮数 $<d$ $\Rightarrow$ 时间轴分量 $<d$"在这里是**显式见证**，不只是下界。 -/
+/-- **Sharpness of C2**: the same protocol at $T=2$ admits an undetectable logical fault of
+weight exactly $2$, and $2<3=d$. So the implication from a round count $<d$ to a timelike
+component $<d$ has an **explicit witness** here, not merely a lower bound. -/
 theorem bsMeasure2_lt_d :
     ∃ f : Vec 6, inKerB bsCrossChecks2 f = true ∧ bsRound0of2 ⬝ᵥ f = 1 ∧
       hammingNorm f = 2 ∧ 2 < 3 :=
   ⟨e 0 + e 3, by decide, by decide, by decide, by norm_num⟩
 
-/-! ### 三之二：另外两个轮数的读数（$T=1$ 与 $T=4$）
+/-! ### 3.2. Readings for two further round counts ($T=1$ and $T=4$)
 
-Figure 2 的测量曲线取四个轮数；下面两条把 $T=1$ 与 $T=4$ 也落成内核读数，
-于是那条曲线的**每一个画出来的点**都有内核断言（四个轮数各一条）。 -/
+The measurement curve of the companion paper (Figure 2) takes four round counts; the two
+statements below make $T=1$ and $T=4$ kernel readings as well, so that **every plotted
+point** of that curve has a kernel assertion (one per round count). -/
 
-/-- **$T=1$：一轮之内没有任何跨轮校验**，故重量 $1$ 的读数错误既不可探测又翻转逻辑，
-距离恰为 $1$——这正是"横向测量必须靠时间轴保护"的极端读数。 -/
+/-- **$T=1$: a single round has no cross-round check at all**, so a readout error of weight
+$1$ is both undetectable and logically flipping, and the distance is exactly $1$. This is
+the extreme reading of the requirement that a transversal measurement be protected along
+the timelike direction. -/
 theorem bsMeasure1_eq_one :
     (NoLightFault (0 : Matrix (Fin 0) (Fin 3) (ZMod 2)) (e 0 + e 1 + e 2 : Vec 3) 1) ∧
       (∃ f : Vec 3,
@@ -177,29 +212,32 @@ theorem bsMeasure1_eq_one :
   ⟨noLightFault_of_faultCand_nil _ _ (by decide),
     ⟨e 0, by decide, by decide, by decide⟩⟩
 
-/-- $T=4$ 的跨轮校验矩阵：三行，第 $i$ 行是第 $i$ 与 $i+1$ 轮的全部比特。 -/
+/-- The cross-round parity-check matrix for $T=4$: three rows, row $i$ covering all bits of
+rounds $i$ and $i+1$. -/
 def bsCrossChecks4 : Matrix (Fin 3) (Fin 12) (ZMod 2) :=
   Matrix.of ![(e 0 + e 1 + e 2 + e 3 + e 4 + e 5 : Vec 12),
                (e 3 + e 4 + e 5 + e 6 + e 7 + e 8 : Vec 12),
                (e 6 + e 7 + e 8 + e 9 + e 10 + e 11 : Vec 12)]
 
-/-- $T=4$ 时第 $0$ 轮的读出。 -/
+/-- The readout of round $0$ when $T=4$. -/
 def bsRound0of4 : Vec 12 := e 0 + e 1 + e 2
 
-/-- **$T=4$ 的时间轴分量 $=4=T$（下界）**。 -/
+/-- **The timelike component is $=4=T$ for $T=4$** (lower bound). -/
 theorem bsMeasure4_noLightFault : NoLightFault bsCrossChecks4 bsRound0of4 4 :=
   noLightFault_of_faultCand_nil bsCrossChecks4 bsRound0of4 (by decide)
 
-/-- **$T=4$ 的见证**：每轮翻同一个比特，重量 $=4=T$。 -/
+/-- **The witness for $T=4$**: the same bit is flipped in every round, weight $=4=T$. -/
 def bsMeasure4W : Vec 12 := e 0 + e 3 + e 6 + e 9
 
-/-- 见证三事实：在校验核里、逻辑读出被翻转、重量 $=4=T$。 -/
+/-- The three witness facts: in the kernel of the checks, the logical readout is flipped,
+and the weight is $=4=T$. -/
 theorem bsMeasure4W_witness :
     inKerB bsCrossChecks4 bsMeasure4W = true ∧ bsRound0of4 ⬝ᵥ bsMeasure4W = 1 ∧
       hammingNorm bsMeasure4W = 4 :=
   ⟨by decide, by decide, by decide⟩
 
-/-- **$T=4$ 的时间轴分量两向夹逼：距离恰为 $4=T$**——测量曲线的第四点。 -/
+/-- **Two-sided bracket for the timelike component at $T=4$: the distance is exactly
+$4=T$**, the fourth point of the measurement curve. -/
 theorem bsMeasure4_eq_T :
     (NoLightFault bsCrossChecks4 bsRound0of4 4) ∧
       (∃ f : Vec 12, inKerB bsCrossChecks4 f = true ∧ bsRound0of4 ⬝ᵥ f = 1 ∧
@@ -207,20 +245,22 @@ theorem bsMeasure4_eq_T :
   ⟨bsMeasure4_noLightFault, bsMeasure4W, bsMeasure4W_witness.1, bsMeasure4W_witness.2.1,
     bsMeasure4W_witness.2.2⟩
 
-/-! ## 四、分层坐标：把 `MeasurementProtocol` 的时间轴律实例化
+/-! ## 4. Layered coordinates: instantiating the timelike law of `MeasurementProtocol`
 
-$\S$二 的扁平坐标便于 `by decide`，$\S$四 的分层坐标 `Fin T → Vec 3` 是
-`MeasurementProtocol` 的通用形态。两者是同一个协议的两种写法，给出同一个数。 -/
+The flat coordinates of Section 2 are convenient for `by decide`, while the layered
+coordinates `Fin T → Vec 3` of Section 4 are the general shape of `MeasurementProtocol`.
+The two are two spellings of one protocol and give the same number. -/
 
-/-- **时间轴律在此协议上的实例**：单轮距离 $s=1$（`bare_noLightFault`：只测支撑时
-一轮之内无校验），故 $T$ 轮的时空故障重量 $\ge T\cdot 1=T$。 -/
+/-- **The timelike law instantiated on this protocol**: the single-round distance is $s=1$
+(`bare_noLightFault`: with only the support measured there is no check within a round), so
+the spacetime fault weight over $T$ rounds is $\ge T\cdot 1=T$. -/
 theorem bsTransversal_time_lower {T : ℕ} (f : SpacetimeFault T 3)
     (hker : ∀ t, inKerB (0 : Matrix (Fin 0) (Fin 3) (ZMod 2)) (f t) = true)
     (hlog : ∀ t, bsColumnReadout ⬝ᵥ f t = 1) : T ≤ spacetimeWeight f := by
   simpa using le_spacetimeWeight (bare_noLightFault bsColumnReadout (n := 3)) hker hlog
 
-/-- **$T=3$ 的见证**：每轮翻同一个比特，重量 $=3=T$——与 $\S$二 的 `bsMeasureW` 是同一模式
-（把它按 $3t+i$ 摊开就是 $e_0+e_3+e_6$）。 -/
+/-- **The witness for $T=3$**: the same bit is flipped in every round, weight $=3=T$, the
+same pattern as `bsMeasureW` in Section 2 (flattened by $3t+i$ it is $e_0+e_3+e_6$). -/
 theorem bsTransversal_T3_witness :
     ∃ f : SpacetimeFault 3 3,
       IsUndetectedSpacetimeFault (0 : Matrix (Fin 0) (Fin 3) (ZMod 2)) bsColumnReadout f ∧
@@ -229,13 +269,16 @@ theorem bsTransversal_T3_witness :
     (w := bsColumnReadout) (e (0 : Fin 3)) (by decide) (by decide) (by decide)
   simpa using h
 
-/-- **测量型时间轴的通用下界（对一切轮数）**：各轮读出全同、且多数轮翻转时，
-时空重量 $\ge T$。
+/-- **The general lower bound for a measurement-type timelike axis (for every round
+count)**: when all round readouts agree and more than half the rounds flip, the spacetime
+weight is $\ge T$.
 
-证明只有一步：读出全同（`AgreeOn`）给出公共值 $b$；$b=1$ 时每一轮自己都有
-$w\cdot f_t=1$，故每轮重量 $\ge1$，加起来即 $T$；$b=0$ 时没有一轮翻转，
-与"多数轮翻转"直接矛盾。**注意跨轮约束在这里没有别的出路**：它只把各轮绑成同一个值，
-而"翻转"要求那个值是 $1$，于是每一轮都得各自付一份重量。 -/
+The proof is one step: agreement (`AgreeOn`) gives a common value $b$. If $b=1$ then every
+round satisfies $w\cdot f_t=1$ on its own, so each round has weight $\ge1$ and the sum is
+$T$; if $b=0$ then no round flips, which contradicts the hypothesis that more than half
+do. **Note that the cross-round constraint has no other way out here**: it only ties the
+rounds to a single value, and flipping requires that value to be $1$, so every round has
+to pay its own share of the weight. -/
 theorem le_spacetimeWeight_of_agree {T : ℕ} {f : SpacetimeFault T 3}
     (hagree : AgreeOn bsColumnReadout f)
     (hlog : T < 2 * (Finset.univ.filter (fun t : Fin T => bsColumnReadout ⬝ᵥ f t = 1)).card) :
@@ -268,8 +311,9 @@ theorem le_spacetimeWeight_of_agree {T : ℕ} {f : SpacetimeFault T 3}
     rw [hemp] at hlog
     simp at hlog
 
-/-- **测量型时间轴的通用可达界（对一切轮数）**：把单轮见证复制到每一轮，
-重量恰为 $T$——下界与它合起来即"距离 $=T$"。 -/
+/-- **The general attainable bound for a measurement-type timelike axis (for every round
+count)**: copying the single-round witness into every round gives weight exactly $T$,
+which together with the lower bound yields a distance of $T$. -/
 theorem spacetimeWeight_witness_of_agree {T : ℕ} (hT : 0 < T) :
     ∃ f : SpacetimeFault T 3, AgreeOn bsColumnReadout f ∧
       T < 2 * (Finset.univ.filter (fun t : Fin T => bsColumnReadout ⬝ᵥ f t = 1)).card ∧
@@ -286,9 +330,11 @@ theorem spacetimeWeight_witness_of_agree {T : ℕ} (hT : 0 < T) :
     rw [Finset.sum_congr rfl fun t _ => hwt, Finset.sum_const, Finset.card_univ]
     simp
 
-/-- **只靠跨轮比较的测量模型，故障距离恰为轮数 $T$**（任意 $T\ge1$）：
-下界是 `le_spacetimeWeight_of_agree`，可达是 `spacetimeWeight_witness_of_agree`。
-$\S$三 的四条逐 $T$ 读数（$T=1,2,3,4$）就是这条的两侧在具体轮数上的取值。 -/
+/-- **For a measurement model that relies only on cross-round comparison, the fault
+distance is exactly the number of rounds $T$** (any $T\ge1$): the lower bound is
+`le_spacetimeWeight_of_agree` and attainability is `spacetimeWeight_witness_of_agree`.
+The four per-$T$ readings of Section 3 ($T=1,2,3,4$) are the two sides of this statement
+evaluated at concrete round counts. -/
 theorem measureTime_distance_eq_rounds {T : ℕ} (hT : 0 < T) :
     (∀ f : SpacetimeFault T 3, AgreeOn bsColumnReadout f →
       T < 2 * (Finset.univ.filter (fun t : Fin T => bsColumnReadout ⬝ᵥ f t = 1)).card →
@@ -298,8 +344,9 @@ theorem measureTime_distance_eq_rounds {T : ℕ} (hT : 0 < T) :
       spacetimeWeight f = T) :=
   ⟨fun _ h1 h2 => le_spacetimeWeight_of_agree h1 h2, spacetimeWeight_witness_of_agree hT⟩
 
-/-- **两分量各有一个内核实例**：空间轴 $3=d$（$\S$一）、时间轴 $T=d=3$（$\S$二/$\S$三），
-而 $3$ 正是 `Codes/BaconShor.lean` 判出的码距 `bst_dX`。 -/
+/-- **Each component has a kernel-checked instance**: the spacelike component gives $3=d$
+(Section 1) and the timelike component $T=d=3$ (Sections 2 and 3), and $3$ is exactly the
+code distance `bst_dX` determined in `Codes/BaconShor.lean`. -/
 theorem bsMeasure_T_eq_codeDistance :
     (3 : ℕ) = min_weight_ker_not_mem_rowspace bstHz bstHx := by
   rw [bst_dX]

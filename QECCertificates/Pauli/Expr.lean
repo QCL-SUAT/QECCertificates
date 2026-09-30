@@ -1,44 +1,57 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.KernelBasis
 
 /-!
-# 算符代数层（算符树）与判定层（GF(2) 辛表示）的翻译定理（Q3）
+# Translation theorems between the operator-algebra layer (operator trees) and the decision layer (GF(2) symplectic representation)
 
-指南点名要求"为算符代数层建**算符树中间表示**（把 Pauli 与逻辑算符的表达式写成树形），
-并与判定层的 GF(2) 辛表示之间给出**机器检验的翻译定理**——算符代数走树、
-距离与秩判定走向量，两套表示各司其职又互相衔接"。本模块是该要求的第一条落地。
+The specification calls for an **operator-tree intermediate representation** of the
+operator-algebra layer, in which the expressions for Pauli and logical operators are
+written as trees, together with **machine-checked translation theorems** connecting it to
+the GF(2) symplectic representation of the decision layer: operator algebra travels
+through trees, distance and rank decisions travel through vectors, and the two
+representations each serve their own purpose while meeting. This module is the first
+realization of that requirement.
 
-## 两层表示
+## The two representations
 
-| 层 | 对象 | 运算 |
+| Layer | Objects | Operation |
 |---|---|---|
-| 算符代数层（树） | `PauliExpr n`：叶 ="在第 `i` 位放单点 Pauli"，节点 = 乘法 | `PauliExpr.mul` |
-| 判定层（向量） | `Vec n × Vec n`：`(Z 侧, X 侧)` 两个 GF(2) 向量 | 逐位加 |
+| operator algebra (trees) | `PauliExpr n`: a leaf is "place a single-site Pauli at position `i`", a node is multiplication | `PauliExpr.mul` |
+| decision layer (vectors) | `Vec n × Vec n`: the two GF(2) vectors `(Z side, X side)` | coordinatewise addition |
 
-翻译 `toSymp` 把树求值成 Pauli 字再取辛编码；**主定理说它是乘法同态**：
+The translation `toSymp` evaluates a tree into a Pauli word and then takes its symplectic
+encoding; **the main theorem states that it is a multiplicative homomorphism**:
 
   `toSymp (mul a b) = toSymp a + toSymp b`.
 
-第二条翻译定理是**对易判据**：算符层"对易"（反对易站点数为偶数）
-等价于判定层辛内积为零。这条判据是稳定子码一切结构断言的入口。
+The second translation theorem is the **commutation criterion**: "commuting" at the
+operator layer, meaning an even number of anticommuting sites, is equivalent to the
+symplectic inner product vanishing at the decision layer. This criterion is the entry
+point to every structural statement about stabilizer codes.
 
-## 为什么两层都要
+## Why both layers are needed
 
-* 树层贴近**表达式**：逻辑算符、稳定子生成元、线路中间结果天然是表达式，
-  在树上做重写（合并同类项、消去 `P·P = 1`）不需要展开成 $2^n$ 维向量；
-* 向量层贴近**判定**：对易、秩、距离都是 GF(2) 上的线性代数，向量层可直接调用
-  `QECCertificates.GF2` 的整套机器。
+* The tree layer stays close to **expressions**: logical operators, stabilizer generators
+  and intermediate circuit results are naturally expressions, and rewriting on trees,
+  collecting like terms and cancelling `P·P = 1`, does not require expanding into
+  $2^n$-dimensional vectors.
+* The vector layer stays close to **decision**: commutation, rank and distance are all
+  linear algebra over GF(2), and the vector layer can call the whole
+  `QECCertificates.GF2` machinery directly.
 
-## 主结果
+## Main results
 
-* `Pauli.symp_mul`：单点乘法 ↔ 辛编码相加。
-* `Pauli.anti_eq_symp`：单点反对易指示 = 单点辛内积。
-* `toSymp_mul` / `toSymp_one`：**翻译是乘法同态**。
-* `commutesWord_iff_symplectic` / `commutes_iff_symplectic`：**对易判据（字版与树版）**。
+* `Pauli.symp_mul`: single-site multiplication corresponds to addition of symplectic
+  encodings.
+* `Pauli.anti_eq_symp`: the single-site anticommutation indicator equals the single-site
+  symplectic inner product.
+* `toSymp_mul` / `toSymp_one`: **the translation is a multiplicative homomorphism**.
+* `commutesWord_iff_symplectic` / `commutes_iff_symplectic`: **the commutation criterion,
+  in word form and in tree form**.
 -/
 
 namespace QECCertificates
@@ -47,9 +60,10 @@ open scoped BigOperators
 
 variable {n : ℕ}
 
-/-! ## 单点 Pauli -/
+/-! ## Single-site Pauli operators -/
 
-/-- 单量子比特 Pauli 算符（模去相位；相位不进辛表示）。 -/
+/-- Single-qubit Pauli operators, modulo phase; the phase does not enter the symplectic
+representation. -/
 inductive Pauli where
   | I | X | Y | Z
   deriving DecidableEq, Repr
@@ -60,7 +74,8 @@ instance : Fintype Pauli where
 
 namespace Pauli
 
-/-- 模去相位的 Pauli 乘法（Pauli 群横模 $\{\pm1,\pm i\}$ 后的群运算）。 -/
+/-- Pauli multiplication modulo phase: the group operation after quotienting the Pauli
+group by $\{\pm1,\pm i\}$. -/
 def mul : Pauli → Pauli → Pauli
   | .I, q => q
   | p, .I => p
@@ -74,18 +89,20 @@ def mul : Pauli → Pauli → Pauli
   | .Z, .Y => .X
   | .Z, .Z => .I
 
-/-- **辛编码**：`(Z 分量, X 分量)`。$I\mapsto(0,0)$、$X\mapsto(0,1)$、
-$Z\mapsto(1,0)$、$Y\mapsto(1,1)$。 -/
+/-- **Symplectic encoding**: `(Z component, X component)`. $I\mapsto(0,0)$,
+$X\mapsto(0,1)$, $Z\mapsto(1,0)$, $Y\mapsto(1,1)$. -/
 def symp : Pauli → ZMod 2 × ZMod 2
   | .I => (0, 0)
   | .X => (0, 1)
   | .Y => (1, 1)
   | .Z => (1, 0)
 
-/-- **单点反对易指示**：非恒等且两者不同 ⟹ 1（反对易），否则 0（对易）。
+/-- **The single-site anticommutation indicator**: 1, meaning anticommute, when neither
+factor is the identity and the two differ, and 0, meaning commute, otherwise.
 
-按物理定义直接给出（$X,Y,Z$ 两两反对易），不借助辛编码——
-下文的 `anti_eq_symp` 才是"它与辛内积一致"的机器检验定理。 -/
+It is given directly by the physical definition, since $X,Y,Z$ anticommute pairwise,
+without recourse to the symplectic encoding; `anti_eq_symp` below is the machine-checked
+result that it agrees with the symplectic inner product. -/
 def anti : Pauli → Pauli → ZMod 2
   | .I, _ => 0
   | _, .I => 0
@@ -101,34 +118,37 @@ lemma mul_comm (p q : Pauli) : mul p q = mul q p := by fin_cases p <;> fin_cases
 lemma mul_assoc (p q r : Pauli) : mul (mul p q) r = mul p (mul q r) := by
   fin_cases p <;> fin_cases q <;> fin_cases r <;> rfl
 
-/-- **翻译定理（单点）**：单点乘法过去就是辛编码逐位相加。 -/
+/-- **Translation theorem, single site**: single-site multiplication carries over to
+coordinatewise addition of symplectic encodings. -/
 lemma symp_mul (p q : Pauli) : symp (mul p q) = symp p + symp q := by
   fin_cases p <;> fin_cases q <;> decide
 
 @[simp] lemma anti_self (p : Pauli) : anti p p = 0 := by cases p <;> rfl
 lemma anti_comm (p q : Pauli) : anti p q = anti q p := by fin_cases p <;> fin_cases q <;> decide
 
-/-- **翻译定理（单点对易判据）**：反对易指示恰好等于单点辛内积
-`(z_p x_q + z_q x_p)`。 -/
+/-- **Translation theorem, single-site commutation criterion**: the anticommutation
+indicator equals exactly the single-site symplectic inner product `(z_p x_q + z_q x_p)`. -/
 lemma anti_eq_symp (p q : Pauli) :
     anti p q = (symp p).1 * (symp q).2 + (symp q).1 * (symp p).2 := by
   fin_cases p <;> fin_cases q <;> decide
 
 end Pauli
 
-/-! ## Pauli 字（判定层的对象） -/
+/-! ## Pauli words (the objects of the decision layer) -/
 
-/-- Pauli 字：每个位置放一个单点 Pauli。这是辛表示的原像。 -/
+/-- A Pauli word: a single-site Pauli at every position. This is the preimage of the
+symplectic representation. -/
 abbrev PauliWord (n : ℕ) := Fin n → Pauli
 
-/-- **判定层的辛向量对**：`(Z 侧, X 侧)`。 -/
+/-- **The symplectic vector pair of the decision layer**: `(Z side, X side)`. -/
 def sympWord (w : PauliWord n) : Vec n × Vec n :=
   ((fun i => (Pauli.symp (w i)).1), (fun i => (Pauli.symp (w i)).2))
 
 @[simp] lemma sympWord_fst (w : PauliWord n) : (sympWord w).1 = fun i => (Pauli.symp (w i)).1 := rfl
 @[simp] lemma sympWord_snd (w : PauliWord n) : (sympWord w).2 = fun i => (Pauli.symp (w i)).2 := rfl
 
-/-- **算符层对易**：反对易的站点数为偶数（GF(2) 上求和为零）。 -/
+/-- **Commutation at the operator layer**: the number of anticommuting sites is even,
+that is, the sum over GF(2) is zero. -/
 def commutesWord (u v : PauliWord n) : Prop := (∑ i, Pauli.anti (u i) (v i)) = 0
 
 lemma commutesWord_symm {u v : PauliWord n} (h : commutesWord u v) : commutesWord v u := by
@@ -137,15 +157,17 @@ lemma commutesWord_symm {u v : PauliWord n} (h : commutesWord u v) : commutesWor
     Finset.sum_congr rfl fun i _ => Pauli.anti_comm (v i) (u i)
   rw [hswap]; exact h
 
-/-- 每个 Pauli 字与自己对易（辛形式是交错的）。 -/
+/-- Every Pauli word commutes with itself, since the symplectic form is alternating. -/
 @[simp] lemma commutesWord_self (u : PauliWord n) : commutesWord u u := by
   rw [commutesWord]
   exact Finset.sum_eq_zero fun i _ => Pauli.anti_self (u i)
 
-/-- **对易判据（字版）**：算符层对易 ⟺ 判定层辛内积为零。
+/-- **The commutation criterion, word form**: commutation at the operator layer if and
+only if the symplectic inner product vanishes at the decision layer.
 
-证明是把单点对应 `anti_eq_symp` 逐点搬过来再拆和——
-两层的"对易"是同一个 GF(2) 二次型的两个写法。 -/
+The proof transports the single-site correspondence `anti_eq_symp` pointwise and then
+splits the sum; "commutation" in the two layers is one and the same GF(2) quadratic form
+written two ways. -/
 theorem commutesWord_iff_symplectic (u v : PauliWord n) :
     commutesWord u v ↔
       (sympWord u).1 ⬝ᵥ (sympWord v).2 + (sympWord v).1 ⬝ᵥ (sympWord u).2 = 0 := by
@@ -159,29 +181,33 @@ theorem commutesWord_iff_symplectic (u v : PauliWord n) :
       show (∑ i, (sympWord v).1 i * (sympWord u).2 i)
         = (sympWord v).1 ⬝ᵥ (sympWord u).2 from rfl]
 
-/-! ## 算符树（算符代数层的对象） -/
+/-! ## Operator trees (the objects of the operator-algebra layer) -/
 
-/-- **算符树**：叶是"在第 `i` 位放单点 Pauli"，节点是乘法，另有显式单位。
+/-- **Operator trees**: a leaf is "place a single-site Pauli at position `i`", a node is
+multiplication, and there is an explicit unit.
 
-这是指南点名的"算符代数层中间表示"：表达式在树上做重写
-（合并、消去 $P\cdot P = 1$）不必展开成 $2^n$ 维向量。 -/
+This is the operator-tree intermediate representation of the operator-algebra layer
+called for by the specification: rewriting on trees, collecting and cancelling
+$P\cdot P = 1$, does not require expanding into $2^n$-dimensional vectors. -/
 inductive PauliExpr (n : ℕ) where
-  /-- 在第 `i` 位放单点 Pauli `p`。 -/
+  /-- Place the single-site Pauli `p` at position `i`. -/
   | atom (i : Fin n) (p : Pauli)
-  /-- 单位算符。 -/
+  /-- The identity operator. -/
   | one
-  /-- 乘法节点。 -/
+  /-- A multiplication node. -/
   | mul (a b : PauliExpr n)
 
 namespace PauliExpr
 
-/-- 树求值：叶展开为"单位向量上的单点 Pauli"，乘法节点逐位相乘。 -/
+/-- Tree evaluation: a leaf expands to a single-site Pauli on the unit vector, and a
+multiplication node multiplies coordinatewise. -/
 def eval : PauliExpr n → PauliWord n
   | .atom i p => fun j => if j = i then p else .I
   | .one => fun _ => .I
   | .mul a b => fun i => Pauli.mul (eval a i) (eval b i)
 
-/-- **两层之间的翻译**：算符树 → GF(2) 辛向量对。 -/
+/-- **The translation between the two layers**: operator tree to GF(2) symplectic vector
+pair. -/
 def toSymp (e : PauliExpr n) : Vec n × Vec n := sympWord (eval e)
 
 @[simp] lemma eval_one : eval (.one : PauliExpr n) = fun _ => Pauli.I := rfl
@@ -192,17 +218,20 @@ def toSymp (e : PauliExpr n) : Vec n × Vec n := sympWord (eval e)
 @[simp] lemma toSymp_one : toSymp (.one : PauliExpr n) = 0 := by
   refine Prod.ext ?_ ?_ <;> funext i <;> simp [toSymp, sympWord, Pauli.symp]
 
-/-- **主翻译定理（乘法同态）**：算符树上的乘法，翻译过去就是辛向量的逐位加。
+/-- **The main translation theorem, a multiplicative homomorphism**: multiplication on
+operator trees carries over to coordinatewise addition of symplectic vectors.
 
-这正是"两套表示互相衔接"的内容：树层的结构运算（乘法）在判定层是线性的，
-于是树上的表达式可以整体翻译到向量层，交给 `QECCertificates.GF2` 的线性代数机器。 -/
+This is the content of "the two representations meet": the structural operation of the
+tree layer, namely multiplication, is linear at the decision layer, so an expression on
+trees can be translated as a whole to the vector layer and handed to the linear algebra
+machinery of `QECCertificates.GF2`. -/
 theorem toSymp_mul (a b : PauliExpr n) : toSymp (.mul a b) = toSymp a + toSymp b := by
   refine Prod.ext ?_ ?_ <;>
     · funext i
       simp only [toSymp, sympWord, eval_mul, Prod.fst_add, Prod.snd_add, Pi.add_apply,
         Pauli.symp_mul, Prod.fst_add, Prod.snd_add]
 
-/-- 叶子的翻译：只有第 `i` 位非零。 -/
+/-- Translation of a leaf: only position `i` is nonzero. -/
 lemma toSymp_atom (i : Fin n) (p : Pauli) :
     toSymp (.atom i p)
       = ((fun j => if j = i then (Pauli.symp p).1 else 0),
@@ -211,13 +240,17 @@ lemma toSymp_atom (i : Fin n) (p : Pauli) :
     · simp only [toSymp, sympWord, eval]
       by_cases h : j = i <;> simp [h, Pauli.symp]
 
-/-- **算符层对易（树版）**：把两棵树各自求值后按字判对易。 -/
+/-- **Commutation at the operator layer, tree form**: evaluate the two trees and test
+commutation of the resulting words. -/
 def commutes (a b : PauliExpr n) : Prop := commutesWord (eval a) (eval b)
 
-/-- **对易翻译定理（树版）**：树层对易 ⟺ 判定层辛内积为零。
+/-- **The translation theorem for commutation, tree form**: commutation at the tree layer
+if and only if the symplectic inner product vanishes at the decision layer.
 
-这是本模块对外的**主判据**：稳定子码的一切结构断言（元素属于稳定子群、
-逻辑算符与稳定子对易、码距候选与校验对易）都归约到它。 -/
+This is the main public criterion of this module: every structural statement about
+stabilizer codes, whether an element lies in the stabilizer group, whether a logical
+operator commutes with the stabilizers, or whether a distance candidate commutes with the
+checks, reduces to it. -/
 theorem commutes_iff_symplectic (a b : PauliExpr n) :
     commutes a b ↔ (toSymp a).1 ⬝ᵥ (toSymp b).2 + (toSymp b).1 ⬝ᵥ (toSymp a).2 = 0 :=
   commutesWord_iff_symplectic (eval a) (eval b)

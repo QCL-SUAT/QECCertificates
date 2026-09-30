@@ -1,46 +1,51 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.KunnethCore
 
 /-!
-# HGP 的维数张量公式 `k = k₁k₂ + k₁ᵀk₂ᵀ`（ 收官）
+# The dimension tensor formula for HGP: `k = k₁k₂ + k₁ᵀk₂ᵀ`
 
-Tillich–Zémor 超图积的**逻辑比特数**满足 Künneth 型张量公式：
+The **number of logical qubits** of the Tillich–Zémor hypergraph product satisfies a
+Künneth-type tensor formula:
 
 $$k(\mathrm{HGP}(H_1,H_2)) \;=\; k_1k_2 + k_1^\top k_2^\top,\qquad
 k_1 = \dim\ker H_1,\quad k_1^\top=\dim\ker H_1^\top,$$
 
-其中 $k = n - \operatorname{rank}H_X - \operatorname{rank}H_Z$（$n = n_1n_2+r_1r_2$）。
-第一片给出了构造与 CSS 正交性、第二片压缩恒等式、第三片距离下界——本模块补上**维数一侧**，
- 由此收官（距离 + 维数两侧都成了对任意输入 $H_1,H_2$ 的结构化定理）。
+where $k = n - \operatorname{rank}H_X - \operatorname{rank}H_Z$ ($n = n_1n_2+r_1r_2$).
+The first part gives the construction and the CSS orthogonality, the second the compression
+identity and the third the distance lower bound; this module supplies the **dimension
+side**, and with it the picture is complete: both the distance side and the dimension side
+are structural theorems for arbitrary inputs $H_1,H_2$.
 
-## 证明骨架
+## Proof outline
 
-`hgpHX` 的秩是分块矩阵的秩：
+The rank of `hgpHX` is the rank of a block matrix:
 
 $$\operatorname{rank}[\,A\otimes I_s \mid I_p\otimes B^\top\,]
 = \operatorname{rank}(A\otimes I_s) + \operatorname{rank}(I_p\otimes B^\top)
  - \dim\big(\mathrm{im}(A\otimes I_s)\cap \mathrm{im}(I_p\otimes B^\top)\big),$$
 
-三项各自是 `KunnethCore` 的维数事实：
+and each of the three terms is a dimension fact from `KunnethCore`:
 
-| 项 | 识别 | 维数 |
+| term | identification | dimension |
 |---|---|---|
-| `im(A ⊗ I)` | 列 ⊆ `col A` 的矩阵（`colsSub`） | `s · rank A`（`finrank_colsSub`） |
-| `im(I ⊗ Bᵀ)` | 行 ⊆ `row B` 的矩阵（`rowsSub`） | `p · rank B`（`finrank_rowsSub`） |
-| 交集 | **列 ⊆ `col A` 且行 ⊆ `row B`** | `rank A · rank B`（`finrank_colsRows`，即"子空间张量交"） |
+| `im(A ⊗ I)` | matrices with columns in `col A` (`colsSub`) | `s · rank A` (`finrank_colsSub`) |
+| `im(I ⊗ Bᵀ)` | matrices with rows in `row B` (`rowsSub`) | `p · rank B` (`finrank_rowsSub`) |
+| intersection | **columns in `col A` and rows in `row B`** | `rank A · rank B` (`finrank_colsRows`, the tensor intersection of subspaces) |
 
-对 $H_Z$ 走**转置码运输**（第三片的 `mulVec_swap_eq`）：$H_Z(A,B)$ 与
-$H_X(A^\top,B^\top)$ 只差列的分块交换，秩相同——与距离一侧共用同一套论证。
+For $H_Z$ the transport goes along the transpose code (`mulVec_swap_eq` from the third
+part):
+$H_Z(A,B)$ and $H_X(A^\top,B^\top)$ differ only by the block swap of the columns, so their
+ranks agree, and the distance side runs on the same argument.
 
-## 主结果
+## Main results
 
-* `rank_hgpHX_add`：`rank H_X + rank A · rank B = n₂ · rank A + r₁ · rank B`；
-* `rank_hgpHZ_add`：`rank H_Z + rank A · rank B = r₂ · rank A + n₁ · rank B`；
-* **`hgp_kunneth`**：$k = k_1k_2+k_1^\top k_2^\top$（减法形）。
+* `rank_hgpHX_add`: `rank H_X + rank A · rank B = n₂ · rank A + r₁ · rank B`;
+* `rank_hgpHZ_add`: `rank H_Z + rank A · rank B = r₂ · rank A + n₁ · rank B`;
+* **`hgp_kunneth`**: $k = k_1k_2+k_1^\top k_2^\top$ (subtraction form).
 -/
 
 namespace QECCertificates
@@ -51,9 +56,10 @@ open scoped BigOperators
 
 variable {p q r s : ℕ} {r₁ n₁ r₂ n₂ : ℕ}
 
-/-! ## 一、两个块映射 `M ↦ A·M` 与 `N ↦ N·B` -/
+/-! ## 1. The two block maps `M ↦ A·M` and `N ↦ N·B` -/
 
-/-- **左乘块** `M ↦ A·M`（即 $A\otimes I$）：行 `p` 由 `A` 作用、列不动。 -/
+/-- **Left multiplication block** `M ↦ A·M` (that is, $A\otimes I$): the rows `p` carry the
+action of `A` and the columns stay fixed. -/
 noncomputable def mulLeft (A : Matrix (Fin p) (Fin q) (ZMod 2)) : VMat q s →ₗ[ZMod 2] VMat p s where
   toFun M := fun ij => ∑ a, A ij.1 a * M (a, ij.2)
   map_add' M N := by
@@ -66,7 +72,8 @@ noncomputable def mulLeft (A : Matrix (Fin p) (Fin q) (ZMod 2)) : VMat q s →�
     intro x _
     ring
 
-/-- **右乘块** `N ↦ N·B`（即 $I\otimes B$）：列由 `B` 作用、行不动。 -/
+/-- **Right multiplication block** `N ↦ N·B` (that is, $I\otimes B$): the columns carry the
+action of `B` and the rows stay fixed. -/
 noncomputable def mulRight (B : Matrix (Fin r) (Fin s) (ZMod 2)) : VMat p r →ₗ[ZMod 2] VMat p s where
   toFun N := fun ij => ∑ t, N (ij.1, t) * B t ij.2
   map_add' M N := by
@@ -80,9 +87,10 @@ noncomputable def mulRight (B : Matrix (Fin r) (Fin s) (ZMod 2)) : VMat p r →�
     intro x _
     ring
 
-/-! ## 二、两个块的像：列约束 / 行约束 -/
+/-! ## 2. The images of the two blocks: column and row constraints -/
 
-/-- **左乘块的像 = 列约束空间**：`M ↦ A·M` 的像恰是"每列都在 `A` 的列空间中"的矩阵。 -/
+/-- **The image of the left block is the column-constraint space**: the image of `M ↦ A·M`
+consists exactly of the matrices whose every column lies in the column space of `A`. -/
 theorem range_mulLeft (A : Matrix (Fin p) (Fin q) (ZMod 2)) :
     LinearMap.range (mulLeft (s := s) A) = colsSub (LinearMap.range A.mulVecLin) := by
   ext X
@@ -105,7 +113,8 @@ theorem range_mulLeft (A : Matrix (Fin p) (Fin q) (ZMod 2)) :
       exact h
     exact hstep
 
-/-- **右乘块的像 = 行约束空间**：`N ↦ N·B` 的像恰是"每行都在 `B` 的行空间中"的矩阵。 -/
+/-- **The image of the right block is the row-constraint space**: the image of `N ↦ N·B`
+consists exactly of the matrices whose every row lies in the row space of `B`. -/
 theorem range_mulRight (B : Matrix (Fin r) (Fin s) (ZMod 2)) :
     LinearMap.range (mulRight (p := p) B) = rowsSub (Matrix.rowSpace B) := by
   ext X
@@ -130,18 +139,18 @@ theorem range_mulRight (B : Matrix (Fin r) (Fin s) (ZMod 2)) :
       exact h
     exact hstep
 
-/-! ## 三、`H_X` 的秩 -/
+/-! ## 3. The rank of `H_X` -/
 
-/-- 分块读取（乘积索引）：左半块 `n₁×n₂`。 -/
+/-- Block reading (product index): the left block `n₁×n₂`. -/
 def blkL (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) : VMat n₁ n₂ :=
   fun ab => v (Sum.inl ab)
 
-/-- 分块读取（乘积索引）：右半块 `r₁×r₂`。 -/
+/-- Block reading (product index): the right block `r₁×r₂`. -/
 def blkR (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) : VMat r₁ r₂ :=
   fun st => v (Sum.inr st)
 
-/-- **`H_X` 的分块作用**：`H_X v = A·U + R·B`（`U = blkL v`、`R = blkR v`）——
-压缩恒等式的"矩阵之和"形态。 -/
+/-- **The block action of `H_X`**: `H_X v = A·U + R·B` (with `U = blkL v` and `R = blkR v`),
+the "sum of matrices" form of the compression identity. -/
 theorem hgpHX_mulVecLin_eq_blocks (A : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (B : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) :
@@ -152,7 +161,7 @@ theorem hgpHX_mulVecLin_eq_blocks (A : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
   rw [Matrix.mulVecLin_apply, hgpHX_mulVec_apply, Matrix.mul_apply, Matrix.mul_apply]
   rfl
 
-/-- **`H_X` 的秩 = 两个块的像之和的维数**。 -/
+/-- **The rank of `H_X` equals the dimension of the sum of the images of the two blocks**. -/
 theorem rank_hgpHX_add (A : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (B : Matrix (Fin r₂) (Fin n₂) (ZMod 2)) :
     (hgpHX A B).rank + A.rank * B.rank = A.rank * n₂ + B.rank * r₁ := by
@@ -196,10 +205,11 @@ theorem rank_hgpHX_add (A : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
   rw [h3, h1, h2] at hsup
   exact hsup
 
-/-! ## 四、`H_Z` 的秩（转置码运输） -/
+/-! ## 4. The rank of `H_Z` (transport along the transpose code) -/
 
-/-- **`H_Z` 的秩 = `H_X` 在转置输入上的秩**：两个矩阵只差列的分块交换
-（第三片的 `mulVec_swap_eq`），故像相同。 -/
+/-- **The rank of `H_Z` equals the rank of `H_X` on the transposed inputs**: the two
+matrices differ only by the block swap of the columns (`mulVec_swap_eq` from the third
+part), so their images agree. -/
 theorem rank_hgpHZ_eq (A : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (B : Matrix (Fin r₂) (Fin n₂) (ZMod 2)) :
     (hgpHZ A B).rank = (hgpHX A.transpose B.transpose).rank := by
@@ -220,7 +230,8 @@ theorem rank_hgpHZ_eq (A : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
         simp only [swapBlocks_swapBlocks]⟩
   rw [Matrix.rank, Matrix.rank, hrange]
 
-/-- **`H_Z` 的秩**：与 `rank_hgpHX_add` 同形，`n₂ ↦ r₂`、`r₁ ↦ n₁`。 -/
+/-- **The rank of `H_Z`**: the same shape as `rank_hgpHX_add`, with `n₂ ↦ r₂` and
+`r₁ ↦ n₁`. -/
 theorem rank_hgpHZ_add (A : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (B : Matrix (Fin r₂) (Fin n₂) (ZMod 2)) :
     (hgpHZ A B).rank + A.rank * B.rank = A.rank * r₂ + B.rank * n₁ := by
@@ -229,10 +240,11 @@ theorem rank_hgpHZ_add (A : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
   rw [rank_hgpHZ_eq]
   exact h
 
-/-! ## 五、维数张量公式 -/
+/-! ## 5. The dimension tensor formula -/
 
-/-- **维数张量公式（整数形式）**：把 `k = n - rank H_X - rank H_Z` 写成加法，
-在 `ℤ` 上做多项式算术（`nlinarith`），避免 `ℕ` 截断减法。 -/
+/-- **Dimension tensor formula (integer form)**: rewrite `k = n - rank H_X - rank H_Z`
+additively and do the polynomial arithmetic over `ℤ` (`nlinarith`), which avoids truncated
+subtraction in `ℕ`. -/
 theorem hgp_kunneth_int (A : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (B : Matrix (Fin r₂) (Fin n₂) (ZMod 2)) :
     ((hgpHX A B).rank : ℤ) + ((hgpHZ A B).rank : ℤ)
@@ -247,11 +259,14 @@ theorem hgp_kunneth_int (A : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     exact_mod_cast rank_hgpHZ_add A B
   nlinarith [h1, h2]
 
-/-- **HGP 的维数张量公式（Künneth）**：逻辑比特数 $k = n - \operatorname{rank}H_X -
-\operatorname{rank}H_Z$ 恰为 $k_1k_2 + k_1^\top k_2^\top$（两个经典码的核维数之积的和）。
+/-- **Dimension tensor formula for HGP (Künneth)**: the number of logical qubits
+$k = n - \operatorname{rank}H_X - \operatorname{rank}H_Z$ is exactly
+$k_1k_2 + k_1^\top k_2^\top$ (the sum of the products of the kernel dimensions of the two
+classical codes).
 
-这是  的最后一块：距离一侧（第三片 + 对偶侧）与维数一侧（本定理）合起来，
-$n\ge144$ 的 HGP 族参数有了**不依赖枚举**的结构化断言。 -/
+This is the last piece: the distance side (the third part together with the dual side) and
+the dimension side (this theorem) together give the HGP family parameters for $n\ge144$ a
+**structural assertion that does not rely on enumeration**. -/
 theorem hgp_kunneth (A : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (B : Matrix (Fin r₂) (Fin n₂) (ZMod 2)) :
     (n₁ * n₂ + r₁ * r₂) - (hgpHX A B).rank - (hgpHZ A B).rank

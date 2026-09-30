@@ -2,17 +2,26 @@ cff-version: 1.2.0
 message: "If you use QECCertificates in academic work, please cite it as below."
 title: "QECCertificates: certified code parameters and fault distances"
 abstract: >-
-  A Lean 4 library and a certificate toolchain for quantum error correction: the
-  GF(2) and symplectic machinery, an in-kernel checker for LRAT certificates, and a
-  Python certificate chain that encodes distance lower bounds as CNF and checks the
-  resulting proofs independently of any solver.
+  A Lean 4 library for certified quantum error correction: the GF(2) and symplectic
+  machinery that turns a code parameter into a checkable statement, an in-kernel checker
+  for LRAT certificates together with its soundness theorem, and encoding faithfulness in
+  both directions, so that a model of the encoded CNF is a light logical operator. Every
+  load-bearing declaration is printed in an audit region and depends on no axioms beyond
+  the three standard ones.
 type: software
 authors:
-  - name: "The QECCertificates Authors"
+  - family-names: "An"
+    given-names: "Shuoming"
 repository-code: "https://github.com/QCL-SUAT/QECCertificates"
 license: Apache-2.0
-version: 0.1.0
+version: "0.1.0"
 date-released: "2026-09-30"
+# Uncomment the line below once Zenodo has minted the DOI for the v0.1.0 release;
+# the same number goes into the BibTeX block of README.md.
+# doi: 10.5281/zenodo.XXXXXXX
+# identifiers:
+#   - type: doi
+#     value: 10.5281/zenodo.XXXXXXX
 keywords:
   - quantum error correction
   - formal verification

@@ -1,42 +1,51 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Reflect.Encode
 import QECCertificates.Reflect.LRATData
 
 /-!
-# 编码忠实性：内核回放的那份 CNF 就是编码器的输出
+# Encoding faithfulness: the CNF that the kernel replays is the encoder's output
 
-`Reflect/Encode.lean` 在核内证明了那条编码（`tools/bb144_server/validate_encoding.py`
-的 `build_pair`）的**可靠性**：任何满足赋值都给出
+`Reflect/Encode.lean` proves **soundness** of that encoding (the `build_pair` routine of an
+external encoder) inside the kernel: every satisfying assignment yields
 
-* `x` 的重量 ≤ `k`（`cntS` 数真值位）；
-* `x` 在核侧行表的核里、`w` 在配对侧行表的核里；
-* `x.w = 1`——由它就排除了 `x` 落在配对侧行空间里（行空间 ⊆ (ker)⊥）。
+* the weight of `x` is at most `k` (`cntS` counts the true bits);
+* `x` lies in the kernel of the kernel-side row table and `w` in the kernel of the
+  pairing-side row table;
+* `x.w = 1`, which by itself rules out `x` lying in the pairing-side row space (the row space
+  is contained in the orthogonal complement of the kernel).
 
-本模块把**两端接起来**：`gen_lrat_lean.py` 搬进内核的那四份 CNF，逐字等于
-`buildPair` 作用在同一批行表上的输出（`by decide`，四条等式）。于是
+This module **joins the two ends**: the four CNFs carried into the kernel are equal, word for
+word, to the output of `buildPair` applied to the same row tables (`by decide`, four
+identities). Hence
 
-    ¬ Satisfiable <实例>CNF   （LRAT 回放，见 LRATData）
-  ＋ <实例>CNF = buildPair <行表>   （本模块）
-  ⟹ ¬ Satisfiable (buildPair <行表>)
+    ¬ Satisfiable <instance>CNF   (LRAT replay, see LRATData)
+  + <instance>CNF = buildPair <row table>   (this module)
+  ⟹ ¬ Satisfiable (buildPair <row table>)
 
-**方向说明（必须说准）**：`Reflect/Encode.lean` 的 `buildPair_sat` 证的是
+**A note on direction (this has to be stated precisely)**: what `buildPair_sat` in
+`Reflect/Encode.lean` proves is
 
-    Satisfiable (buildPair <行表>)  ⟹  存在带对偶见证的轻逻辑算符
+    Satisfiable (buildPair <row table>)  ⟹  a light logical operator with a dual witness exists
 
-即"满足赋值 ⟹ 有轻逻辑算符"（等价地，"没有轻逻辑 ⟹ 不可满足"）。而从上面那条
-`¬ Satisfiable` 走到"不存在轻逻辑算符"，需要的是它的**反向**：
+that is, "a satisfying assignment implies a light logical operator exists" (equivalently,
+"no light logical operator implies unsatisfiable"). To get from the `¬ Satisfiable` above to
+"no light logical operator exists", one needs the **converse**:
 
-    存在轻逻辑算符  ⟹  Satisfiable (buildPair <行表>)
+    a light logical operator exists  ⟹  Satisfiable (buildPair <row table>)
 
-即编码不过度约束。这一条**由 `Reflect/Complete.lean` 给出**：把 Tseitin 链、乘积块与
-顺序计数器的辅助变量取值构造出来，四段串接成 `buildPair_complete`。于是本模块与
-`Reflect.Complete` 合起来给出的是"**可满足 ⟺ 存在轻逻辑算符**"，而它与 LRAT 回放
-合起来就使一个不可满足判决**直接给出距离下界**。$[[144,12,12]]$ 的下界另有独立路线
-（`Codes/BB144Distance.lean` 走 QECLean 的 Gross 形式化），不依赖这一条。
+that is, the encoding does not overconstrain. That statement **is given by
+`Reflect/Complete.lean`**: it constructs the values of the auxiliary variables of the Tseitin
+chains, the product blocks and the sequential counter, and the four pieces concatenate into
+`buildPair_complete`. Together with `Reflect.Complete`, this module therefore gives
+"**satisfiable if and only if a light logical operator exists**", and combined with the LRAT
+replay that lets a single unsatisfiability verdict **yield a distance lower bound directly**.
+The lower bound for $[[144,12,12]]$ has a separate, independent route (in
+`Codes/BB144Distance.lean`, through the Gross formalization of QECLean) and does not depend
+on this.
 -/
 
 namespace QECCertificates.LRAT
@@ -45,67 +54,69 @@ set_option maxRecDepth 1000000
 
 set_option maxHeartbeats 8000000
 
-/-! ## 四个被回放实例的行表
+/-!
+## The row tables of the four replayed instances
 
-来源与 `tools/gen_lrat_lean.py` 的 `instances()` 逐字一致：`probeA_engine` 的
-`rep_code` / `steane_code` / `cycle`（环面），`tools/bb144_server/test_encoding` 的
-`bb18_rows`。行是**列索引表**。 -/
+The sources match, word for word, the instance table of the external encoder: the repetition,
+Steane and toric (`cycle`) instances of its test engine, and the BB18 rows of its encoding
+test. A row is a **list of column indices**.
+-/
 
-/-- 重复码 $[7,1,7]$ 的核侧行表（6 条奇偶校验）。 -/
+/-- The kernel-side row table of the repetition code $[7,1,7]$ (6 parity checks). -/
 def rep7Ker : List (List Nat) := [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]
 
-/-- 重复码的配对侧为空（该实例只问"核里的非零向量"）。 -/
+/-- The pairing side of the repetition code is empty (this instance only asks for "a nonzero vector in the kernel"). -/
 def rep7Pair : List (List Nat) := []
 
-/-- Steane $[[7,1,3]]$ 的核侧（Z 型校验）。 -/
+/-- The kernel side of Steane $[[7,1,3]]$ (the Z-type checks). -/
 def steaneKer : List (List Nat) :=
   [[0, 2, 4, 6], [1, 2, 5, 6], [3, 4, 5, 6]]
 
-/-- Steane 的配对侧（X 型校验）。 -/
+/-- The pairing side of Steane (the X-type checks). -/
 def steanePair : List (List Nat) :=
   [[0, 2, 4, 6], [1, 2, 5, 6], [3, 4, 5, 6]]
 
-/-- 环面 $[[18,2,3]]$（三圈矩阵的 HGP）的核侧。 -/
+/-- The kernel side of the toric $[[18,2,3]]$ (the HGP of the 3-cycle matrix). -/
 def hgp_toric3Ker : List (List Nat) :=
   [[0, 1, 9, 15], [1, 2, 10, 16], [0, 2, 11, 17],
    [3, 4, 9, 12], [4, 5, 10, 13], [3, 5, 11, 14],
    [6, 7, 12, 15], [7, 8, 13, 16], [6, 8, 14, 17]]
 
-/-- 环面 $[[18,2,3]]$ 的配对侧。 -/
+/-- The pairing side of the toric $[[18,2,3]]$. -/
 def hgp_toric3Pair : List (List Nat) :=
   [[0, 3, 9, 11], [1, 4, 9, 10], [2, 5, 10, 11],
    [3, 6, 12, 14], [4, 7, 12, 13], [5, 8, 13, 14],
    [0, 6, 15, 17], [1, 7, 15, 16], [2, 8, 16, 17]]
 
-/-- 双变量自行车 $[[18,4,4]]$ 的核侧。 -/
+/-- The kernel side of the bivariate bicycle $[[18,4,4]]$. -/
 def bb18_lb3Ker : List (List Nat) :=
   [[0, 1, 3, 9, 11, 15], [1, 2, 4, 9, 10, 16], [0, 2, 5, 10, 11, 17],
    [3, 4, 6, 9, 12, 14], [4, 5, 7, 10, 12, 13], [3, 5, 8, 11, 13, 14],
    [0, 6, 7, 12, 15, 17], [1, 7, 8, 13, 15, 16], [2, 6, 8, 14, 16, 17]]
 
-/-- 双变量自行车 $[[18,4,4]]$ 的配对侧。 -/
+/-- The pairing side of the bivariate bicycle $[[18,4,4]]$. -/
 def bb18_lb3Pair : List (List Nat) :=
   [[0, 1, 3, 9, 11, 15], [1, 2, 4, 9, 10, 16], [0, 2, 5, 10, 11, 17],
    [3, 4, 6, 9, 12, 14], [4, 5, 7, 10, 12, 13], [3, 5, 8, 11, 13, 14],
    [0, 6, 7, 12, 15, 17], [1, 7, 8, 13, 15, 16], [2, 6, 8, 14, 16, 17]]
 
-/-! ## 四条同一性（核内 `decide`） -/
+/-! ## The four identities (checked by the kernel with `decide`) -/
 
-/-- 回放用的重复码 CNF 就是编码器的输出。 -/
+/-- The repetition-code CNF used in the replay is exactly the encoder's output. -/
 theorem rep7_eq : buildPair rep7Ker rep7Pair 7 6 = rep7CNF := by decide
 
-/-- Steane 实例同理。 -/
+/-- The same for the Steane instance. -/
 theorem steane_eq : buildPair steaneKer steanePair 7 2 = steaneCNF := by decide
 
-/-- 环面 $[[18,2,3]]$ 实例同理。 -/
+/-- The same for the toric $[[18,2,3]]$ instance. -/
 theorem hgp_toric3_eq : buildPair hgp_toric3Ker hgp_toric3Pair 18 2 = hgp_toric3CNF := by decide
 
-/-- 双变量自行车 $[[18,4,4]]$ 实例同理。 -/
+/-- The same for the bivariate bicycle $[[18,4,4]]$ instance. -/
 theorem bb18_lb3_eq : buildPair bb18_lb3Ker bb18_lb3Pair 18 3 = bb18_lb3CNF := by decide
 
-/-! ## 两端的合成：任何满足赋值都给出一组"轻逻辑算符 + 对偶见证" -/
+/-! ## Composing the two ends: every satisfying assignment yields a light logical operator together with a dual witness -/
 
-/-- 重复码实例：满足 `rep7CNF` 的赋值给出重量 ≤ 6 的核向量与配对见证。 -/
+/-- The repetition-code instance: an assignment satisfying `rep7CNF` yields a kernel vector of weight at most 6 together with a pairing witness. -/
 theorem rep7_certified {σ : Assign} (h : SatFormula σ rep7CNF) :
     cntS σ (List.range 7) ≤ 6 ∧
     (∀ r ∈ rep7Ker, dotS σ r = false) ∧
@@ -114,7 +125,7 @@ theorem rep7_certified {σ : Assign} (h : SatFormula σ rep7CNF) :
   rw [← rep7_eq] at h
   exact buildPair_sat (by decide) (by decide) (by decide) h
 
-/-- Steane 实例。 -/
+/-- The Steane instance. -/
 theorem steane_certified {σ : Assign} (h : SatFormula σ steaneCNF) :
     cntS σ (List.range 7) ≤ 2 ∧
     (∀ r ∈ steaneKer, dotS σ r = false) ∧
@@ -123,7 +134,7 @@ theorem steane_certified {σ : Assign} (h : SatFormula σ steaneCNF) :
   rw [← steane_eq] at h
   exact buildPair_sat (by decide) (by decide) (by decide) h
 
-/-- 环面 $[[18,2,3]]$ 实例。 -/
+/-- The toric $[[18,2,3]]$ instance. -/
 theorem hgp_toric3_certified {σ : Assign} (h : SatFormula σ hgp_toric3CNF) :
     cntS σ (List.range 18) ≤ 2 ∧
     (∀ r ∈ hgp_toric3Ker, dotS σ r = false) ∧
@@ -132,7 +143,7 @@ theorem hgp_toric3_certified {σ : Assign} (h : SatFormula σ hgp_toric3CNF) :
   rw [← hgp_toric3_eq] at h
   exact buildPair_sat (by decide) (by decide) (by decide) h
 
-/-- 双变量自行车 $[[18,4,4]]$ 实例。 -/
+/-- The bivariate bicycle $[[18,4,4]]$ instance. -/
 theorem bb18_lb3_certified {σ : Assign} (h : SatFormula σ bb18_lb3CNF) :
     cntS σ (List.range 18) ≤ 3 ∧
     (∀ r ∈ bb18_lb3Ker, dotS σ r = false) ∧

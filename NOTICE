@@ -1,11 +1,11 @@
 QECCertificates
-Copyright 2026 The QECCertificates Authors
+Copyright 2026 Shuoming An
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
 
-This product consumes, as pinned git dependencies, software developed by others.
-Neither dependency is vendored in this repository; both are fetched by `lake` at
-the revisions pinned in lakefile.toml.
+This product consumes, as pinned git dependencies, software developed by others. None of
+it is vendored in this repository: `lake` fetches each dependency at the revision pinned
+in lakefile.toml.
 
 * mathlib4 — the Lean mathematical library
   https://github.com/leanprover-community/mathlib4
@@ -15,3 +15,8 @@ the revisions pinned in lakefile.toml.
   upstream: https://github.com/VerifiedQC/Lean-QEC
   v4.34 port consumed here: https://github.com/QCL-SUAT/Lean-QEC
   Apache License 2.0 (the upstream distribution carries its own NOTICE)
+
+* QECLean — a Lean 4 formalization of quantum error correction, consumed here for the
+  Gross-formula machinery behind the BB144 distance lower bound
+  https://github.com/QCL-SUAT/QECLean
+  Apache License 2.0

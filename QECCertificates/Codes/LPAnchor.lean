@@ -1,50 +1,60 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Codes.CaseMatrix
 import QECCertificates.GF2.RankEchelon
 import QECCertificates.GF2.LiftedProduct
 
 /-!
-# Lifted-Product 锚点：$D_6$ 上的 2BGA 实例（Lifted-Product 族）
+# Lifted-product anchor: the 2BGA instances over $D_6$ (lifted-product family)
 
-`GF2/LiftedProduct.lean` 给出了 lifted product 的通用定义与结构定理
-（$H_XH_Z^{\top} = 0$、对 HGP 的退化）。本模块把构造**实例化**到文献表格上，
-并按 `Codes/CaseMatrix.lean` 的三步模板给出**内核可检的全参数**。
+`GF2/LiftedProduct.lean` gives the general definition of the lifted product and its
+structural theorems ($H_XH_Z^{\top} = 0$, and the degeneration to the HGP). This module
+**instantiates** the construction on a table from the literature and records the
+**parameters checked by the kernel**, following the three-step template of
+`Codes/CaseMatrix.lean`.
 
-## 复现的文献行
+## The literature row that is reproduced
 
-Lin–Pryadko, *Quantum two-block group algebra codes*, PRA **109**, 022407 (2024)，DOI `10.1103/PhysRevA.109.022407`；**出版版 Appendix C 的 Table III**（那两页种子与 $(k,d)$ 逐字对过出版版，与预印本 v1 的同表一致），$m = 6$ 那一行：
-群 $D_6 = \langle r,s \mid r^6 = s^2 = (rs)^2 = 1\rangle$（12 元）、$n = 4m = 24$，
-两个参数对 $(k, d) = (8, 3)$ 与 $(12, 2)$，种子
+Lin–Pryadko, *Quantum two-block group algebra codes*, PRA **109**, 022407 (2024),
+DOI `10.1103/PhysRevA.109.022407`; **Table III of Appendix C of the published version** (the
+two pages of seeds and $(k,d)$ were read against the published version word by word, and agree
+with the same table of preprint v1), the $m = 6$ row:
+the group $D_6 = \langle r,s \mid r^6 = s^2 = (rs)^2 = 1\rangle$ (12 elements), $n = 4m = 24$,
+the two parameter pairs $(k, d) = (8, 3)$ and $(12, 2)$, with seeds
 
-| 实例 | $k$ | $d$ | $a$ | $b$ |
+| instance | $k$ | $d$ | $a$ | $b$ |
 |---|---|---|---|---|
-| 实例 1 | 8 | 3 | $1 + r^4$ | $1 + sr^4 + r^3 + r^4 + sr^2 + r$ |
-| 实例 2 | 12 | 2 | $1 + r^3$ | $1 + sr + r^3 + r^4 + sr^4 + r$ |
+| instance 1 | 8 | 3 | $1 + r^4$ | $1 + sr^4 + r^3 + r^4 + sr^2 + r$ |
+| instance 2 | 12 | 2 | $1 + r^3$ | $1 + sr + r^3 + r^4 + sr^4 + r$ |
 
-（该表的口径：$W_a = 2$、$W_b = 6$，表中每一行都满足 $kd = n$。）
+(The convention of that table: $W_a = 2$, $W_b = 6$, and every row satisfies $kd = n$.)
 
-## 落地的断言（全部内核 `by decide`）
+## The assertions established here (all by the kernel, through `by decide`)
 
-* `lpAnchorHx` / `lpAnchorHz`：由 **LP 构造**（1 × 1 种子，即 2BGA）经元素编号重标得到
-  （`d6Equiv` 把 12 个群元素编号为 `0..11`；列编号为"左块 0..11、右块 12..23"）；
-* `lpAnchor_css`：$H_XH_Z^{\top} = 0$（通用定理 `lp2_orthogonal` 的实例）；
-* `lpAnchor_k` / `lpAnchor2_k`：维数 $k$ 由行消元直算（走 `rankEchelon` 只追加梯队形后端）；
-* `lpAnchor_dx` / `lpAnchor_dz`（及实例 2 的两条）：码距**恰为** $d$——
-  下界由重量限定候选列表为空给出（`lpAnchor_lowerHyp`，镜像 `lowerHyp_of_lightCand_nil` 的编排，
-  但走 `inSpanEch` 的梯队形后端），上界由一个**显式低重量逻辑算符**给出。
+* `lpAnchorHx` / `lpAnchorHz`: obtained from the **LP construction** (a 1 x 1 seed, that is, a
+  2BGA) by relabelling the element numbering (`d6Equiv` numbers the 12 group elements `0..11`;
+  columns are numbered "left block 0..11, right block 12..23");
+* `lpAnchor_css`: $H_XH_Z^{\top} = 0$ (an instance of the general theorem `lp2_orthogonal`);
+* `lpAnchor_k` / `lpAnchor2_k`: the dimension $k$ computed directly by row reduction (through
+  the append-only echelon back end `rankEchelon`);
+* `lpAnchor_dx` / `lpAnchor_dz` (and the two for instance 2): the distance is **exactly** $d$.
+  The lower bound is given by an empty weight-limited candidate list (`lpAnchor_lowerHyp`,
+  mirroring the arrangement of `lowerHyp_of_lightCand_nil` but running on the echelon back end
+  `inSpanEch`), and the upper bound by an **explicit low-weight logical operator**.
 
-## 与数值侧的关系（第二路对账）
+## Relation to the numerical side (a second, independent route)
 
-`tools/verify_codes.py` 的 `lp_anchor()` 用**独立的 Python 实现**（同一群、同一种子、
-同一元素序与列序）重算同一条链：$H_XH_Z^{\top}=0$、`k = n - rank H_X - rank H_Z`、
-重量限定枚举为空（下界）、显式见证 + 对偶见证配对 1（上界），得到同一组读数
-（实例 1 $n=24,k=8,d_X=d_Z=3$、实例 2 $n=24,k=12,d_X=d_Z=2$，
-见证列号分别是 `{0,2,4}` 与 `{0,3}`）。本模块把其中属于内核可判定的部分
-升格为机器检验断言——两侧互证，但只有内核侧进可信基。
+An independent Python implementation of the same route (the same group, the same seed, the same
+element order and column order) recomputes the whole chain: $H_XH_Z^{\top}=0$,
+`k = n - rank H_X - rank H_Z`, an empty weight-limited enumeration (lower bound), and an
+explicit witness paired with a dual witness to give 1 (upper bound). It obtains the same
+readings (instance 1: $n=24,k=8,d_X=d_Z=3$; instance 2: $n=24,k=12,d_X=d_Z=2$, with witness
+column sets `{0,2,4}` and `{0,3}` respectively). The parts of this that the kernel can decide
+are raised here to machine-checked assertions: the two routes corroborate each other, but only
+the kernel side enters the trusted base.
 -/
 
 namespace QECCertificates
@@ -52,15 +62,15 @@ namespace QECCertificates
 set_option maxRecDepth 100000
 set_option maxHeartbeats 8000000
 
-/-! ## 一、群 $D_6$ 的元素编号 -/
+/-! ## 1. Numbering the elements of $D_6$ -/
 
-/-- $D_6$ 的元素按 `r^0..r^5, sr^0..sr^5` 编号为 `0..11`。 -/
+/-- The elements of $D_6$ are numbered `0..11` as `r^0..r^5, sr^0..sr^5`. -/
 def d6Code (x : DihedralGroup 6) : Fin 12 :=
   match x with
   | .r i => ⟨i.val, by have h := ZMod.val_lt i; omega⟩
   | .sr i => ⟨6 + i.val, by have h := ZMod.val_lt i; omega⟩
 
-/-- `d6Code` 的逆（只用到 `ZMod` 的自然数转换，不构造 `Fin`）。 -/
+/-- The inverse of `d6Code` (it uses only the natural-number conversion of `ZMod` and does not construct a `Fin`). -/
 def d6Index (k : Fin 12) : DihedralGroup 6 :=
   if (k : ℕ) < 6 then DihedralGroup.r (((k : ℕ) : ZMod 6))
   else DihedralGroup.sr ((((k : ℕ) - 6 : ℕ)) : ZMod 6)
@@ -69,77 +79,78 @@ theorem d6Index_code : Function.LeftInverse d6Index d6Code := by decide
 
 theorem d6Code_index : Function.RightInverse d6Index d6Code := by decide
 
-/-- 行指标的重标：$D_6 \simeq \{0,\dots,11\}$。 -/
+/-- Relabelling of the row indices: $D_6 \simeq \{0,\dots,11\}$. -/
 def d6Equiv : DihedralGroup 6 ≃ Fin 12 where
   toFun := d6Code
   invFun := d6Index
   left_inv := d6Index_code
   right_inv := d6Code_index
 
-/-- 列指标的重标：两个 $D_6$ 块 $\simeq \{0,\dots,23\}$（**左块 0..11、右块 12..23**）。 -/
+/-- Relabelling of the column indices: the two $D_6$ blocks $\simeq \{0,\dots,23\}$ (**left block 0..11, right block 12..23**). -/
 def d6ColEquiv : (DihedralGroup 6 ⊕ DihedralGroup 6) ≃ Fin 24 :=
   (Equiv.sumCongr d6Equiv d6Equiv).trans finSumFinEquiv
 
-/-- 群代数元 $\sum_{g \in s} g$（在 $s$ 上系数为 1）。 -/
+/-- The group-algebra element $\sum_{g \in s} g$ (coefficient 1 on $s$). -/
 def gsum (s : Finset (DihedralGroup 6)) : DihedralGroup 6 → ZMod 2 :=
   fun g => if g ∈ s then 1 else 0
 
-/-! ## 二、实例 1：种子 $a = 1 + r^4$、$b = 1 + sr^4 + r^3 + r^4 + sr^2 + r$ -/
+/-! ## 2. Instance 1: seeds $a = 1 + r^4$, $b = 1 + sr^4 + r^3 + r^4 + sr^2 + r$ -/
 
-/-- 实例 1 的种子 $a = 1 + r^4$。 -/
+/-- The seed of instance 1: $a = 1 + r^4$. -/
 def lpSeedA : DihedralGroup 6 → ZMod 2 := gsum {(1 : DihedralGroup 6), DihedralGroup.r 4}
 
-/-- 实例 1 的种子 $b = 1 + sr^4 + r^3 + r^4 + sr^2 + r$。 -/
+/-- The seed of instance 1: $b = 1 + sr^4 + r^3 + r^4 + sr^2 + r$. -/
 def lpSeedB : DihedralGroup 6 → ZMod 2 :=
   gsum {(1 : DihedralGroup 6), DihedralGroup.r 1, DihedralGroup.r 3, DihedralGroup.r 4,
     DihedralGroup.sr 2, DihedralGroup.sr 4}
 
-/-- 实例 1 的 X 型校验：LP 构造（1 x 1 种子）经元素编号重标到 `Fin 12 x Fin 24`。 -/
+/-- The X-type checks of instance 1: the LP construction (a 1 x 1 seed) relabelled by element numbering to `Fin 12 x Fin 24`. -/
 def lpAnchorHx : Matrix (Fin 12) (Fin 24) (ZMod 2) :=
   (Matrix.reindex d6Equiv d6ColEquiv) (lp2HX lpSeedA lpSeedB)
 
-/-- 实例 1 的 Z 型校验。 -/
+/-- The Z-type checks of instance 1. -/
 def lpAnchorHz : Matrix (Fin 12) (Fin 24) (ZMod 2) :=
   (Matrix.reindex d6Equiv d6ColEquiv) (lp2HZ lpSeedA lpSeedB)
 
-/-- **锚点等式（CSS 相容性）**：LP 构造的 $H_XH_Z^{\top} = 0$ 在实例上成立
-（通用定理 `lp2_orthogonal` 的实例化）。 -/
+/--
+**The anchor identity (CSS compatibility)**: the identity $H_XH_Z^{\top} = 0$ of the LP construction holds on the instance (an instantiation of the general theorem `lp2_orthogonal`).
+-/
 theorem lpAnchor_css : lpAnchorHx * (lpAnchorHz).transpose = 0 := by decide
 
-/-- 实例 1 的 X 型见证：重量 3 的逻辑算符（列 `0, 2, 4`，即左块的 $r^0, r^2, r^4$）。 -/
+/-- The X-type witness of instance 1: a weight-3 logical operator (columns `0, 2, 4`, that is, $r^0, r^2, r^4$ of the left block). -/
 def lpXW : Vec 24 := (e 0 + e 2 + e 4 : Vec 24)
 
-/-- 实例 1 的 X 型对偶见证（与 `lpXW` 配对为 1、落在 $H_Z$ 的核里）。 -/
+/-- The X-type dual witness of instance 1 (it pairs with `lpXW` to give 1 and lies in the kernel of $H_Z$). -/
 def lpXWdual : Vec 24 := (e 0 + e 2 + e 4 : Vec 24)
 
-/-- 实例 1 的 Z 型见证。 -/
+/-- The Z-type witness of instance 1. -/
 def lpZW : Vec 24 := (e 0 + e 2 + e 4 : Vec 24)
 
-/-- 实例 1 的 Z 型对偶见证。 -/
+/-- The Z-type dual witness of instance 1. -/
 def lpZWdual : Vec 24 := (e 0 + e 2 + e 4 : Vec 24)
 
-/-! ## 三、实例 2：种子 $a = 1 + r^3$、$b = 1 + sr + r^3 + r^4 + sr^4 + r$ -/
+/-! ## 3. Instance 2: seeds $a = 1 + r^3$, $b = 1 + sr + r^3 + r^4 + sr^4 + r$ -/
 
-/-- 实例 2 的种子 $a = 1 + r^3$。 -/
+/-- The seed of instance 2: $a = 1 + r^3$. -/
 def lpSeed2A : DihedralGroup 6 → ZMod 2 := gsum {(1 : DihedralGroup 6), DihedralGroup.r 3}
 
-/-- 实例 2 的种子 $b = 1 + sr + r^3 + r^4 + sr^4 + r$。 -/
+/-- The seed of instance 2: $b = 1 + sr + r^3 + r^4 + sr^4 + r$. -/
 def lpSeed2B : DihedralGroup 6 → ZMod 2 :=
   gsum {(1 : DihedralGroup 6), DihedralGroup.r 1, DihedralGroup.r 3, DihedralGroup.r 4,
     DihedralGroup.sr 1, DihedralGroup.sr 4}
 
-/-- 实例 2 的 X 型校验。 -/
+/-- The X-type checks of instance 2. -/
 def lpAnchor2Hx : Matrix (Fin 12) (Fin 24) (ZMod 2) :=
   (Matrix.reindex d6Equiv d6ColEquiv) (lp2HX lpSeed2A lpSeed2B)
 
-/-- 实例 2 的 Z 型校验。 -/
+/-- The Z-type checks of instance 2. -/
 def lpAnchor2Hz : Matrix (Fin 12) (Fin 24) (ZMod 2) :=
   (Matrix.reindex d6Equiv d6ColEquiv) (lp2HZ lpSeed2A lpSeed2B)
 
-/-- **锚点等式（CSS 相容性）**，实例 2。 -/
+/-- **The anchor identity (CSS compatibility)**, instance 2. -/
 theorem lpAnchor2_css : lpAnchor2Hx * (lpAnchor2Hz).transpose = 0 := by decide
 
-/-- 实例 2 的 X 型见证：重量 2（列 `0, 3`）。 -/
+/-- The X-type witness of instance 2: weight 2 (columns `0, 3`). -/
 def lp2XW : Vec 24 := (e 0 + e 3 : Vec 24)
 
 def lp2XWdual : Vec 24 := (e 0 + e 2 + e 6 + e 7 : Vec 24)
@@ -148,42 +159,50 @@ def lp2ZW : Vec 24 := (e 0 + e 3 : Vec 24)
 
 def lp2ZWdual : Vec 24 := (e 0 + e 1 + e 7 + e 12 : Vec 24)
 
-/-! ## 四、维数：行消元直算（只追加梯队形后端） -/
+/-! ## 4. Dimension: direct row reduction (append-only echelon back end) -/
 
-/-- **实例 1 的维数**：$24 - 8 - 8 = 8$。
+/--
+**The dimension of instance 1**: $24 - 8 - 8 = 8$.
 
-归约走 `GF2/RankEchelon.lean` 的只追加梯队形（宽 24 上 `rowReduce` 的回代消去代价逐轮相乘）；
-桥定理 `rankEchelon_eq_length_rowReduce` 保证两者给出同一个秩，故陈述仍写成 `rowReduce` 形态。 -/
+The reduction runs on the append-only echelon form of `GF2/RankEchelon.lean` (at width 24 the
+back-substitution of `rowReduce` multiplies its own cost from round to round); the bridge
+theorem `rankEchelon_eq_length_rowReduce` guarantees that both give the same rank, so the
+statement is still written in the `rowReduce` form.
+-/
 theorem lpAnchor_k : 24 - (rowReduce (List.ofFn fun i => lpAnchorHx i)).length
     - (rowReduce (List.ofFn fun i => lpAnchorHz i)).length = 8 := by
   simp only [← rankEchelon_eq_length_rowReduce]
   decide
 
-/-- **实例 2 的维数**：$24 - 6 - 6 = 12$。 -/
+/-- **The dimension of instance 2**: $24 - 6 - 6 = 12$. -/
 theorem lpAnchor2_k : 24 - (rowReduce (List.ofFn fun i => lpAnchor2Hx i)).length
     - (rowReduce (List.ofFn fun i => lpAnchor2Hz i)).length = 12 := by
   simp only [← rankEchelon_eq_length_rowReduce]
   decide
 
-/-! ## 五、距离：重量限定候选列表为空 ⟹ 下界（梯队形后端）
+/-!
+## 5. Distance: an empty weight-limited candidate list implies the lower bound (echelon back end)
 
-`GF2/LowerBound.lean` 的 `lightCand` 用 `inSpanB`（内部跑 `rowReduce`），宽 24 上太贵；
-这里把**同一个候选集**搬到 `inSpanEch`（只追加梯队形后端）上，并在本文件内证
-"候选为空 ⟹ 距离下界"（镜像 `lowerHyp_of_lightCand_nil` 的编排）。 -/
+The `lightCand` of `GF2/LowerBound.lean` uses `inSpanB` (which runs `rowReduce` internally) and
+is too expensive at width 24. Here the **same candidate set** is moved onto `inSpanEch` (the
+append-only echelon back end), and the implication "an empty candidate list implies the distance
+lower bound" is proved inside this file (mirroring the arrangement of
+`lowerHyp_of_lightCand_nil`).
+-/
 
-/-- 轻算符判定（梯队形后端）：重量非零、与 `M₁` 对易、且不在 `M₂` 的行空间里。 -/
+/-- The light-operator predicate (echelon back end): nonzero weight, commuting with `M₁`, and not in the row space of `M₂`. -/
 abbrev lpLight {m₁ m₂ : ℕ}
     (M₁ : Matrix (Fin m₁) (Fin 24) (ZMod 2)) (M₂ : Matrix (Fin m₂) (Fin 24) (ZMod 2))
     (v : Vec 24) : Prop :=
   0 < hammingNorm v ∧ inKerB M₁ v = true ∧ inSpanEch (List.ofFn fun i => M₂ i) v = false
 
-/-- 重量 $\le w$ 的候选集。 -/
+/-- The set of candidates of weight $\le w$. -/
 def lpLightCand (w : ℕ) {m₁ m₂ : ℕ}
     (M₁ : Matrix (Fin m₁) (Fin 24) (ZMod 2)) (M₂ : Matrix (Fin m₂) (Fin 24) (ZMod 2)) :
     List (Vec 24) :=
   (lightVecs 24 w).filter (fun v => decide (lpLight M₁ M₂ v))
 
-/-- **下界假设**（镜像 `lowerHyp_of_lightCand_nil`）：重量 $\le d-1$ 的候选为空 ⟹ 距离 $\ge d$。 -/
+/-- **The lower-bound hypothesis** (mirroring `lowerHyp_of_lightCand_nil`): an empty candidate list at weight $\le d-1$ implies distance $\ge d$. -/
 theorem lpAnchor_lowerHyp {m₁ m₂ d : ℕ} (hd : 1 ≤ d)
     (M₁ : Matrix (Fin m₁) (Fin 24) (ZMod 2)) (M₂ : Matrix (Fin m₂) (Fin 24) (ZMod 2))
     (h : lpLightCand (d - 1) M₁ M₂ = []) :
@@ -208,21 +227,21 @@ theorem lpAnchor_lowerHyp {m₁ m₂ d : ℕ} (hd : 1 ≤ d)
   rw [h] at hmem
   simp at hmem
 
-/-- **下界证书（实例 1，X 侧）**：重量 $\le 2$ 的候选列表为空。 -/
+/-- **Lower-bound certificate (instance 1, X side)**: the candidate list at weight $\le 2$ is empty. -/
 theorem lpAnchor_lightCand_x : lpLightCand 2 lpAnchorHx lpAnchorHz = [] := by decide
 
-/-- **下界证书（实例 1，Z 侧）**。 -/
+/-- **Lower-bound certificate (instance 1, Z side)**. -/
 theorem lpAnchor_lightCand_z : lpLightCand 2 lpAnchorHz lpAnchorHx = [] := by decide
 
-/-- **下界证书（实例 2，X 侧）**：重量 $\le 1$ 的候选列表为空。 -/
+/-- **Lower-bound certificate (instance 2, X side)**: the candidate list at weight $\le 1$ is empty. -/
 theorem lpAnchor2_lightCand_x : lpLightCand 1 lpAnchor2Hx lpAnchor2Hz = [] := by decide
 
-/-- **下界证书（实例 2，Z 侧）**。 -/
+/-- **Lower-bound certificate (instance 2, Z side)**. -/
 theorem lpAnchor2_lightCand_z : lpLightCand 1 lpAnchor2Hz lpAnchor2Hx = [] := by decide
 
-/-! ## 六、精确码距 -/
+/-! ## 6. Exact distances -/
 
-/-- **实例 1 的 X 侧码距 = 3**：下界候选列表为空，上界是显式重量-3 逻辑算符（配双对偶见证）。 -/
+/-- **The X-side distance of instance 1 is 3**: the lower-bound candidate list is empty, and the upper bound is an explicit weight-3 logical operator paired with a dual witness. -/
 theorem lpAnchor_dx : min_weight_ker_not_mem_rowspace lpAnchorHx lpAnchorHz = 3 :=
   eq_minWeight_of_bounds lpAnchorHx lpAnchorHz (by decide) (E := lpXW)
     (mem_ker_of_inKerB lpAnchorHx (by decide))
@@ -230,7 +249,7 @@ theorem lpAnchor_dx : min_weight_ker_not_mem_rowspace lpAnchorHx lpAnchorHz = 3 
     (by decide)
     (lpAnchor_lowerHyp (d := 3) (by decide) lpAnchorHx lpAnchorHz lpAnchor_lightCand_x)
 
-/-- **实例 1 的 Z 侧码距 = 3**。 -/
+/-- **The Z-side distance of instance 1 is 3**. -/
 theorem lpAnchor_dz : min_weight_ker_not_mem_rowspace lpAnchorHz lpAnchorHx = 3 :=
   eq_minWeight_of_bounds lpAnchorHz lpAnchorHx (by decide) (E := lpZW)
     (mem_ker_of_inKerB lpAnchorHz (by decide))
@@ -238,7 +257,7 @@ theorem lpAnchor_dz : min_weight_ker_not_mem_rowspace lpAnchorHz lpAnchorHx = 3 
     (by decide)
     (lpAnchor_lowerHyp (d := 3) (by decide) lpAnchorHz lpAnchorHx lpAnchor_lightCand_z)
 
-/-- **实例 2 的 X 侧码距 = 2**。 -/
+/-- **The X-side distance of instance 2 is 2**. -/
 theorem lpAnchor2_dx : min_weight_ker_not_mem_rowspace lpAnchor2Hx lpAnchor2Hz = 2 :=
   eq_minWeight_of_bounds lpAnchor2Hx lpAnchor2Hz (by decide) (E := lp2XW)
     (mem_ker_of_inKerB lpAnchor2Hx (by decide))
@@ -246,7 +265,7 @@ theorem lpAnchor2_dx : min_weight_ker_not_mem_rowspace lpAnchor2Hx lpAnchor2Hz =
     (by decide)
     (lpAnchor_lowerHyp (d := 2) (by decide) lpAnchor2Hx lpAnchor2Hz lpAnchor2_lightCand_x)
 
-/-- **实例 2 的 Z 侧码距 = 2**。 -/
+/-- **The Z-side distance of instance 2 is 2**. -/
 theorem lpAnchor2_dz : min_weight_ker_not_mem_rowspace lpAnchor2Hz lpAnchor2Hx = 2 :=
   eq_minWeight_of_bounds lpAnchor2Hz lpAnchor2Hx (by decide) (E := lp2ZW)
     (mem_ker_of_inKerB lpAnchor2Hz (by decide))

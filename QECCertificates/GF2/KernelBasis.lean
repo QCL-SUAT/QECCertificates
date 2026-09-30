@@ -1,38 +1,48 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.RowReduce
 
 /-!
-# 核基提取与完备性（ 第二交付物）
+# Kernel-basis extraction and completeness
 
-Lean-QEC 的核基（校验矩阵的零空间基）由**外部 Python 脚本**产出，脚本的正确性
-不在可信基内——论文自陈其只对"秩与正交性"做事后检验。本模块给出**内核内证明**：从行消元的枢轴结构直接读出一组生成元，并证明
+Lean-QEC's kernel basis (a basis of the null space of a parity-check matrix) is produced by
+an **external Python script**, and the correctness of that script is not part of the
+trusted base: the companion paper states that only the rank and the orthogonality are
+checked after the fact. This module supplies a **proof inside the kernel**: a set of
+generators is read directly off the pivot structure of row reduction, and
 
-  `ker(H) = span(核生成元)`
+  `ker(H) = span(kernel generators)`
 
-两个方向都在 Lean 内核内闭合。有了它，"核基由外部脚本产出"这一步从可信基里消失。
+is closed in both directions inside the Lean kernel. With it, the step "the kernel basis is
+produced by an external script" drops out of the trusted base.
 
-## 机制
+## Mechanism
 
-行消元输出互约化的枢轴行集 `D`（见 `IsReduced`）。枢轴列是"被占住"的列，
-其余列为**自由列**。对每个自由列 `j`，核向量取
+Row reduction outputs a mutually reduced set of pivot rows `D` (see `IsReduced`). The pivot
+columns are the occupied columns and the remaining columns are the **free columns**. For
+each free column `j` the kernel vector is taken to be
 
   `kerVec D j := e_j + ∑_{r ∈ D} (r_j) · e_{pivot(r)}`
 
-即在 `e_j` 上按各行在 `j` 列的分量补上枢轴方向。正交性来自 (R2)：
-每个行在自己枢轴列上取 1、在别的行的枢轴列上取 0，两类贡献恰好相消。
+that is, `e_j` corrected along the pivot directions by the entry of each row in column `j`.
+Orthogonality comes from (R2): every row takes the value 1 at its own pivot column and 0 at
+the pivot columns of the other rows, so the two kinds of contribution cancel exactly.
 
-## 主结果
+## Main results
 
-* `kerVec_mem_kerL`：核向量确实落在核里（可靠性方向）。
-* `kerL_le_spanL_kerBasis`：核里每个向量都是核生成元的线性组合（**完备性方向**）。
-* `kerL_rowReduce`：`ker H = span (kerBasis (rowReduce H))`——两侧合拢。
-* `hammingNorm_kerVec_le` / `kerVec_ne_zero` / `exists_light_mem_kerL`：
-  **Singleton 型计数**——核非平凡时核里有一个重量 $\le$ 秩 $+1$ 的非零元。
-  前沿界的论证（`paper/sm.tex` 的 "the frontier argument"）用到的正是这一步。
+* `kerVec_mem_kerL`: a kernel vector really does lie in the kernel (the soundness
+  direction).
+* `kerL_le_spanL_kerBasis`: every vector in the kernel is a linear combination of the
+  kernel generators (the **completeness direction**).
+* `kerL_rowReduce`: `ker H = span (kerBasis (rowReduce H))`, bringing the two sides
+  together.
+* `hammingNorm_kerVec_le` / `kerVec_ne_zero` / `exists_light_mem_kerL`: the
+  **Singleton-type count**; when the kernel is nontrivial it contains a nonzero element of
+  weight at most the rank plus one. The frontier argument in the companion paper uses
+  exactly this step.
 -/
 
 namespace QECCertificates
@@ -41,14 +51,14 @@ open scoped BigOperators
 
 variable {n : ℕ}
 
-/-- 单位向量 `e_i`（第 `i` 位为 1，其余为 0）。 -/
+/-- The unit vector `e_i` (1 at the `i`-th coordinate and 0 elsewhere). -/
 def unitVec (i : Fin n) : Vec n := fun j => if j = i then 1 else 0
 
 @[simp] lemma unitVec_apply (i j : Fin n) : unitVec i j = if j = i then 1 else 0 := rfl
 
-/-! ## 单项求和助手（把"按列挑一项"的和塌成单项） -/
+/-! ## Single-term summation helpers (collapsing a column-selection sum to one term) -/
 
-/-- `∑ i, u i * (if i = a then 1 else 0) = u a`。 -/
+/-- `∑ i, u i * (if i = a then 1 else 0) = u a`. -/
 lemma sum_mul_ite_self (u : Vec n) (a : Fin n) :
     ∑ i, u i * (if i = a then (1 : ZMod 2) else 0) = u a := by
   have h := Finset.sum_eq_single (s := Finset.univ)
@@ -57,7 +67,7 @@ lemma sum_mul_ite_self (u : Vec n) (a : Fin n) :
     (fun hnot => absurd (Finset.mem_univ a) hnot)
   rw [h, ite_eq_left rfl, mul_one]
 
-/-- `∑ i, u i * (if a = i then c else 0) = u a * c`。 -/
+/-- `∑ i, u i * (if a = i then c else 0) = u a * c`. -/
 lemma sum_mul_ite_eq (u : Vec n) (a : Fin n) (c : ZMod 2) :
     ∑ i, u i * (if a = i then c else 0) = u a * c := by
   have h := Finset.sum_eq_single (s := Finset.univ)
@@ -66,7 +76,7 @@ lemma sum_mul_ite_eq (u : Vec n) (a : Fin n) (c : ZMod 2) :
     (fun hnot => absurd (Finset.mem_univ a) hnot)
   rw [h, ite_eq_left rfl]
 
-/-- `∑ i, (if i = a then u i else 0) = u a`。 -/
+/-- `∑ i, (if i = a then u i else 0) = u a`. -/
 lemma sum_ite_self (u : Vec n) (a : Fin n) :
     ∑ i, (if i = a then u i else 0) = u a := by
   have h := Finset.sum_eq_single (s := Finset.univ)
@@ -75,12 +85,14 @@ lemma sum_ite_self (u : Vec n) (a : Fin n) :
     (fun hnot => absurd (Finset.mem_univ a) hnot)
   rw [h, ite_eq_left rfl]
 
-/-! ## 核 -/
+/-! ## The kernel -/
 
-/-- 行列表的核：与每一行都正交（GF(2) 点积为零）的向量全体。
+/-- The kernel of a list of rows: all vectors orthogonal to every row (zero GF(2) dot
+product).
 
-这是量子纠错码的**错误空间**的代数刻画：与所有校验行对易的 Pauli 算符。
-与 LeanQEC 的 `LinearMap.ker M.toLin'` 通过 `mem_ker_iff_dotProd_rows_eq_zero` 对接。 -/
+This is the algebraic description of the **error space** of a quantum error-correcting
+code, namely the Pauli operators commuting with every parity-check row. It is tied to
+LeanQEC's `LinearMap.ker M.toLin'` through `mem_ker_iff_dotProd_rows_eq_zero`. -/
 def kerL (L : List (Vec n)) : Submodule (ZMod 2) (Vec n) where
   carrier := {x | ∀ r ∈ L, r ⬝ᵥ x = 0}
   zero_mem' := by intro r _; simp
@@ -94,7 +106,8 @@ def kerL (L : List (Vec n)) : Submodule (ZMod 2) (Vec n) where
 @[simp] lemma mem_kerL {L : List (Vec n)} {x : Vec n} :
     x ∈ kerL L ↔ ∀ r ∈ L, r ⬝ᵥ x = 0 := Iff.rfl
 
-/-- 核只依赖行空间：行空间相同的两个行列表给出相同的核。 -/
+/-- The kernel depends only on the row space: two lists of rows with the same row space
+give the same kernel. -/
 lemma kerL_eq_of_spanL_eq {A B : List (Vec n)} (h : spanL A = spanL B) : kerL A = kerL B := by
   have key : ∀ {P Q : List (Vec n)}, spanL P ≤ spanL Q → kerL Q ≤ kerL P := by
     intro P Q hPQ x hx
@@ -107,19 +120,20 @@ lemma kerL_eq_of_spanL_eq {A B : List (Vec n)} (h : spanL A = spanL B) : kerL A 
       (hPQ (subset_spanL hp))
   exact le_antisymm (key h.ge) (key h.le)
 
-/-! ## 枢轴列与自由列 -/
+/-! ## Pivot columns and free columns -/
 
-/-- 枢轴列集合。 -/
+/-- The set of pivot columns. -/
 def pivCols (D : List (PivRow n)) : Finset (Fin n) := (D.map (·.2)).toFinset
 
-/-- 自由列：不是任何行的枢轴列的列。 -/
+/-- A free column: a column that is not the pivot column of any row. -/
 def IsFreeCol (D : List (PivRow n)) (j : Fin n) : Prop := ∀ ri ∈ D, ri.2 ≠ j
 
 lemma mem_pivCols {D : List (PivRow n)} {i : Fin n} :
     i ∈ pivCols D ↔ ∃ ri ∈ D, ri.2 = i := by
   rw [pivCols, List.mem_toFinset, List.mem_map]
 
-/-- (R2) 的配对形式：任一枢轴行在任一枢轴列上的取值是 Kronecker 型的。 -/
+/-- The paired form of (R2): the entry of any pivot row at any pivot column is of
+Kronecker type. -/
 lemma IsReduced.row_apply_piv {D : List (PivRow n)} (hD : IsReduced D)
     {ri rj : PivRow n} (hri : ri ∈ D) (hrj : rj ∈ D) :
     ri.1 rj.2 = if ri = rj then 1 else 0 := by
@@ -127,9 +141,10 @@ lemma IsReduced.row_apply_piv {D : List (PivRow n)} (hD : IsReduced D)
   · rw [ite_eq_left h, h]; exact hD.1 rj hrj
   · rw [ite_eq_right h]; exact hD.2 ri hri rj hrj h
 
-/-! ## 核向量 -/
+/-! ## Kernel vectors -/
 
-/-- 自由列 `j` 对应的核向量：`e_j` 加上由各行在 `j` 列的分量决定的枢轴修正。 -/
+/-- The kernel vector attached to the free column `j`: `e_j` plus the pivot corrections
+determined by the entries of the rows in column `j`. -/
 def kerVec (D : List (PivRow n)) (j : Fin n) : Vec n :=
   fun i => (if i = j then 1 else 0) + ∑ ri ∈ D.toFinset, (if ri.2 = i then ri.1 j else 0)
 
@@ -137,7 +152,8 @@ lemma kerVec_apply (D : List (PivRow n)) (j i : Fin n) :
     kerVec D j i
       = (if i = j then 1 else 0) + ∑ ri ∈ D.toFinset, (if ri.2 = i then ri.1 j else 0) := rfl
 
-/-- 自由列上核向量就是 `e_j`：修正项全为零。 -/
+/-- On a free column the kernel vector is just `e_j`: every correction term
+vanishes. -/
 lemma kerVec_apply_free {D : List (PivRow n)} {j i : Fin n} (hi : IsFreeCol D i) :
     kerVec D j i = if i = j then 1 else 0 := by
   rw [kerVec_apply]
@@ -146,7 +162,8 @@ lemma kerVec_apply_free {D : List (PivRow n)} {j i : Fin n} (hi : IsFreeCol D i)
     rw [ite_eq_right (hi ri (List.mem_toFinset.mp hri))]
   rw [hsum, add_zero]
 
-/-- 枢轴列上核向量读出该行的对应分量。 -/
+/-- On a pivot column the kernel vector reads off the corresponding entry of that
+row. -/
 lemma kerVec_apply_piv {D : List (PivRow n)} (hD : IsReduced D) {j : Fin n} {rk : PivRow n}
     (hrk : rk ∈ D) :
     kerVec D j rk.2 = (if rk.2 = j then 1 else 0) + rk.1 j := by
@@ -163,10 +180,11 @@ lemma kerVec_apply_piv {D : List (PivRow n)} (hD : IsReduced D) {j : Fin n} {rk 
     rwa [ite_eq_left rfl] at h
   exact hsingle
 
-/-- **可靠性方向**：核向量确实落在这组行的核里。
+/-- **Soundness direction**: a kernel vector really does lie in the kernel of these rows.
 
-证明是两个求和的对消：把 `rk` 与核向量的点积展开成双重和、交换求和次序，
-再用 (R1)/(R2) 的 Kronecker 形式把内层和塌成单项。 -/
+The proof cancels two sums: the dot product of `rk` with the kernel vector is expanded into
+a double sum, the order of summation is exchanged, and the Kronecker form of (R1)/(R2)
+collapses the inner sum to a single term. -/
 lemma kerVec_mem_kerL {D : List (PivRow n)} (hD : IsReduced D) (j : Fin n) :
     kerVec D j ∈ kerL (rowList D) := by
   rw [mem_kerL]
@@ -197,9 +215,10 @@ lemma kerVec_mem_kerL {D : List (PivRow n)} (hD : IsReduced D) (j : Fin n) :
   rw [h1, h2]
   exact CharTwo.add_self_eq_zero (rk.1 j)
 
-/-! ## Singleton 型计数：核向量有多轻 -/
+/-! ## The Singleton-type count: how light a kernel vector is -/
 
-/-- **核向量非零**：自由列上它就是 `e_j`，故不可能是零向量。 -/
+/-- **A kernel vector is nonzero**: on a free column it is just `e_j`, so it cannot be the
+zero vector. -/
 theorem kerVec_ne_zero {D : List (PivRow n)} {j : Fin n} (hj : IsFreeCol D j) :
     kerVec D j ≠ 0 := by
   intro hzero
@@ -208,12 +227,14 @@ theorem kerVec_ne_zero {D : List (PivRow n)} {j : Fin n} (hj : IsFreeCol D j) :
   simp only [Pi.zero_apply] at h1
   exact zero_ne_one h1
 
-/-- **Singleton 型计数**：核向量的支撑落在 $\{j\}\cup$ 枢轴列里，故重量至多 $1+\#D$。
+/-- **The Singleton-type count**: the support of a kernel vector lies in
+$\{j\}\cup$ the pivot columns, so its weight is at most $1+\#D$.
 
-这条对**任意**列 `j` 成立（自由与否都一样）：`kerVec D j` 只在 `j` 与枢轴列上可能
-非零，其余列都是自由列、按 `kerVec_apply_free` 取零；而枢轴列恰有 `#D` 个，
-`#D` 就是秩。配上 `kerVec_ne_zero`，"核非平凡 $\Rightarrow$ 存在重量 $\le\rho+1$
-的非零核向量"就成了一条定理，而不是一句解析断言。 -/
+This holds for **every** column `j`, free or not: `kerVec D j` can be nonzero only at `j`
+and at the pivot columns, and every other column is free and hence vanishes by
+`kerVec_apply_free`. There are exactly `#D` pivot columns, and `#D` is the rank. Together
+with `kerVec_ne_zero` this makes "a nontrivial kernel $\Rightarrow$ there is a nonzero
+kernel vector of weight $\le\rho+1$" a theorem rather than an informal remark. -/
 theorem hammingNorm_kerVec_le (D : List (PivRow n)) (j : Fin n) :
     hammingNorm (kerVec D j) ≤ D.length + 1 := by
   rw [← weight_eq_hammingNorm]
@@ -234,10 +255,11 @@ theorem hammingNorm_kerVec_le (D : List (PivRow n)) (j : Fin n) :
   rw [kerVec_apply_free hfree, ite_eq_right hij] at hne
   exact hne rfl
 
-/-! ## 核生成元 -/
+/-! ## Kernel generators -/
 
-/-- 核生成元：每个自由列给出一个核向量。（自由列恰有 `n − #D` 个，
-故这组生成元的个数就是核的维数——见 `kerL_rowReduce` 的完备性。） -/
+/-- The kernel generators: each free column yields one kernel vector. (There are exactly
+`n − #D` free columns, so the number of generators is the dimension of the kernel; see the
+completeness half of `kerL_rowReduce`.) -/
 def kerBasis (D : List (PivRow n)) : List (Vec n) :=
   ((List.finRange n).filter (fun j => decide (j ∉ pivCols D))).map (kerVec D)
 
@@ -250,9 +272,9 @@ lemma mem_kerBasis {D : List (PivRow n)} {x : Vec n} :
   · rintro ⟨j, hjp, rfl⟩
     exact ⟨j, decide_eq_true hjp, rfl⟩
 
-/-! ## 完备性 -/
+/-! ## Completeness -/
 
-/-- 支在枢轴列上的向量可按枢轴列重构。 -/
+/-- A vector supported on the pivot columns is recovered from the pivot columns. -/
 lemma eq_sum_of_piv_support {D : List (PivRow n)} (hD : IsReduced D) {z : Vec n}
     (hz : ∀ i, (∀ ri ∈ D, ri.2 ≠ i) → z i = 0) :
     ∀ m, z m = ∑ rl ∈ D.toFinset, (if rl.2 = m then z rl.2 else 0) := by
@@ -277,7 +299,8 @@ lemma eq_sum_of_piv_support {D : List (PivRow n)} (hD : IsReduced D) {z : Vec n}
       exact hm ⟨b, List.mem_toFinset.mp hb, hcon⟩
     rw [hz0, hsum0]
 
-/-- **枢轴列上的分量决定一切**：支在枢轴列上且在核里的向量必为零。 -/
+/-- **The entries at the pivot columns determine everything**: a vector supported on the
+pivot columns that also lies in the kernel must be zero. -/
 lemma eq_zero_of_piv_support {D : List (PivRow n)} (hD : IsReduced D) {z : Vec n}
     (hz : ∀ i, (∀ ri ∈ D, ri.2 ≠ i) → z i = 0) (hzker : ∀ ri ∈ D, ri.1 ⬝ᵥ z = 0) :
     z = 0 := by
@@ -307,7 +330,8 @@ lemma eq_zero_of_piv_support {D : List (PivRow n)} (hD : IsReduced D) {z : Vec n
     exact hzker rk hrk
   · exact hz m (fun ri hri hcon => hm ⟨ri, hri, hcon⟩)
 
-/-- **完备性方向**：核里每个向量都是核生成元的线性组合。 -/
+/-- **Completeness direction**: every vector in the kernel is a linear combination of the
+kernel generators. -/
 lemma kerL_le_spanL_kerBasis {D : List (PivRow n)} (hD : IsReduced D) :
     kerL (rowList D) ≤ spanL (kerBasis D) := by
   intro x hx
@@ -357,10 +381,12 @@ lemma kerL_le_spanL_kerBasis {D : List (PivRow n)} (hD : IsReduced D) :
   rw [hxy]
   exact hy_mem
 
-/-! ## 与原始码的合拢 -/
+/-! ## Agreement with the original code -/
 
-/-- **主定理**：核 = 核生成元张成的空间。行列表先经可信行消元，
-核生成元直接从消元输出的枢轴结构读出——整条链在内核内闭合。 -/
+/-- **Main theorem**: the kernel equals the space spanned by the kernel generators. The
+list of rows is first put through the trusted row reduction, and the kernel generators are
+read directly off the pivot structure that it outputs; the whole chain closes inside the
+kernel. -/
 theorem kerL_rowReduce (L : List (Vec n)) :
     kerL L = spanL (kerBasis (rowReduce L)) := by
   rw [← kerL_eq_of_spanL_eq (spanL_rowReduce L)]
@@ -371,11 +397,14 @@ theorem kerL_rowReduce (L : List (Vec n)) :
   obtain ⟨j, -, rfl⟩ := hx'
   exact kerVec_mem_kerL (isReduced_rowReduce L) j
 
-/-- **前沿界论证那一步的行列表形态**：只要 `rowReduce L` 还剩自由列（即核非平凡），
-`L` 的核里就有一个重量 $\le 1+\#(rowReduce L)$ 的非零元。
+/-- **The row-list form of the frontier-argument step**: as long as `rowReduce L` still
+has a free column, that is, as long as the kernel is nontrivial, the kernel of `L` contains
+a nonzero element of weight $\le 1+\#(rowReduce L)$.
 
-$\#(rowReduce L)$ 就是 $L$ 的秩，故这是"秩 $\rho$ 的矩阵有重量 $\le\rho+1$ 的非零
-核向量"的完整陈述：存在性走 `kerL_rowReduce` 的完备性方向，非零与重量界走上面两条。 -/
+Now $\#(rowReduce L)$ is the rank of `L`, so this is the full statement that a matrix of
+rank $\rho$ has a nonzero kernel vector of weight $\le\rho+1$: existence comes from the
+completeness direction of `kerL_rowReduce`, while nonzeroness and the weight bound come
+from the two results above. -/
 theorem exists_light_mem_kerL (L : List (Vec n)) {j : Fin n}
     (hj : IsFreeCol (rowReduce L) j) :
     ∃ v ∈ kerL L, v ≠ 0 ∧ hammingNorm v ≤ (rowReduce L).length + 1 := by
@@ -385,11 +414,12 @@ theorem exists_light_mem_kerL (L : List (Vec n)) {j : Fin n}
   obtain ⟨ri, hri, hcon⟩ := mem_pivCols.mp hmem
   exact hj ri hri hcon
 
-/-- **带下标的形态**：自由列 `j` 给出的核向量，同时在核里、重量 $\le$ 秩 $+1$、
-且在 `j` 位取 $1$。
+/-- **The indexed form**: the kernel vector given by the free column `j` lies in the
+kernel, has weight at most the rank plus one, and takes the value $1$ at `j`.
 
-"在 `j` 位取 1"这一条是前沿界论证里必需的：HGP 的见证构造要求种子核向量在某个下标上
-非零（`xwLeft` 的 `s a₀ = 1`）。 -/
+The clause "takes the value 1 at `j`" is needed for the frontier argument: the witness
+construction for the hypergraph product requires the seed kernel vector to be nonzero at
+some index (`s a₀ = 1` in `xwLeft`). -/
 theorem exists_light_mem_kerL_apply (L : List (Vec n)) {j : Fin n}
     (hj : IsFreeCol (rowReduce L) j) :
     kerVec (rowReduce L) j ∈ kerL L
@@ -402,10 +432,11 @@ theorem exists_light_mem_kerL_apply (L : List (Vec n)) {j : Fin n}
     exact hj ri hri hcon
   · rw [kerVec_apply_free hj, ite_eq_left rfl]
 
-/-! ## 与 LeanQEC 矩阵接口的合拢 -/
+/-! ## Agreement with the LeanQEC matrix interface -/
 
-/-- 校验**矩阵**的核（LeanQEC 的 `LinearMap.ker M.toLin'`）与行列表的核一致。
-这条桥让 LeanQEC 已有的行空间定理直接作用到本模块的 `kerL` 上。 -/
+/-- The kernel of a parity-check **matrix** (LeanQEC's `LinearMap.ker M.toLin'`) agrees
+with the kernel of its list of rows. This bridge lets the row-space theorems already
+available in LeanQEC act directly on `kerL` of this module. -/
 theorem LinearMap.ker_eq_kerL_ofFn {m : ℕ} (M : Matrix (Fin m) (Fin n) (ZMod 2)) :
     LinearMap.ker M.toLin' = kerL (List.ofFn fun i => M i) := by
   refine le_antisymm ?_ ?_
@@ -420,8 +451,10 @@ theorem LinearMap.ker_eq_kerL_ofFn {m : ℕ} (M : Matrix (Fin m) (Fin n) (ZMod 2
     intro i
     exact (mem_kerL.mp hx) (M i) (List.mem_ofFn.mpr ⟨i, rfl⟩)
 
-/-- **对外主定理（LeanQEC 接口版）**：校验矩阵 `M` 的核空间等于核生成元张成的空间。
-核生成元由可信行消元从 `M` 的行列表直接读出，全过程在内核内闭合。 -/
+/-- **Main theorem for external use (LeanQEC interface version)**: the kernel of a
+parity-check matrix `M` equals the space spanned by the kernel generators. The generators
+are read directly off the list of rows of `M` by the trusted row reduction, and the whole
+procedure closes inside the kernel. -/
 theorem LinearMap.ker_eq_spanL_kerBasis_ofFn {m : ℕ}
     (M : Matrix (Fin m) (Fin n) (ZMod 2)) :
     LinearMap.ker M.toLin' = spanL (kerBasis (rowReduce (List.ofFn fun i => M i))) := by

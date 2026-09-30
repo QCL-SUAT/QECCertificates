@@ -1,39 +1,45 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Reflect.LRAT
 
 /-!
-# 编码忠实性：CNF 的模型就是轻逻辑算符
+# Encoding fidelity: a model of the CNF is a light logical operator
 
-`Reflect/LRAT.lean` 把"内核复算通过"变成"该 CNF 不可满足"，`Reflect/LRATData.lean`
-则把本包流水线（`tools/bb144_server` 的编码器 + cadical 的 LRAT）的产物搬进内核。
-但这两步合起来给的仍是**关于 CNF 的**命题。本模块补上把它们翻成**码级**命题的那一环。
+`Reflect/LRAT.lean` turns "the kernel recomputation succeeds" into "that CNF is
+unsatisfiable", and `Reflect/LRATData.lean` moves the output of this package's pipeline (an
+external encoder together with cadical's LRAT) into the kernel. Together, however, those two
+steps still yield a statement **about the CNF**. This module supplies the step that
+translates them into a statement **about the code**.
 
-编码器断言的是（见 `tools/bb144_server/validate_encoding.py` 的模块说明）
+What the encoder asserts is (see the module note of the external encoder)
 
     exists x, w  with  x in ker(Hker),  w in ker(Hpair),  x.w = 1,  wt(x) <= k
 
-三部分各由一类子句实现，本模块对每一类给出**可靠性**（"子句全被满足 ⟹ 该条语义成立"）：
+The three parts are each realised by one class of clauses, and for each class this module
+establishes **soundness** ("all clauses satisfied implies that the semantics holds"):
 
-| 部件 | 子句 | 可靠性 |
+| part | clauses | soundness |
 |---|---|---|
-| `xorChain` | Tseitin 链 + 一条定值子句 | `dotS σ xs = want`（`dotS` 是支持集上的 GF(2) 点积） |
-| `atMostK` | 顺序计数器（Sinz） | `cntS σ xs ≤ k` |
+| `xorChain` | a Tseitin chain plus one fixing clause | `dotS σ xs = want` (`dotS` is the GF(2) dot product over a support set) |
+| `atMostK` | a sequential counter (Sinz) | `cntS σ xs ≤ k` |
 
-乘积变量（三条子句的 Tseitin 合取）在同文件后续段落给出。
-"`x` 不在 `Hpair` 的行空间里"由 `x.w = 1` 与 `w ∈ ker(Hpair)` 给出：若
-`x = Σ c_r r` 是行的组合，则 `x.w = Σ c_r (r.w) = 0`，与 `x.w = 1` 矛盾。
-这一步只用**行空间 ⊆ (ker)⊥** 这半边——不需要反向的 `(ker)⊥ ⊆ row`。
+The product variables (a Tseitin conjunction of three clauses) are given in a later section
+of this same file.
+The fact that "`x` is not in the row space of `Hpair`" follows from `x.w = 1` together with
+`w ∈ ker(Hpair)`: if `x = Σ c_r r` is a combination of rows, then `x.w = Σ c_r (r.w) = 0`,
+contradicting `x.w = 1`. This step uses only the one half **row space ⊆ (ker)⊥**; the
+converse inclusion `(ker)⊥ ⊆ row` is not needed.
 -/
 
 namespace QECCertificates.LRAT
 
-/-! ## 支持集上的 GF(2) 点积与支撑大小 -/
+/-! ## The GF(2) dot product over a support set, and the support size -/
 
-/-- 支持集 `s` 上的 GF(2) 点积 `Σ_{j ∈ s} σ j`（以 `Bool` 的异或为加法）。 -/
+/-- The GF(2) dot product `Σ_{j ∈ s} σ j` over the support set `s` (with XOR of `Bool` as
+the addition). -/
 def dotS (σ : Assign) : List Nat → Bool
   | [] => false
   | j :: s => σ j ^^ dotS σ s
@@ -43,14 +49,15 @@ def dotS (σ : Assign) : List Nat → Bool
 @[simp] theorem dotS_cons (σ : Assign) (j : Nat) (s : List Nat) :
     dotS σ (j :: s) = (σ j ^^ dotS σ s) := rfl
 
-/-- 拼接律：点积在支持集拼接下相加。 -/
+/-- The concatenation law: the dot product is additive under concatenation of support
+sets. -/
 theorem dotS_append (σ : Assign) (s t : List Nat) :
     dotS σ (s ++ t) = (dotS σ s ^^ dotS σ t) := by
   induction s with
   | nil => simp
   | cons j s ih => simp only [List.cons_append, dotS_cons, ih]; rw [Bool.xor_assoc]
 
-/-- 支撑大小：`σ` 取真值的变量个数。 -/
+/-- The support size: the number of variables that `σ` assigns true. -/
 def cntS (σ : Assign) (l : List Nat) : Nat := (l.filter (fun t => σ t)).length
 
 @[simp] theorem cntS_nil (σ : Assign) : cntS σ [] = 0 := rfl
@@ -68,9 +75,9 @@ theorem cntS_singleton_false (σ : Assign) (x : Nat) (h : σ x = false) : cntS �
 theorem cntS_le_length (σ : Assign) (l : List Nat) : cntS σ l ≤ l.length :=
   List.length_filter_le _ _
 
-/-! ## 通用子句引理 -/
+/-! ## General clause lemmas -/
 
-/-- 二元子句的语义。 -/
+/-- The semantics of a two-literal clause. -/
 theorem sat_two {σ : Assign} {a b : Lit} (h : SatClause σ [a, b]) :
     σ a.1 = a.2 ∨ σ b.1 = b.2 := by
   obtain ⟨l, hl, hv⟩ := h
@@ -79,7 +86,7 @@ theorem sat_two {σ : Assign} {a b : Lit} (h : SatClause σ [a, b]) :
   · exact Or.inl hv
   · exact Or.inr hv
 
-/-- 三元子句的语义。 -/
+/-- The semantics of a three-literal clause. -/
 theorem sat_three {σ : Assign} {a b c : Lit} (h : SatClause σ [a, b, c]) :
     σ a.1 = a.2 ∨ σ b.1 = b.2 ∨ σ c.1 = c.2 := by
   obtain ⟨l, hl, hv⟩ := h
@@ -89,19 +96,22 @@ theorem sat_three {σ : Assign} {a b c : Lit} (h : SatClause σ [a, b, c]) :
   · exact Or.inr (Or.inl hv)
   · exact Or.inr (Or.inr hv)
 
-/-! ## Tseitin 链：`Σ xs = want` -/
+/-! ## Tseitin chain: `Σ xs = want` -/
 
-/-- Tseitin 一步的四条子句，钉住 `nxt = cur ⊕ x`。
+/-- The four clauses of one Tseitin step, pinning `nxt = cur ⊕ x`.
 
-四条子句的极性不能写反：把前两条的 `nxt` 去掉否定，链算的就不是异或而是同或，
-UNSAT 与物理断言脱钩（`tools/bb144_server/test_encoding.py` 的小例自检专防这个）。 -/
+The polarities of the four clauses must not be swapped: dropping the negation of `nxt` in
+the first two leaves the chain computing an equivalence rather than an XOR, which detaches
+the UNSAT result from the physical assertion (a self-check on a small example in the
+external encoder guards against exactly this). -/
 def xorStepClauses (cur x nxt : Nat) : List Clause :=
   [[(cur, false), (x, false), (nxt, false)],
    [(cur, false), (x, true), (nxt, true)],
    [(cur, true), (x, false), (nxt, true)],
    [(cur, true), (x, true), (nxt, false)]]
 
-/-- 一步的可靠性：四条子句全真 ⟹ `nxt` 取 `cur ⊕ x`。 -/
+/-- Soundness of one step: all four clauses true implies that `nxt` takes the value
+`cur ⊕ x`. -/
 theorem xorStep_sat {σ : Assign} {cur x nxt : Nat}
     (h : ∀ C ∈ xorStepClauses cur x nxt, SatClause σ C) :
     σ nxt = (σ cur ^^ σ x) := by
@@ -119,16 +129,18 @@ theorem xorStep_sat {σ : Assign} {cur x nxt : Nat}
   have k4 : σ cur = true ∨ σ x = true ∨ σ nxt = false := sat_three h4
   by_cases hc : σ cur = true <;> by_cases hx : σ x = true <;> simp_all
 
-/-- 链：从 `cur` 出发依次异或 `rest` 的每个变量，新变量编号从 `c` 起连续分配。
+/-- The chain: starting from `cur`, XOR in each variable of `rest` in turn, with the new
+variables numbered consecutively from `c`.
 
-最后一条子句（`rest` 走完时）把链的结果钉成 `want`。 -/
+The final clause (emitted once `rest` is exhausted) pins the result of the chain to
+`want`. -/
 def xorChainAux : List Nat → Bool → Nat → Nat → List Clause × Nat
   | [], want, cur, c => ([[(cur, want)]], c)
   | x :: rest, want, cur, c =>
       let (tl, c') := xorChainAux rest want c (c + 1)
       (xorStepClauses cur x c ++ tl, c')
 
-/-- 链的可靠性：子句全真 ⟹ `dotS σ (cur :: rest) = want`。 -/
+/-- Soundness of the chain: all clauses true implies `dotS σ (cur :: rest) = want`. -/
 theorem xorChainAux_sat : ∀ (rest : List Nat) (want : Bool) (cur c : Nat) (σ : Assign),
     (∀ C ∈ (xorChainAux rest want cur c).1, SatClause σ C) →
     dotS σ (cur :: rest) = want := by
@@ -155,20 +167,22 @@ theorem xorChainAux_sat : ∀ (rest : List Nat) (want : Bool) (cur c : Nat) (σ 
       rw [hnxt] at hIH
       rw [← hIH, Bool.xor_assoc]
 
-/-- 完整链（`xs` 非空；空表只可能来自空支持集，此时**不发子句**——
-编码器不会产生空支持集，发一条 `[-start]` 反而会凭空造出约束）。 -/
+/-- The complete chain (`xs` nonempty; an empty list can only come from an empty support
+set, in which case **no clause is emitted** at all, since the encoder never produces an
+empty support set and a `[-start]` clause would create a constraint out of nothing). -/
 def xorChain (xs : List Nat) (want : Bool) (start : Nat) : List Clause × Nat :=
   match xs with
   | [] => ([], start)
   | x₀ :: rest => xorChainAux rest want x₀ start
 
-/-- 链的可靠性（非空形态）。 -/
+/-- Soundness of the chain (the nonempty form). -/
 theorem xorChain_sat {σ : Assign} {x₀ : Nat} {rest : List Nat} {want : Bool} {start : Nat}
     (h : ∀ C ∈ (xorChainAux rest want x₀ start).1, SatClause σ C) :
     dotS σ (x₀ :: rest) = want :=
   xorChainAux_sat rest want x₀ start σ h
 
-/-- 链的可靠性（对任意非空变量表；`prodVars` 这类定义不句法可约时用它）。 -/
+/-- Soundness of the chain for an arbitrary nonempty list of variables; used when a
+definition such as `prodVars` does not reduce syntactically. -/
 theorem xorChain_sat' {σ : Assign} {xs : List Nat} {want : Bool} {start : Nat}
     (hne : xs ≠ []) (h : ∀ C ∈ (xorChain xs want start).1, SatClause σ C) :
     dotS σ xs = want := by
@@ -176,13 +190,15 @@ theorem xorChain_sat' {σ : Assign} {xs : List Nat} {want : Bool} {start : Nat}
   | nil => exact absurd rfl hne
   | cons x₀ rest => exact xorChain_sat h
 
-/-! ## 顺序计数器：`wt ≤ k` -/
+/-! ## Sequential counter: `wt ≤ k` -/
 
-/-- 槽位约定：`s i j` 是"前 `i` 个变量里至少有 `j` 个为真"的变量号；`none` 表示该槽位是
-**常量**（`j = 0` 时恒真，`j > min i (k+1)` 时恒假）。
+/-- The slot convention: `s i j` is the variable number meaning "at least `j` of the first
+`i` variables are true"; `none` marks the slot as a **constant** (true when `j = 0`, false
+when `j > min i (k+1)`).
 
-`tools/bb144_server/bb144_sat.py` 的 `at_most_k` 用 `0` 表示这两种常量槽，且必须在写出
-子句前消去——`0` 在 DIMACS 里是子句终止符，写出去会把一条子句劈成两条。 -/
+The external encoder writes `0` for those two constant slots, and it must discharge them
+before emitting clauses: `0` is the clause terminator in DIMACS, so writing it out would
+split one clause into two. -/
 def SlotOK (s : Nat → Nat → Option Nat) (k : Nat) : Prop :=
   ∀ i j, s i j = none ↔ ¬(1 ≤ j ∧ j ≤ min i (k+1))
 
@@ -196,7 +212,8 @@ theorem SlotOK.some_of {s : Nat → Nat → Option Nat} {k : Nat} (hok : SlotOK 
 theorem SlotOK.none_of {s : Nat → Nat → Option Nat} {k : Nat} (hok : SlotOK s k) {i j : Nat}
     (h : ¬(1 ≤ j ∧ j ≤ min i (k+1))) : s i j = none := (hok i j).mpr h
 
-/-- 槽位 `(i,j)` 的三到四条子句，逐字照抄编码器；`none` 槽位按常量消去（恒假/恒真）。 -/
+/-- The three or four clauses of the slot `(i,j)`, transcribed verbatim from the encoder;
+`none` slots are discharged as constants (always false or always true). -/
 def slotClauses (s : Nat → Nat → Option Nat) (i j x : Nat) : List Clause :=
   match s (i - 1) j, s (i - 1) (j - 1), s i j with
   | some a, some b, some si =>
@@ -217,12 +234,14 @@ def slotClauses (s : Nat → Nat → Option Nat) (i j x : Nat) : List Clause :=
        [(si, false), (x, true)]]
   | _, _, none => []
 
-/-- 第 `i` 行（处理变量 `x`）的全部子句，按 `j = 1..min i (k+1)` 展开。 -/
+/-- All clauses of the `i`-th row (which processes the variable `x`), expanded over
+`j = 1..min i (k+1)`. -/
 def rowClauses (s : Nat → Nat → Option Nat) (k i x : Nat) : List Clause :=
   (List.range (min i (k+1))).flatMap (fun j' => slotClauses s i (j' + 1) x)
 
-/-- 顺序计数器：`pre` 是已处理的变量（槽位编号靠它的长度算），`suf` 是剩余的。
-`k+1 ≤ pre.length` 时（即走到末行）再发一条把 `s n (k+1)` 钉成假的子句。 -/
+/-- The sequential counter: `pre` holds the variables already processed (the slot numbers
+are computed from its length) and `suf` the remaining ones. When `k+1 ≤ pre.length`, that is
+on reaching the last row, one further clause is emitted pinning `s n (k+1)` to false. -/
 def atMostKAux (s : Nat → Nat → Option Nat) (k : Nat) (pre suf : List Nat) : List Clause :=
   match suf with
   | [] =>
@@ -233,11 +252,12 @@ def atMostKAux (s : Nat → Nat → Option Nat) (k : Nat) (pre suf : List Nat) :
       else []
   | x :: rest => rowClauses s k (pre.length + 1) x ++ atMostKAux s k (pre ++ [x]) rest
 
-/-- 计数器的全部子句（从空前缀起步）。 -/
+/-- All clauses of the counter (starting from an empty prefix). -/
 def atMostK (s : Nat → Nat → Option Nat) (k : Nat) (xs : List Nat) : List Clause :=
   atMostKAux s k [] xs
 
-/-- 行子句的成员判定：`1 ≤ j ≤ min i (k+1)` 时槽位 `(i,j)` 的子句都在第 `i` 行里。 -/
+/-- Membership for the row clauses: for `1 ≤ j ≤ min i (k+1)`, the clauses of the slot
+`(i,j)` all occur in the `i`-th row. -/
 theorem mem_rowClauses {s : Nat → Nat → Option Nat} {k i j x : Nat} {C : Clause}
     (h1 : 1 ≤ j) (h2 : j ≤ min i (k+1)) (hC : C ∈ slotClauses s i j x) :
     C ∈ rowClauses s k i x := by
@@ -245,11 +265,13 @@ theorem mem_rowClauses {s : Nat → Nat → Option Nat} {k i j x : Nat} {C : Cla
   have : j - 1 + 1 = j := by omega
   rwa [this]
 
-/-- **计数器的可靠性**：子句全被满足 ⟹ 真值变量个数 ≤ `k`。
+/-- **Soundness of the counter**: all clauses satisfied implies that the number of true
+variables is at most `k`.
 
-不变量：前 `i` 个变量里至少有 `j` 个为真 ⟹ 槽位 `(i,j)` 为真。归纳沿变量表走
-（`pre` 是已处理的前缀、`suf` 是剩余的），故步进只需 `List.filter_append`，
-不需要 `List.take` 的下标搬运。 -/
+The invariant is: at least `j` of the first `i` variables are true implies that the slot
+`(i,j)` is true. The induction runs along the list of variables (`pre` is the prefix already
+processed and `suf` the remainder), so the step needs only `List.filter_append` and not the
+index bookkeeping of `List.take`. -/
 theorem atMostKAux_sat {σ : Assign} {s : Nat → Nat → Option Nat} {k : Nat}
     (hok : SlotOK s k) :
     ∀ (pre suf : List Nat),
@@ -358,7 +380,8 @@ theorem atMostKAux_sat {σ : Assign} {s : Nat → Nat → Option Nat} {k : Nat}
       exact ih (pre ++ [x]) hinv' htl
   exact aux suf pre hinv0 hcl0
 
-/-- **计数器的可靠性（无前缀形态）**：`∃ σ` 满足全部子句 ⟹ 真值变量个数 ≤ `k`。 -/
+/-- **Soundness of the counter (the prefix-free form)**: the existence of a `σ` satisfying
+all clauses implies that the number of true variables is at most `k`. -/
 theorem atMostK_sat {σ : Assign} {s : Nat → Nat → Option Nat} {k : Nat}
     (hok : SlotOK s k) {xs : List Nat}
     (h : ∀ C ∈ atMostK s k xs, SatClause σ C) :
@@ -371,7 +394,7 @@ theorem atMostK_sat {σ : Assign} {s : Nat → Nat → Option Nat} {k : Nat}
   have := atMostKAux_sat hok (pre := []) (suf := xs) hinv0 h
   simpa using this
 
-/-! ## 组装：对照 `tools/bb144_server/validate_encoding.py` 的 `build_pair` -/
+/-! ## Assembly, matching `build_pair` of the external encoder -/
 
 theorem satFormula_append {σ : Assign} {A B : CNF} :
     SatFormula σ (A ++ B) ↔ SatFormula σ A ∧ SatFormula σ B := by
@@ -384,7 +407,8 @@ theorem satFormula_append {σ : Assign} {A B : CNF} :
     · exact hA C h
     · exact hB C h
 
-/-- `SatFormula` 是 `def`，隐式透明度下不自动展开——要 `∀ C ∈ F` 形态时用它。 -/
+/-- `SatFormula` is a `def` and does not unfold automatically at implicit transparency; use
+this to obtain the `∀ C ∈ F` form. -/
 theorem SatFormula.forall {σ : Assign} {F : CNF} (h : SatFormula σ F) :
     ∀ C ∈ F, SatClause σ C := h
 
@@ -403,19 +427,20 @@ theorem dotS_congr {σ τ : Assign} {l : List Nat} (h : ∀ j ∈ l, σ j = τ j
       have hl : ∀ t ∈ l, σ t = τ t := fun t ht => h t (List.mem_cons_of_mem _ ht)
       simp only [dotS_cons, hj, ih hl]
 
-/-- 支撑大小在映射下的不变式（把"变量号表"换成"按列索引的赋值函数"）。 -/
+/-- The invariance of the support size under a map, exchanging a list of variable numbers
+for an assignment indexed by column. -/
 theorem cntS_map (σ : Assign) (f : Nat → Nat) (l : List Nat) :
     cntS σ (l.map f) = cntS (fun t => σ (f t)) l := by
   simp only [cntS, List.filter_map, List.length_map, Function.comp_def]
 
-/-- 乘积变量块：`a_j ↔ x_j ∧ w_j`，每个三条子句。 -/
+/-- The block of product variables: `a_j ↔ x_j ∧ w_j`, with three clauses each. -/
 def prodClauses (c n : Nat) : List Clause :=
   (List.range n).flatMap (fun j =>
     [[(c + j, false), (j, true)],
      [(c + j, false), (n + j, true)],
      [(c + j, true), (j, false), (n + j, false)]])
 
-/-- 乘积块的三条子句 ⟹ `a = x ∧ w`。 -/
+/-- The three clauses of the product block imply `a = x ∧ w`. -/
 theorem prod_sat {σ : Assign} {a x w : Nat}
     (h1 : SatClause σ [(a, false), (x, true)])
     (h2 : SatClause σ [(a, false), (w, true)])
@@ -443,7 +468,8 @@ theorem prod_sat {σ : Assign} {a x w : Nat}
     · simp [ha', h]
     · simp [ha', h]
 
-/-- 乘积块全部被满足 ⟹ 每个乘积变量取合取值。 -/
+/-- All of the product block satisfied implies that every product variable takes the value
+of the conjunction. -/
 theorem prodClauses_sat {σ : Assign} {c n : Nat}
     (h : ∀ C ∈ prodClauses c n, SatClause σ C) :
     ∀ j < n, σ (c + j) = (σ j && σ (n + j)) := by
@@ -457,7 +483,8 @@ theorem prodClauses_sat {σ : Assign} {c n : Nat}
   exact prod_sat (h _ (mem _ (by simp)))
     (h _ (mem _ (by simp))) (h _ (mem _ (by simp)))
 
-/-- 一串 `xorChain`（一行一条），返回（子句，下一个变量号）。 -/
+/-- A sequence of `xorChain`s, one per row, returning the clauses and the next variable
+number. -/
 def chainsFrom (f : Nat → Nat) : List (List Nat) → Nat → List Clause × Nat
   | [], c => ([], c)
   | r :: rest, c =>
@@ -498,10 +525,12 @@ theorem chainsFrom_sat {σ : Assign} {f : Nat → Nat} {rows : List (List Nat)}
           exact h C hmem2
         exact ih (fun r' hr' => hne r' (List.mem_cons_of_mem _ hr')) c' hrest r hr
 
-/-- 槽位基址：第 `i` 行之前已分配的槽位数（与编码器的行优先分配顺序一致）。 -/
+/-- The slot base: the number of slots allocated before the `i`-th row (agreeing with the
+row-major allocation order of the encoder). -/
 def slotBase (k i : Nat) : Nat := ((List.range i).map (fun i' => min i' (k+1))).sum
 
-/-- 顺序计数器的槽位变量号（`none` = 常量槽）。 -/
+/-- The slot variable numbers of the sequential counter (`none` marks a constant
+slot). -/
 def slotVar (c k i j : Nat) : Option Nat :=
   if 1 ≤ j ∧ j ≤ min i (k+1) then some (c + slotBase k i + (j - 1)) else none
 
@@ -509,21 +538,23 @@ theorem slotVar_ok (c k : Nat) : SlotOK (slotVar c k) k := by
   intro i j
   by_cases h : 1 ≤ j ∧ j ≤ min i (k+1) <;> simp [slotVar, h]
 
-/-- 核约束段（`x` 的行，变量号 = 列 + 1），以及它之后的计数器。 -/
+/-- The kernel-constraint section (the rows of `x`, with variable number = column + 1),
+together with the counter that follows it. -/
 def kerClauses (Rker : List (List Nat)) (n : Nat) : List Clause :=
   (chainsFrom (fun j => j) Rker (2 * n)).1
 
 def c1Of (Rker : List (List Nat)) (n : Nat) : Nat :=
   (chainsFrom (fun j => j) Rker (2 * n)).2
 
-/-- 配对约束段（`w` 的行，变量号 = `n + 列 + 1`）。 -/
+/-- The pairing-constraint section (the rows of `w`, with variable number =
+`n + column + 1`). -/
 def pairClauses (Rker Rpair : List (List Nat)) (n : Nat) : List Clause :=
   (chainsFrom (fun j => n + j) Rpair (c1Of Rker n)).1
 
 def c2Of (Rker Rpair : List (List Nat)) (n : Nat) : Nat :=
   (chainsFrom (fun j => n + j) Rpair (c1Of Rker n)).2
 
-/-- 乘积变量段与 `x·w = 1` 那条链。 -/
+/-- The product-variable section, together with the chain for `x·w = 1`. -/
 def prodVars (Rker Rpair : List (List Nat)) (n : Nat) : List Nat :=
   (List.range n).map (fun j => c2Of Rker Rpair n + j)
 
@@ -533,23 +564,25 @@ def xwClauses (Rker Rpair : List (List Nat)) (n : Nat) : List Clause :=
 def c3Of (Rker Rpair : List (List Nat)) (n : Nat) : Nat :=
   (xorChain (prodVars Rker Rpair n) true (c2Of Rker Rpair n + n)).2
 
-/-- **本包流水线用的那份编码**，逐字照抄 `validate_encoding.build_pair`。
+/-- **The encoding used by this package's pipeline**, transcribed verbatim from `build_pair`
+of the external encoder.
 
-行给成**列索引表**（`to_masks` 之前的形态）：`x_j ↔ 变量 j+1`、`w_j ↔ 变量 n+j+1`。
-组装顺序也必须逐字一致，否则实例同一性（`by decide`）对不上。 -/
+Rows are given as **lists of column indices** (the form before `to_masks`):
+`x_j ↔ variable j+1` and `w_j ↔ variable n+j+1`. The order of assembly must match verbatim
+as well, otherwise the instance identity checked by `by decide` does not go through. -/
 def buildPair (Rker Rpair : List (List Nat)) (n k : Nat) : CNF :=
   ((kerClauses Rker n ++ pairClauses Rker Rpair n) ++
     (prodClauses (c2Of Rker Rpair n) n ++ xwClauses Rker Rpair n)) ++
   atMostK (slotVar (c3Of Rker Rpair n) k) k (List.range n)
 
-/-- **编码忠实性（可靠性方向）**：任何满足赋值都给出
+/-- **Encoding fidelity (the soundness direction)**: every satisfying assignment yields
 
-* 重量 ≤ `k` 的 `x`（`cntS` 数真值位）；
-* `x` 在 `Rker` 的核里、`w` 在 `Rpair` 的核里；
-* `x.w = 1`（逐点合取再异或）。
+* an `x` of weight at most `k` (`cntS` counts the true positions);
+* `x` in the kernel of `Rker` and `w` in the kernel of `Rpair`;
+* `x.w = 1` (a pointwise conjunction followed by an XOR).
 
-配合 `x.w = 1`，第三、四条使 `x` 不可能落在 `Rpair` 的行空间里（行空间 ⊆ (ker)⊥），
-即 `x` 是一个**轻逻辑算符**。 -/
+Together with `x.w = 1`, the third and fourth items make it impossible for `x` to lie in the
+row space of `Rpair` (row space ⊆ (ker)⊥), that is, `x` is a **light logical operator**. -/
 theorem buildPair_sat {Rker Rpair : List (List Nat)} {n k : Nat} {σ : Assign}
     (hn : 0 < n) (hne₁ : ∀ r ∈ Rker, r ≠ []) (hne₂ : ∀ r ∈ Rpair, r ≠ [])
     (h : SatFormula σ (buildPair Rker Rpair n k)) :

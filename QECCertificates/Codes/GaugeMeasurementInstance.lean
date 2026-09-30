@@ -1,77 +1,96 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Codes.BB24Gauged
 import QECCertificates.Codes.CaseMatrix
 import QECCertificates.GF2.HGPCompression
 
 /-!
-# BB gauging 测量线路的时间型探测码：$|V| = 4$ 条 Gauss 律、$T = 4 = d$ 轮
+# The timelike detector code of the BB gauging measurement circuit: $|V| = 4$ Gauss laws, $T = 4 = d$ rounds
 
-`Codes/BB24Gauged.lean` 给了 BB $[[18,4,4]]$ 经 $K_4$ 辅助图 gauging 得 $[[24,3,4]]$
-的**空间型**实例（$k$ 减一、距离保持）。本模块补它的**线路侧**对偶：把 gauging
-**测量线路**的时间型（时空）故障距离算成一个具名、可复算、在内核内判出数值的实例
-——与 `Codes/TimeLikeInstance.lean` 的 Bacon–Shor 探测码同形、同一条归约链
-（`tools/timelike_server/timelike_sat.py` → `cadical` → `Reflect/LRATDataCircuit.lean`
-→ `Reflect/FaithfulCircuit.lean`）。
+`Codes/BB24Gauged.lean` gives the **spacelike** instance of BB $[[18,4,4]]$ gauged by the
+$K_4$ ancilla graph to $[[24,3,4]]$ ($k$ drops by one, the distance is preserved). This
+module supplies its **circuit-side** dual: it computes the timelike (spacetime) fault
+distance of the gauging **measurement circuit** as a named, reproducible instance whose
+value is decided inside the kernel, in the same shape and along the same reduction chain
+as the Bacon–Shor detector code of `Codes/TimeLikeInstance.lean` (an external encoder and
+solver, then `Reflect/LRATDataCircuit.lean` and `Reflect/FaithfulCircuit.lean`).
 
-## 这是 BB gauging 测量线路的哪一部分
+## Which part of the BB gauging measurement circuit this is
 
-gauging 测量 $L$ 的做法是：把 $L$ 分解成 $|V|$ 条 **Gauss 律**
-$A_v = X_v\prod_{e \ni v}X_e$（$K_4$ 辅助图，顶点 = $L$ 的 4 个支撑比特），
-**每条律各用一个辅助比特测一次**，再把 $|V|$ 个结果相乘得到 $L$ 的读出
-（$\prod_v A_v = L$，边比特成对相消，见 `Codes/Gauging.lean` 的
-`gauss_prod_eq_vertex_prod`）。本模块取的就是**这一步**：被重复测量的是这 4 条律。
+Gauging measures $L$ by decomposing it into $|V|$ **Gauss laws**
+$A_v = X_v\prod_{e \ni v}X_e$ (the $K_4$ ancilla graph, whose vertices are the 4 support
+qubits of $L$), measuring **each law once with its own ancilla**, and multiplying the
+$|V|$ outcomes to obtain the readout of $L$ ($\prod_v A_v = L$: the edge qubits cancel in
+pairs, see `gauss_prod_eq_vertex_prod` in `Codes/Gauging.lean`). That step, the repeated
+measurement of these 4 laws, is what this module encodes.
 
-* 校验数 $m = |V| = 4$——由 gauging 结构定死（$K_4$ 的 4 个顶点），不是自由参数；
-* 轮数 $T = 4 = d$——$d$ 是 gauged 码 $[[24,3,4]]$ 的码距（`Codes/BB24Gauged.lean`
-  的 `bb24_dx` / `bb24_dz`）。取 $T = d$ 使**时间型分量恰为 $d$**，于是与空间型
-  分量一起给出"两分量都 $\ge d$"——这正是 `Codes/BaconShorMeasurement.lean` 里
-  $T = d = 3$ 那一档的同一件事。
+* The number of checks is $m = |V| = 4$, fixed by the gauging structure (the 4 vertices
+  of $K_4$) and not a free parameter;
+* the number of rounds is $T = 4 = d$, where $d$ is the distance of the gauged code
+  $[[24,3,4]]$ (`bb24_dx` / `bb24_dz` in `Codes/BB24Gauged.lean`). Taking $T = d$ makes
+  the **timelike component exactly $d$**, so that together with the spacelike component
+  the two components are both $\ge d$; this is the same statement as the $T = d = 3$ case
+  in `Codes/BaconShorMeasurement.lean`.
 
-于是 $N = mT = 16$ 个比特、$m(T-1) = 12$ 条探测器，最小不可探测重量 $= T = 4 = d$。
+So there are $N = mT = 16$ qubits and $m(T-1) = 12$ detectors, and the minimum
+undetectable weight is $T = 4 = d$.
 
-## 主结果
+## Main results
 
-* `bbGauge44_d`：$\min\{\mathrm{wt}(f) : Hf = 0,\ f \neq 0\} = 4$——**两向夹逼**：
-  下界走族级定理（见下），上界走显式见证 `bbGauge44W`（第一条律连续 4 轮报错）；
-* `bbGauge44_le_weight_of_ker`：下界的**族级定理路线**——核里每个块常值 ⟹ 至少一条律
-  的时间轴全非零 ⟹ 该切片重量恰为 $4$ ⟹ 单射拉回给出 $4 \le \mathrm{wt}(f)$，**全程无枚举**；
-* `bbGauge44_lightSet_zero`：同一条下界的**第二路证书**（重量限定枚举，候选
-  $\sum_{k \le 3}\binom{16}{k} = 697$ 个，`by decide`）——本包"同一断言两条算路"的口径；
-* `bbGauge44_ker_slice_const`：**复用族级定理的地方**——把每条律的 4 轮取成切片
-  `Vec 4`，逐行正交即得 `Codes/Gauging.lean` 的 `timeLike_eq_of_repCheck` 的前提，
-  族级定理直接给出常值性；
-* `bbGauge44Checks_rows` / `bbGauge44Checks_prod`：4 条 Gauss 律**逐字钉在**
-  `Codes/BB24Gauged.lean` 的 `bb24Hx` 第 $9..12$ 行上，且其乘积恰是 4 个顶点比特的
-  指示向量（$L = \prod_v A_v$）——有了这两条，"被重复测量的 4 个算符"才真的是
-  gauging 的那 4 条律。
+* `bbGauge44_d`: $\min\{\mathrm{wt}(f) : Hf = 0,\ f \neq 0\} = 4$, by a **two-sided
+  squeeze**: the lower bound from the family-level theorem (below), the upper bound from
+  the explicit witness `bbGauge44W` (the first law reports an error in 4 consecutive
+  rounds);
+* `bbGauge44_le_weight_of_ker`: the **family-level theorem route** to the lower bound:
+  every block of a kernel vector is constant, hence at least one law has an entirely
+  non-zero time axis, hence that slice has weight exactly $4$, hence the injective
+  pull-back gives $4 \le \mathrm{wt}(f)$. **No enumeration anywhere.**
+* `bbGauge44_lightSet_zero`: a **second certificate** for the same lower bound (a
+  weight-limited enumeration over $\sum_{k \le 3}\binom{16}{k} = 697$ candidates,
+  `by decide`), following this package's practice of computing one assertion along two
+  routes;
+* `bbGauge44_ker_slice_const`: the point at which **the family-level theorem is reused**:
+  the 4 rounds of each law are read as a slice `Vec 4`, row-by-row orthogonality supplies
+  the hypothesis of `timeLike_eq_of_repCheck` from `Codes/Gauging.lean`, and the
+  family-level theorem gives constancy directly;
+* `bbGauge44Checks_rows` / `bbGauge44Checks_prod`: the 4 Gauss laws are **pinned
+  literally** to rows $9..12$ of `bb24Hx` in `Codes/BB24Gauged.lean`, and their product is
+  exactly the indicator vector of the 4 vertex qubits ($L = \prod_v A_v$). These two are
+  what makes the 4 repeatedly measured operators really the 4 laws of the gauging.
 
-## 诚实边界（本模块**没有**做的事）
+## Honest boundaries (what this module does **not** do)
 
-1. **没有复现完整规模的线路**：本模块只编码 gauging 测量那一步的 $|V| = 4$ 条 Gauss 律
-   的重复测量，**不是**整个 gauged 码 $[[24,3,4]]$ 的 13 条 X 校验 / 12 条 Z 校验的
-   完整综合征提取循环。后者若照搬会得到 $m \approx 13$、$N \approx 52$ 的 CNF，
-   其内核回放规模超出本包预算（`Codes/BB24Gauged.lean` 的记录：宽 24 上的
-   `inSpanB`/`rowReduce` 后端起第 7 行即不收敛）——这一取舍与理由写在
-   `tools/timelike_server/timelike_sat.py` 的模块头与 `Reflect/LRATDataCircuit.lean`
-   的 `bbgauge44` 档说明里。**这是简化，不是完整线路。**
-2. **没有做通用门级线路演算**：本模块的时型结构是"同一校验在相邻两轮的**报告结果**
-   之奇偶"这一**现象学**模型（与 `Codes/MeasurementProtocol.lean` 同口径），
-   **不含**门级位置（不是逐门电路级仿真），也不含轮内的空间型校验
-   （轮内 $\prod_v \sigma_{v,t}$ 那条 Gauss 律乘积是**空间**型分量，属于另一个分量）。
-3. **没有把 4 条律与 `Codes/Gauging.lean` 的 `gaussOp` 在索引层桥接**：
-   `gaussOp` 用的是 $\mathrm{Fin}\,k \oplus \mathrm{Fin}\,m$ 编号，本模块用的是
-   `Codes/BB24Gauged.lean` 的 24 比特编号；两者的**公式**相同、**内容**由
-   `bbGauge44Checks_rows` / `bbGauge44Checks_prod` 在 24 比特编号下逐条验明，
-   但两个编号之间的形式化桥接没有做。
-4. **时间型分量的下界只对"探测器全静默且非零"这一档**：与
-   `Codes/TimeLikeInstance.lean` 同口径（`zeroRows`），**不是**
-   `Codes/MeasurementProtocol.lean` 里带逻辑泛函 $w \cdot f = 1$ 的 `IsUndetectedFault`
-   那一支——这里没有 $w$（gauging 测量的读出是 4 个结果的乘积，在时型链上不构成
-   另一条约束）。
+1. **The full-scale circuit is not reproduced**: this module encodes only the repeated
+   measurement of the $|V| = 4$ Gauss laws of the gauging step. It is **not** the full
+   syndrome-extraction cycle over the 13 X checks and 12 Z checks of the whole gauged code
+   $[[24,3,4]]$. Copying that over would give a CNF with $m \approx 13$ and $N \approx 52$,
+   whose kernel replay is beyond this package's budget (as recorded in
+   `Codes/BB24Gauged.lean`: on width 24, `inSpanB`/`rowReduce` stops converging from row 7
+   on). The trade-off and its reasons are documented in the module header of the external
+   encoder and in the description of the `bbgauge44` entry of
+   `Reflect/LRATDataCircuit.lean`. **This is a simplification, not the full circuit.**
+2. **No general gate-level circuit calculus is carried out**: the timelike structure here
+   is the **phenomenological** model of "the parity of the reported outcomes of the same
+   check in two adjacent rounds" (the same model as in
+   `Codes/MeasurementProtocol.lean`). It does **not** contain gate-level positions (it is
+   not a gate-by-gate circuit simulation), nor the intra-round spacelike checks (the
+   Gauss-law product $\prod_v \sigma_{v,t}$ inside a round is a **spacelike** component
+   and belongs to the other component).
+3. **The 4 laws are not bridged to `gaussOp` of `Codes/Gauging.lean` at the index level**:
+   `gaussOp` uses the $\mathrm{Fin}\,k \oplus \mathrm{Fin}\,m$ numbering whereas this
+   module uses the 24-qubit numbering of `Codes/BB24Gauged.lean`. The **formulas** are the
+   same and the **content** is verified one by one in the 24-qubit numbering by
+   `bbGauge44Checks_rows` / `bbGauge44Checks_prod`, but the formal bridge between the two
+   numberings is not built.
+4. **The lower bound on the timelike component covers only the case "all detectors silent
+   and the fault non-zero"**: the same convention as `Codes/TimeLikeInstance.lean`
+   (`zeroRows`), **not** the `IsUndetectedFault` branch of
+   `Codes/MeasurementProtocol.lean`, which carries the logical functional $w \cdot f = 1$.
+   There is no $w$ here, because the readout of a gauging measurement is the product of 4
+   outcomes and does not form another constraint on the timelike chain.
 -/
 
 namespace QECCertificates
@@ -83,50 +102,53 @@ open scoped BigOperators
 set_option maxRecDepth 100000
 set_option maxHeartbeats 8000000
 
-/-! ## 一、被重复测量的 4 条 Gauss 律（钉在 `Codes/BB24Gauged.lean` 上） -/
+/-! ## 1. The 4 Gauss laws that are measured repeatedly (pinned to `Codes/BB24Gauged.lean`) -/
 
-/-- $K_4$ 的顶点：被提升为稳定子的重量-4 X 型逻辑 $L$ 的 4 个支撑比特
-（在 `Codes/BB24Gauged.lean` 的 24 比特编号里，次序为 $K_4$ 的顶点序）。 -/
+/-- The vertices of $K_4$: the 4 support qubits of the weight-4 X-type logical operator $L$ that is
+promoted to a stabilizer (in the 24-qubit numbering of `Codes/BB24Gauged.lean`, ordered as the
+vertices of $K_4$). -/
 def bbGauge44Vert : Fin 4 → Fin 24 := ![0, 2, 6, 9]
 
-/-- **4 条 Gauss 律** $A_v = X_v\prod_{e \ni v}X_e$（$K_4$ 辅助图：顶点比特 = `bbGauge44Vert v`，
-3 条关联边各配一个辅助比特，编号 $18..23$）。
+/-- **The 4 Gauss laws** $A_v = X_v\prod_{e \ni v}X_e$ (the $K_4$ ancilla graph: the vertex qubit is
+`bbGauge44Vert v`, and each of the 3 incident edges carries an ancilla, numbered $18..23$).
 
-逐字写法与 `Codes/BB24Gauged.lean` 的 `bb24Hx` 第 $9..12$ 行相同——
-`bbGauge44Checks_rows` 把这件事钉成定理。 -/
+The verbatim description is the same as rows $9..12$ of `bb24Hx` in `Codes/BB24Gauged.lean`;
+`bbGauge44Checks_rows` pins that down as a theorem. -/
 def bbGauge44Star : Fin 4 → Vec 24 :=
   ![ (e 0 + e 18 + e 19 + e 20 : Vec 24),
      (e 2 + e 18 + e 21 + e 22 : Vec 24),
      (e 6 + e 19 + e 21 + e 23 : Vec 24),
      (e 9 + e 20 + e 22 + e 23 : Vec 24) ]
 
-/-- 4 条 Gauss 律的行列表（gauging 测量每一轮要测的 4 个算符）。 -/
+/-- The list of rows of the 4 Gauss laws (the 4 operators that one round of the gauging measurement measures). -/
 def bbGauge44Checks : List (Vec 24) := List.ofFn bbGauge44Star
 
-/-- **逐字钉在 gauged 码的 X 校验上**：这 4 条律就是 `Codes/BB24Gauged.lean` 的
-`bb24Hx` 第 $9..12$ 行——gauging 时追加在原始 $H_X$ 之后的那 4 行。 -/
+/-- **Pinned literally to the X checks of the gauged code**: these 4 laws are rows $9..12$ of
+`bb24Hx` in `Codes/BB24Gauged.lean`, the 4 rows appended to the original $H_X$ by the gauging. -/
 theorem bbGauge44Checks_rows :
     bbGauge44Checks = (List.ofFn (fun i : Fin 13 => bb24Hx i)).drop 9 := by decide
 
-/-- 每条 Gauss 律的重量恰为 $4 = 1$（顶点）$+\ 3$（$K_4$ 上该顶点的度）。 -/
+/-- Every Gauss law has weight exactly $4 = 1$ (the vertex) $+\ 3$ (the degree of that vertex in $K_4$). -/
 theorem bbGauge44Star_weight (v : Fin 4) : hammingNorm (bbGauge44Star v) = 4 := by
   fin_cases v <;> decide
 
-/-- **$L = \prod_v A_v$**（`Codes/Gauging.lean` 的 `gauss_prod_eq_vertex_prod` 的实例）：
-6 条边比特各出现在两条律里、成对相消，于是 4 条律之和恰是 4 个顶点比特的
-指示向量——即被 gauging 提升为稳定子的那个重量-4 逻辑 $L$。
+/-- **$L = \prod_v A_v$** (an instance of `gauss_prod_eq_vertex_prod` in `Codes/Gauging.lean`):
+each of the 6 edge qubits occurs in two laws and cancels in pairs, so the sum of the 4 laws is
+exactly the indicator vector of the 4 vertex qubits, that is, the weight-4 logical operator $L$ that
+the gauging promotes to a stabilizer.
 
-故"把 $|V|$ 条律的读出相乘"确实得到 $L$ 的读出：本模块的 4 条律不是随便挑的 4 个算符。 -/
+Hence multiplying the readouts of the $|V|$ laws does give the readout of $L$: the 4 laws of this
+module are not an arbitrary choice of 4 operators. -/
 theorem bbGauge44Checks_prod :
     (∑ v : Fin 4, bbGauge44Star v) = ∑ v : Fin 4, e (bbGauge44Vert v) := by decide
 
-/-! ## 二、时间型探测码（$|V| = 4$ 条律、$T = 4$ 轮） -/
+/-! ## 2. The timelike detector code ($|V| = 4$ laws, $T = 4$ rounds) -/
 
-/-- **时间型探测码的校验矩阵**：$12$ 行、$16$ 列。
+/-- **The parity-check matrix of the timelike detector code**: $12$ rows, $16$ columns.
 
-比特编号 $4v + t$（第 `v` 条 Gauss 律在第 `t` 轮的**报告结果**），
-第 $(v,t)$ 行是**同一条律相邻两轮**的一对 $e_{4v+t} + e_{4v+t+1}$——两条相邻轮的
-报告结果应当一致，故探测器是它们的奇偶。行序按 $(v,t)$ 字典序。 -/
+Qubit $4v + t$ is the **reported outcome** of the `v`-th Gauss law in round `t`, and row $(v,t)$
+is the pair $e_{4v+t} + e_{4v+t+1}$ of **the same law in two adjacent rounds**: two adjacent rounds
+should agree, so the detector is their parity. The row order is the lexicographic order on $(v,t)$. -/
 def bbGauge44H : Matrix (Fin 12) (Fin 16) (ZMod 2) :=
   Matrix.of ![
     e 0 + e 1,   e 1 + e 2,   e 2 + e 3,
@@ -135,72 +157,75 @@ def bbGauge44H : Matrix (Fin 12) (Fin 16) (ZMod 2) :=
     e 12 + e 13, e 13 + e 14, e 14 + e 15
   ]
 
-/-- 见证：**第一条 Gauss 律连续 4 轮报告出错**，重量 $4 = T$。
+/-- A witness: **the first Gauss law reports an error in 4 consecutive rounds**, of weight $4 = T$.
 
-它在核里，且是核里重量最小的非零向量——时间型分量"不可探测时长 = 轮数"的显式算符
-（一条律的读出被翻转 $\Rightarrow$ 逻辑读出 $\prod_v$ 被翻转，而所有探测器静默）。 -/
+It lies in the kernel and is the non-zero kernel vector of minimum weight, the explicit operator
+behind "the undetectable duration of the timelike component equals the number of rounds" (the
+readout of one law is flipped, hence the logical readout $\prod_v$ is flipped, while every detector
+stays silent). -/
 def bbGauge44W : Vec 16 := e 0 + e 1 + e 2 + e 3
 
-/-! ## 三、见证三事实 -/
+/-! ## 3. The three facts about the witness -/
 
-/-- 在核里：$H w = 0$（每条律的相邻轮读数一致）。 -/
+/-- It lies in the kernel: $H w = 0$ (the readings of adjacent rounds agree for every law). -/
 theorem bbGauge44_witness_mem_ker : bbGauge44H *ᵥ bbGauge44W = 0 := by decide
 
-/-- 非零。 -/
+/-- It is non-zero. -/
 theorem bbGauge44_witness_ne_zero : bbGauge44W ≠ 0 := by decide
 
-/-- 重量恰为轮数 $T = 4$。 -/
+/-- Its weight is exactly the number of rounds $T = 4$. -/
 theorem bbGauge44_witness_weight : hammingNorm bbGauge44W = 4 := by decide
 
-/-- **4 条律各有自己的最小不可探测方向**：每条律的四轮全错都是核向量，
-故最小重量的实现有 $|V| = 4$ 个（下界不是靠某个偶然向量撑起来的）。 -/
+/-- **Each of the 4 laws has its own minimum-weight undetectable direction**: the four rounds of any
+single law being wrong is a kernel vector, so there are $|V| = 4$ implementations of the minimum weight
+(the lower bound does not rest on one accidental vector). -/
 theorem bbGauge44_block_witnesses :
     (bbGauge44H *ᵥ (e 0 + e 1 + e 2 + e 3 : Vec 16) = 0 ∧
      bbGauge44H *ᵥ (e 4 + e 5 + e 6 + e 7 : Vec 16) = 0 ∧
      bbGauge44H *ᵥ (e 8 + e 9 + e 10 + e 11 : Vec 16) = 0 ∧
      bbGauge44H *ᵥ (e 12 + e 13 + e 14 + e 15 : Vec 16) = 0) := by decide
 
-/-! ## 四、块的索引与切片（复用族级定理的桥） -/
+/-! ## 4. Block indices and slices (the bridge that reuses the family-level theorem) -/
 
-/-- 第 `v` 条律、第 `t` 轮的比特编号：$4v + t$。 -/
+/-- The qubit number of the `v`-th law in round `t`: $4v + t$. -/
 def bbGauge44Blk (v : Fin 4) (t : Fin 4) : Fin 16 :=
   ⟨4 * v.val + t.val, by have := v.isLt; have := t.isLt; omega⟩
 
-/-- 第 `(v,i)` 个探测器的行号：$3v + i$。 -/
+/-- The row number of the $(v,i)$-th detector: $3v + i$. -/
 def bbGauge44RowIdx (v : Fin 4) (i : Fin 3) : Fin 12 :=
   ⟨3 * v.val + i.val, by have := v.isLt; have := i.isLt; omega⟩
 
-/-- 第 `(v,i)` 行的第一个非零列：第 `v` 条律的第 `i` 轮。 -/
+/-- The first non-zero column of row $(v,i)$: round `i` of the `v`-th law. -/
 def bbGauge44RowL (v : Fin 4) (i : Fin 3) : Fin 16 := bbGauge44Blk v (Fin.castSucc i)
 
-/-- 第 `(v,i)` 行的第二个非零列：第 `v` 条律的第 `i+1` 轮。 -/
+/-- The second non-zero column of row $(v,i)$: round `i+1` of the `v`-th law. -/
 def bbGauge44RowR (v : Fin 4) (i : Fin 3) : Fin 16 := bbGauge44Blk v (Fin.succ i)
 
-/-- **第 `v` 条律的时间轴切片**：把 4 轮取值取成 `Vec 4`——
-族级定理 `timeLike_eq_of_repCheck` 作用的对象。 -/
+/-- **The time-axis slice of the `v`-th law**: the values of the 4 rounds read as a `Vec 4`, which is
+the object the family-level theorem `timeLike_eq_of_repCheck` acts on. -/
 def bbGauge44Slice (v : Fin 4) (f : Vec 16) : Vec 4 :=
   fun t => f (bbGauge44Blk v t)
 
-/-- 第 `v` 条律的时间轴是单射（4 个轮次落在 4 个互不相同的比特上）。 -/
+/-- The time axis of the `v`-th law is injective (the 4 rounds land on 4 distinct qubits). -/
 theorem bbGauge44Blk_injective (v : Fin 4) : Function.Injective (bbGauge44Blk v) := by
   intro a b h
   have h' : 4 * v.val + a.val = 4 * v.val + b.val := congrArg Fin.val h
   exact Fin.ext (by omega)
 
-/-- 校验矩阵的每一行确实是"同一条律相邻两轮"的一对。 -/
+/-- Every row of the parity-check matrix really is a pair of adjacent rounds of one law. -/
 theorem bbGauge44H_row (v : Fin 4) (i : Fin 3) :
     bbGauge44H (bbGauge44RowIdx v i)
       = (e (bbGauge44RowL v i) + e (bbGauge44RowR v i) : Vec 16) := by
   fin_cases v <;> fin_cases i <;> decide
 
-/-- 支持集上的点积把 `e i` 读成第 `i` 个分量（`e` 与 `unitVec` 是同一个定义，
-故直接搬运 `Codes/Gauging.lean` 的 `unitVec_dot`）。 -/
+/-- The dot product on a support reads `e i` as the `i`-th component (`e` and `unitVec` are the same
+definition, so `unitVec_dot` of `Codes/Gauging.lean` applies directly). -/
 theorem e_dot {n : ℕ} (i : Fin n) (x : Vec n) : e i ⬝ᵥ x = x i := by
   have h : e i = unitVec i := rfl
   rw [h]
   exact unitVec_dot i x
 
-/-- 逐行正交（`inKerB` 展开成"每一行的点积为零"）。 -/
+/-- Row-by-row orthogonality (`inKerB` unfolds to "the dot product of every row is zero"). -/
 theorem inKerB_dot_row {k n : ℕ} (M : Matrix (Fin k) (Fin n) (ZMod 2)) {f : Vec n}
     (h : inKerB M f = true) (i : Fin k) : M i ⬝ᵥ f = 0 := by
   unfold inKerB at h
@@ -211,7 +236,8 @@ theorem inKerB_dot_row {k n : ℕ} (M : Matrix (Fin k) (Fin n) (ZMod 2)) {f : Ve
     exact ⟨i, rfl⟩
   simpa using h _ hmem
 
-/-- 探测器"静默"给出块内的相邻轮等式（第 `i` 轮与第 `i+1` 轮读数相同）。 -/
+/-- A silent detector gives the adjacent-round equality inside a block (round `i` and round `i+1`
+read the same). -/
 theorem bbGauge44_ker_row_eq {f : Vec 16} (hf : inKerB bbGauge44H f = true)
     (v : Fin 4) (i : Fin 3) :
     f (bbGauge44RowL v i) = f (bbGauge44RowR v i) := by
@@ -219,20 +245,22 @@ theorem bbGauge44_ker_row_eq {f : Vec 16} (hf : inKerB bbGauge44H f = true)
   rw [bbGauge44H_row, add_dotProduct, e_dot, e_dot] at hrow
   exact (add_eq_zero_iff_eq _ _).mp hrow
 
-/-- 每个比特都在某条律的时间轴上（$4v + t$ 遍历 $0..15$）。 -/
+/-- Every qubit lies on the time axis of some law ($4v + t$ runs over $0..15$). -/
 theorem bbGauge44Blk_surjective :
     ∀ j : Fin 16, ∃ v : Fin 4, ∃ t : Fin 4, j = bbGauge44Blk v t := by
   decide
 
-/-! ## 五、核刻画：把族级定理逐块用上 -/
+/-! ## 5. The kernel characterisation: the family-level theorem used block by block -/
 
-/-- **核里的向量在每条 Gauss 律的时间轴上取常值**——这是 `Codes/Gauging.lean` 的
-族级定理 `timeLike_eq_of_repCheck` 的**块形式**：把第 `v` 条律的 4 轮取成切片
-`bbGauge44Slice v f : Vec 4`，逐行正交给出 `repCheck 3 i ⬝ᵥ slice = 0`（相邻轮相等），
-族级定理即给出"逐轮取值相同"。
+/-- **A kernel vector takes a constant value on the time axis of every Gauss law**, which is the
+**block form** of the family-level theorem `timeLike_eq_of_repCheck` of `Codes/Gauging.lean`: the
+4 rounds of the `v`-th law are read as the slice `bbGauge44Slice v f : Vec 4`, row-by-row
+orthogonality gives `repCheck 3 i ⬝ᵥ slice = 0` (adjacent rounds are equal); the family-level theorem
+then yields "the value is the same in every round".
 
-有了它，本实例的下界不再依赖枚举，而是**同一条族级定理**——`Codes/TimeLikeInstance.lean`
-的枚举下界与这里互为对账。 -/
+With this, the lower bound of the present instance no longer rests on enumeration but on the same
+family-level theorem; the enumeration-based lower bound of `Codes/TimeLikeInstance.lean` and the one
+here cross-check each other. -/
 theorem bbGauge44_ker_slice_const {f : Vec 16} (hf : inKerB bbGauge44H f = true)
     (v : Fin 4) : ∀ i j : Fin 4, bbGauge44Slice v f i = bbGauge44Slice v f j := by
   refine timeLike_eq_of_repCheck (S := 3) (x := bbGauge44Slice v f) ?_
@@ -243,11 +271,12 @@ theorem bbGauge44_ker_slice_const {f : Vec 16} (hf : inKerB bbGauge44H f = true)
   rw [repCheck, add_dotProduct, unitVec_dot, unitVec_dot, hL, hR, hrow]
   exact CharTwo.add_self_eq_zero _
 
-/-- **下界（族级定理路线）**：核里的非零向量重量至少 $T = 4$。
+/-- **The lower bound (family-level theorem route)**: a non-zero vector in the kernel has weight at least $T = 4$.
 
-证明只走结构：核里每个块常值 ⟹ 至少一条律的时间轴全非零（否则 $f = 0$）
-⟹ 该切片的重量恰为 $4$（`timeLike_weight_eq`）⟹ 由单射拉回重量不超过全向量重量
-（`hammingNorm_le_of_injective`）得 $4 \le \mathrm{wt}(f)$。**全程无枚举。** -/
+The proof is structural throughout: in the kernel every block is constant, so at least one law has an
+entirely non-zero time axis (otherwise $f = 0$), so that slice has weight exactly $4$
+(`timeLike_weight_eq`), and by the injective pull-back the weight is at most the weight of the whole
+vector (`hammingNorm_le_of_injective`), so $4 \le \mathrm{wt}(f)$. **No enumeration anywhere.** -/
 theorem bbGauge44_le_weight_of_ker {f : Vec 16} (hf : inKerB bbGauge44H f = true)
     (hne : f ≠ 0) : 4 ≤ hammingNorm f := by
   have hex : ∃ v : Fin 4, bbGauge44Slice v f ≠ 0 := by
@@ -269,12 +298,13 @@ theorem bbGauge44_le_weight_of_ker {f : Vec 16} (hf : inKerB bbGauge44H f = true
     _ ≤ hammingNorm f :=
         hammingNorm_le_of_injective (bbGauge44Blk v) (bbGauge44Blk_injective v) f
 
-/-! ## 六、最小不可探测重量 = 轮数 = 码距（两向夹逼） -/
+/-! ## 6. Minimum undetectable weight = rounds = code distance (two-sided squeeze) -/
 
-/-- **主断言**：$|V| = 4$ 条 Gauss 律、$T = 4$ 轮的 gauging 测量线路，
-最小不可探测时空重量恰为 $4$。
+/-- **The main assertion**: for the gauging measurement circuit with $|V| = 4$ Gauss laws and
+$T = 4$ rounds, the minimum undetectable spacetime weight is exactly $4$.
 
-下界走第五节（族级定理，无枚举），上界走显式见证 `bbGauge44W`。 -/
+The lower bound comes from Section 5 (the family-level theorem, no enumeration) and the upper bound
+from the explicit witness `bbGauge44W`. -/
 theorem bbGauge44_d : min_weight_ker_not_mem_rowspace bbGauge44H (zeroRows 16) = 4 :=
   eq_minWeight_of_bounds bbGauge44H (zeroRows 16) (by decide) (E := bbGauge44W)
     (mem_ker_of_inKerB bbGauge44H (by decide))
@@ -284,19 +314,20 @@ theorem bbGauge44_d : min_weight_ker_not_mem_rowspace bbGauge44H (zeroRows 16) =
       bbGauge44_le_weight_of_ker ((inKerB_iff bbGauge44H E).mpr hker)
         (fun h0 => hnot (h0 ▸ (zeroRows 16).rowSpace.zero_mem)))
 
-/-- **同一条下界的第二路证书**：重量 $\le 3$ 的候选集为空（重量限定枚举，
-$\sum_{k \le 3}\binom{16}{k} = 697$ 个候选，`by decide`）。
+/-- **A second certificate for the same lower bound**: the candidate set of weight $\le 3$ is empty
+(a weight-limited enumeration over $\sum_{k \le 3}\binom{16}{k} = 697$ candidates, `by decide`).
 
-与 `bbGauge44_le_weight_of_ker` 的族级定理路线是**两条独立的算路**——本包
-"同一断言两条算路"的口径；第三条独立的算路（$2^{16}$ 全空间枚举）在
-`tools/timelike_server/verify_timelike.py` 的 Python 侧。 -/
+This and the family-level theorem route of `bbGauge44_le_weight_of_ker` are **two independent
+routes** to the same assertion. A third independent route (enumeration of the whole $2^{16}$ space)
+lives on the Python side of the external encoder. -/
 theorem bbGauge44_lightSet_zero : (lightSet bbGauge44H (zeroRows 16) 4).card = 0 := by decide
 
-/-- **时间型分量 = 码距**：$4$ 既是这个测量线路的时间型故障距离，也是 gauged 码
-$[[24,3,4]]$ 的码距（`Codes/BB24Gauged.lean` 的 `bb24_dx`）。
+/-- **The timelike component = the code distance**: $4$ is both the timelike fault distance of this
+measurement circuit and the distance of the gauged code $[[24,3,4]]$ (`bb24_dx` in
+`Codes/BB24Gauged.lean`).
 
-取 $T = d$ 轮即得"时间型分量 $\ge d$"，构成 `Codes/BB24Gauged.lean` 那边
-空间型实例（$d = 4$ 保持）的线路侧对偶。 -/
+Taking $T = d$ rounds gives "the timelike component $\ge d$", which is the circuit-side dual of the
+spacelike instance of `Codes/BB24Gauged.lean` ($d = 4$ preserved). -/
 theorem bbGauge44_d_eq_codeDistance :
     min_weight_ker_not_mem_rowspace bbGauge44H (zeroRows 16)
       = min_weight_ker_not_mem_rowspace bb24Hx bb24Hz := by

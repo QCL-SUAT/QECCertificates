@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Reflect.LRAT
 
@@ -10,52 +10,66 @@ set_option maxRecDepth 1000000
 set_option maxHeartbeats 8000000
 
 /-!
-# **线路侧**（时间型）SAT 证书的内核回放（由 `tools/gen_circuit_lrat.py` 生成）
+# **The circuit side**: kernel replay of the (timelike) SAT certificates
 
-本模块是 `Reflect/LRATData.lean` 的**同族兄弟**：码侧那四档的 CNF 断言"不存在轻的
-逻辑算符"，本模块的这两档断言"不存在轻的**时空故障**"——《申报指南》方向（八）要的
-"量子**线路**的距离判定归约为 SAT"，落点在这里。两档分别是 Bacon–Shor $[[9,1,3]]$
-重复测量探测码，与 **BB gauging 测量线路**的时间型探测码。
+This module is a **sibling** of `Reflect/LRATData.lean`: the four entries there assert that
+**no light logical operator exists** for a code, while the two entries here assert that **no
+light spacetime fault exists**. This is where the reduction of quantum-**circuit** distance
+decision to SAT lives. The two entries are the Bacon–Shor $[[9,1,3]]$ repeated-measurement
+detection code and the timelike detection code of the **BB gauging measurement circuit**.
 
-两档共用同一个探测器形状：$m$ 个校验重复测量 $T$ 轮，一个比特 = 一次
-"校验 $a$ 在第 $t$ 轮的**报告结果**"（编号 `T*a + t`），**探测器**取同一校验的
-相邻两轮（$H_{(a,t)} = e_{T a + t} + e_{T a + t + 1}$）。故障模式 $f$ 记录哪些
-(校验, 轮次) 的结果被翻转，"所有探测器静默"即 $Hf = 0$。核里的非零向量在每个
-校验的时间轴上取常值，故**最小不可探测重量恰为 $T$**：一个校验连续 $T$ 轮出错
-——时间型分量"不可探测时长 = 轮数"的物理内容。区别只在被重复测量的是哪 $m$ 个
-校验（前者是 `Codes/TimeLikeInstance.lean` 的三条重复测量校验，后者是
-`Codes/GaugeMeasurementInstance.lean` 的 $|V| = 4$ 条 Gauss 律）。
+Both entries share the same detector shape: $m$ checks are measured repeatedly over $T$
+rounds, one bit is one "reported outcome of check $a$ in round $t$" (numbered `T*a + t`), and
+a **detector** pairs two consecutive rounds of the same check
+($H_{(a,t)} = e_{T a + t} + e_{T a + t + 1}$). A fault pattern $f$ records which
+(check, round) outcomes are flipped, and "all detectors silent" is $Hf = 0$. A nonzero vector
+in the kernel is constant along the time axis of each check, so **the minimum undetectable
+weight is exactly $T$**: one check goes wrong in $T$ consecutive rounds. That is the physical
+content of the timelike component, "undetectable duration equals the number of rounds". The
+two entries differ only in which $m$ checks are measured repeatedly (the three
+repeated-measurement checks of `Codes/TimeLikeInstance.lean` in the first, the $|V| = 4$
+Gauss laws of `Codes/GaugeMeasurementInstance.lean` in the second).
 
-编码与求解都不是本模块做的事：CNF 由 `tools/timelike_server/timelike_sat.py` 调
-**码侧同一条** `validate_encoding.build_pair`（Tseitin 链 + 乘积块 + Sinz 顺序计数器）
-产出，证书由 `cadical --lrat` 产出，本模块由脚本逐字节翻译——请勿手改，重跑即可再生。
+Neither the encoding nor the solving is done in this module: the CNF is produced by an
+external encoder calling the **same code-side** `build_pair` routine (Tseitin chains, product
+blocks and the Sinz sequential counter), the certificate is produced by `cadical --lrat`, and
+this module is a byte-for-byte translation done by a script. Do not edit it by hand; rerunning
+the generator reproduces it.
 
-| `bbgauge44` | **BB gauging 测量线路**的时间型探测码（$|V|=4$ 条 Gauss 律、$T=4=d$ 轮）：不存在重量 $\le 3$ 的不可探测时空故障（最小不可探测重量 $=T=4=d$，$d$ 为 gauged 码 $[[24,3,4]]$ 的码距；探测器 = 同一条 Gauss 律相邻两轮的奇偶） |
-| `timelike34` | Bacon–Shor $[[9,1,3]]$ 重复测量探测码（$m=3$ 校验、$T=4$ 轮）：不存在重量 $\le 3$ 的不可探测时空故障（最小不可探测重量 $=T=4$；探测器 = 同一校验相邻两轮的奇偶） |
+| `bbgauge44` | the timelike detection code of the **BB gauging measurement circuit** ($|V|=4$ Gauss laws, $T=4=d$ rounds): no undetectable spacetime fault of weight $\le 3$ (minimum undetectable weight $=T=4=d$, where $d$ is the distance of the gauged code $[[24,3,4]]$; a detector is the parity of two consecutive rounds of the same Gauss law) |
+| `timelike34` | the Bacon–Shor $[[9,1,3]]$ repeated-measurement detection code ($m=3$ checks, $T=4$ rounds): no undetectable spacetime fault of weight $\le 3$ (minimum undetectable weight $=T=4$; a detector is the parity of two consecutive rounds of the same check) |
 
-**`bbgauge44` 档的规模取舍（诚实边界）**：这一档只编码 **gauging 测量那一步**的
-$|V| = 4$ 条 Gauss 律的重复测量，**不是**整个 gauged 码 $[[24,3,4]]$ 的 13 条 X 校验 /
-12 条 Z 校验的完整综合征提取循环——后者的 CNF 会大到超出内核回放预算。被重复测量的
-那 4 个算符逐字钉在 `Codes/GaugeMeasurementInstance.lean` 的 `bbGauge44Checks` 上
-（= `Codes/BB24Gauged.lean` 的 `bb24Hx` 第 $9..12$ 行，即 $K_4$ 上的 Gauss 律
-$A_v = X_v\prod_{e \ni v}X_e$）。同理，本档问的是**时间型分量**（相邻轮的奇偶），
-不含轮内的空间型校验。
+**The scale trade-off of the `bbgauge44` entry (an honest boundary)**: this entry encodes only
+the repeated measurement of the $|V| = 4$ Gauss laws of **the gauging measurement step**, and
+**not** the full syndrome-extraction cycle of all 13 X checks and 12 Z checks of the gauged
+code $[[24,3,4]]$, whose CNF would grow past the kernel replay budget. The four operators
+measured repeatedly are pinned word for word to `bbGauge44Checks` in
+`Codes/GaugeMeasurementInstance.lean` (rows $9..12$ of `bb24Hx` in `Codes/BB24Gauged.lean`,
+that is, the Gauss laws $A_v = X_v\prod_{e \ni v}X_e$ on $K_4$). For the same reason, this
+entry asks about the **timelike component** (the parity of consecutive rounds) and does not
+include the within-round spacelike checks.
 
-**成本口径**：内核回放的成本由 **hint 条数 × 最长子句长度**划定，**不是**引理条数
-（`tools/probeA/lrat_scale_probe.py` 的口径）。本模块两档实测 bbgauge44 共 102 步 / 308 条 hint、最长子句 3 个字面量、证书 2405 B、成本代理 924；timelike34 共 74 步 / 224 条 hint、最长子句 3 个字面量、证书 1711 B、成本代理 672。
+**How the cost is measured**: the cost of a kernel replay is set by **the number of hints
+times the length of the longest clause**, **not** by the number of lemmas. Measured on the two
+entries of this module, bbgauge44 has 102 steps and 308 hints, a longest clause of 3 literals,
+a certificate of 2405 B and a cost proxy of 924; timelike34 has 74 steps and 224 hints, a
+longest clause of 3 literals, a certificate of 1711 B and a cost proxy of 672.
 
-**边界（与码侧逐字同款）**：本模块证明的是**该 CNF 不可满足**。从"CNF 不可满足"到
-"该协议没有重量 $\le T-1$ 的不可探测时空故障"还差**编码忠实性**那一步，它由
-①编码器的双向验收（`timelike_sat.py` 的 UNSAT/SAT 两个方向 + 强制赋值探针）、
-②`tools/timelike_server/verify_timelike.py` 的第二路对账（独立重建行表 + 全空间枚举）、
-③库内 `Reflect/FaithfulCircuit.lean` 的 `buildPair` 同一性等式共同承担，**不在本模块内**。
-端到端不含求解器、不含 `native_decide`、不含任何自定义公理。
+**Boundary (word for word the same as on the code side)**: what this module proves is that
+**that CNF is unsatisfiable**. Going from "the CNF is unsatisfiable" to "the protocol has no
+undetectable spacetime fault of weight $\le T-1$" still requires the step of **encoding
+faithfulness**, which rests jointly on (1) the encoder's acceptance in both directions (the
+UNSAT and the SAT direction together with forced-assignment probes), (2) a second, independent
+route that rebuilds the row tables independently and enumerates the whole space, and (3) the
+`buildPair` identity equations of `Reflect/FaithfulCircuit.lean` in this library. That step is
+**not inside this module**. End to end there is no solver, no `native_decide` and no custom
+axiom.
 -/
 
 namespace QECCertificates.LRAT
 
-/-! ## 一、实例 -/
-/-- bbgauge44：编码器产出的 CNF（133 变量 / 382 子句）。 -/
+/-! ## 1. The instances -/
+/-- bbgauge44: the encoder's CNF (133 variables / 382 clauses). -/
 def bbgauge44CNF : CNF :=
 [
   [(0,false),(1,false),(32,false)], [(0,false),(1,true),(32,true)], [(0,true),(1,false),(32,true)], [(0,true),(1,true),(32,false)],
@@ -156,7 +170,7 @@ def bbgauge44CNF : CNF :=
   [(132,false),(128,true),(127,true)], [(132,false)]
 ]
 
-/-- bbgauge44：cadical 的 LRAT 证书（102 条引理、全部 RUP、号连续；另有 0 条删除步被忽略——见 `Reflect/LRAT.lean` 与生成器的口径说明）。 -/
+/-- bbgauge44: the LRAT certificate produced by cadical (102 lemmas, all RUP, consecutive numbering; a further 0 deletion steps are ignored, see `Reflect/LRAT.lean` and the generator's notes for this convention). -/
 def bbgauge44Proof : List LStep :=
 [
   ⟨383,[(128,false)],[382,378]⟩, ⟨384,[(124,false)],[383,363]⟩,
@@ -212,11 +226,11 @@ def bbgauge44Proof : List LStep :=
   ⟨483,[(72,true)],[479,470,164]⟩, ⟨484,[],[480,483,472,160]⟩
 ]
 
-/-- **bbgauge44 的内核回放**：该 CNF 不可满足（证书逐条在核内复算）。 -/
+/-- **The kernel replay of bbgauge44**: the CNF is unsatisfiable (each certificate step is recomputed in the kernel). -/
 theorem bbgauge44_unsat : ¬ Satisfiable bbgauge44CNF :=
   unsat_of_checkSteps (steps := bbgauge44Proof) (by decide)
 
-/-- timelike34：编码器产出的 CNF（98 变量 / 279 子句）。 -/
+/-- timelike34: the encoder's CNF (98 variables / 279 clauses). -/
 def timelike34CNF : CNF :=
 [
   [(0,false),(1,false),(24,false)], [(0,false),(1,true),(24,true)], [(0,true),(1,false),(24,true)], [(0,true),(1,true),(24,false)],
@@ -291,7 +305,7 @@ def timelike34CNF : CNF :=
   [(97,false),(93,true),(11,true)], [(97,false),(93,true),(92,true)], [(97,false)]
 ]
 
-/-- timelike34：cadical 的 LRAT 证书（74 条引理、全部 RUP、号连续；另有 0 条删除步被忽略——见 `Reflect/LRAT.lean` 与生成器的口径说明）。 -/
+/-- timelike34: the LRAT certificate produced by cadical (74 lemmas, all RUP, consecutive numbering; a further 0 deletion steps are ignored, see `Reflect/LRAT.lean` and the generator's notes for this convention). -/
 def timelike34Proof : List LStep :=
 [
   ⟨280,[(93,false)],[279,275]⟩, ⟨281,[(89,false)],[280,260]⟩,
@@ -333,7 +347,7 @@ def timelike34Proof : List LStep :=
   ⟨352,[(53,true)],[348,339,121]⟩, ⟨353,[],[349,352,341,117]⟩
 ]
 
-/-- **timelike34 的内核回放**：该 CNF 不可满足（证书逐条在核内复算）。 -/
+/-- **The kernel replay of timelike34**: the CNF is unsatisfiable (each certificate step is recomputed in the kernel). -/
 theorem timelike34_unsat : ¬ Satisfiable timelike34CNF :=
   unsat_of_checkSteps (steps := timelike34Proof) (by decide)
 

@@ -1,25 +1,27 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Codes.CaseMatrix
 import LeanQEC.Stabilizer.CSS
 
 /-!
-# 回灌 LeanQEC 的 `CSS_pair`：案例矩阵的距离结论接到上游接口（生态对齐）
+# Feeding the distance results back into LeanQEC's `CSS_pair` (ecosystem alignment)
 
-本包的距离结论一直停在**自己的**公式形态——
-`min_weight_ker_not_mem_rowspace M₁ M₂`（与 LeanQEC 逐字同一定义，但从未
-实例化上游的 `CSS_pair` 结构）。本模块闭合这最后一层：用上游的快捷构造器
-`CSS_pair.of_matrices`（只要一个"行两两正交"的内核可判条件）把案例矩阵里
-**全部五个 CSS 码**（Steane、Shor、$[[4,2,2]]$、两个尺度的环面码）装进
-`CSS_pair`，于是上游的 `CSS_pair.dX / dZ` 与本包案例矩阵的距离定理
-逐字相等——`steanePair.dX = 3` 的证明项**就是** `steane_dx`。
+The distance results of this package have so far stayed in their **own** formula shape,
+`min_weight_ker_not_mem_rowspace M₁ M₂`, the same definition word for word as LeanQEC's, but never
+instantiated at the upstream `CSS_pair` structure. This module closes that last layer: the
+upstream shorthand constructor `CSS_pair.of_matrices`, which only asks for a kernel-decidable "rows
+pairwise orthogonal" condition, puts **all five CSS codes** of the case matrix (Steane, Shor,
+$[[4,2,2]]$, and the toric codes at two sizes) into `CSS_pair`, so that the upstream
+`CSS_pair.dX / dZ` agree word for word with the distance theorems of the case matrix: the proof
+term of `steanePair.dX = 3` **is** `steane_dx`.
 
-至此三层闭合：① 判定层（`inSpanB`/`inKerB`）→ ② 距离层（案例矩阵的
-`by decide` 断言）→ ③ 上游结构层（LeanQEC `CSS_pair`）。
-**零额外数学假设**：正交条件由 `by decide` 核出，距离结论由既有定理转移。
+Three layers now close: (1) the decision layer (`inSpanB`/`inKerB`), (2) the distance layer (the
+`by decide` assertions of the case matrix), and (3) the upstream structure layer (LeanQEC's
+`CSS_pair`). **No extra mathematical assumption** is made: the orthogonality condition is checked
+by `by decide`, and the distance conclusions are transferred from existing theorems.
 -/
 
 namespace QECCertificates
@@ -27,75 +29,78 @@ namespace QECCertificates
 set_option maxRecDepth 100000
 set_option maxHeartbeats 8000000
 
-/-- "行两两正交"的裸量化形态（`mutually_orth_rows` 是 plain `def : Prop`，
-实例搜索不展开它，`by decide` 合不出判定子——先经这条 `Iff.rfl` 桥）。 -/
+/-- The bare quantified form of "rows pairwise orthogonal". (`mutually_orth_rows` is a plain
+`def : Prop`, so instance search does not unfold it and `by decide` cannot synthesize a decision
+procedure for it; this `Iff.rfl` bridge comes first.) -/
 theorem mutually_orth_rows_iff {k₁ k₂ n : ℕ} (M₁ : Matrix (Fin k₁) (Fin n) (ZMod 2))
     (M₂ : Matrix (Fin k₂) (Fin n) (ZMod 2)) :
     M₁.mutually_orth_rows M₂ ↔ ∀ a b, M₁ a ⬝ᵥ M₂ b = 0 := Iff.rfl
 
 /-! ## Steane $[[7,1,3]]$ -/
 
-/-- Steane 码的 `CSS_pair` 实例：`H₁` = Z 校验、`H₂` = X 校验（上游约定：
-`dZ = f(H₁, H₂)`、`dX = f(H₂, H₁)`，与本库 `steane_dz`/`steane_dx` 同向）。 -/
+/-- The `CSS_pair` instance of the Steane code: `H₁` = Z checks and `H₂` = X checks (upstream
+convention: `dZ = f(H₁, H₂)` and `dX = f(H₂, H₁)`, the same orientation as `steane_dz`/`steane_dx`
+in this library). -/
 def steanePair : CSS_pair 7 3 3 :=
   CSS_pair.of_matrices steaneHz steaneHx
     ((mutually_orth_rows_iff steaneHz steaneHx).mpr (by decide))
 
-/-- **回灌（Steane）**：上游 `CSS_pair.dX` 就是本库的 `steane_dx`——证明项逐字相同。 -/
+/-- **Upstream agreement (Steane)**: the upstream `CSS_pair.dX` is `steane_dx` of this library; the
+proof term is word for word the same. -/
 theorem steanePair_dX : CSS_pair.dX steanePair = 3 := steane_dx
 
-/-- **回灌（Steane）**：上游 `CSS_pair.dZ` 就是本库的 `steane_dz`。 -/
+/-- **Upstream agreement (Steane)**: the upstream `CSS_pair.dZ` is `steane_dz` of this library. -/
 theorem steanePair_dZ : CSS_pair.dZ steanePair = 3 := steane_dz
 
 /-! ## Shor $[[9,1,3]]$ -/
 
-/-- Shor 码的 `CSS_pair` 实例（Z 侧 6 行、X 侧 2 行）。 -/
+/-- The `CSS_pair` instance of the Shor code (6 rows on the Z side, 2 rows on the X side). -/
 def shorPair : CSS_pair 9 6 2 :=
   CSS_pair.of_matrices shorHz shorHx
     ((mutually_orth_rows_iff shorHz shorHx).mpr (by decide))
 
-/-- **回灌（Shor）**：上游 `dX` 即本库 `shor_dx`。 -/
+/-- **Upstream agreement (Shor)**: the upstream `dX` is `shor_dx` of this library. -/
 theorem shorPair_dX : CSS_pair.dX shorPair = 3 := shor_dx
 
-/-- **回灌（Shor）**：上游 `dZ` 即本库 `shor_dz`。 -/
+/-- **Upstream agreement (Shor)**: the upstream `dZ` is `shor_dz` of this library. -/
 theorem shorPair_dZ : CSS_pair.dZ shorPair = 3 := shor_dz
 
 /-! ## $[[4,2,2]]$ -/
 
-/-- $[[4,2,2]]$ 码的 `CSS_pair` 实例（两侧各 1 行）。 -/
+/-- The `CSS_pair` instance of the $[[4,2,2]]$ code (1 row on each side). -/
 def fourPair : CSS_pair 4 1 1 :=
   CSS_pair.of_matrices fourHz fourHx
     ((mutually_orth_rows_iff fourHz fourHx).mpr (by decide))
 
-/-- **回灌（$[[4,2,2]]$）**：上游 `dX` 即本库 `four_dx`。 -/
+/-- **Upstream agreement ($[[4,2,2]]$)**: the upstream `dX` is `four_dx` of this library. -/
 theorem fourPair_dX : CSS_pair.dX fourPair = 2 := four_dx
 
-/-- **回灌（$[[4,2,2]]$）**：上游 `dZ` 即本库 `four_dz`。 -/
+/-- **Upstream agreement ($[[4,2,2]]$)**: the upstream `dZ` is `four_dz` of this library. -/
 theorem fourPair_dZ : CSS_pair.dZ fourPair = 2 := four_dz
 
-/-! ## 环面码（两个尺度） -/
+/-! ## Toric codes (two sizes) -/
 
-/-- $2\times2$ 环面码 $[[8,2,2]]$ 的 `CSS_pair` 实例。 -/
+/-- The `CSS_pair` instance of the $2\times2$ toric code $[[8,2,2]]$. -/
 def toricPair : CSS_pair 8 4 4 :=
   CSS_pair.of_matrices toricHz toricHx
     ((mutually_orth_rows_iff toricHz toricHx).mpr (by decide))
 
-/-- **回灌（环面 $2\times2$）**：上游 `dX` 即本库 `toric_dx`。 -/
+/-- **Upstream agreement (toric $2\times2$)**: the upstream `dX` is `toric_dx` of this library. -/
 theorem toricPair_dX : CSS_pair.dX toricPair = 2 := toric_dx
 
-/-- **回灌（环面 $2\times2$）**：上游 `dZ` 即本库 `toric_dz`。 -/
+/-- **Upstream agreement (toric $2\times2$)**: the upstream `dZ` is `toric_dz` of this library. -/
 theorem toricPair_dZ : CSS_pair.dZ toricPair = 2 := toric_dz
 
-/-- $3\times3$ 环面码 $[[18,2,3]]$ 的 `CSS_pair` 实例（$n = 18$；
-正交条件 9×9 个点积，内核秒级——与 `toric3_css` 同型）。 -/
+/-- The `CSS_pair` instance of the $3\times3$ toric code $[[18,2,3]]$ ($n = 18$; the orthogonality
+condition is 9×9 dot products, decided by the kernel in seconds, the same shape as `toric3_css`). -/
 def toric3Pair : CSS_pair 18 9 9 :=
   CSS_pair.of_matrices toric3Hz toric3Hx
     ((mutually_orth_rows_iff toric3Hz toric3Hx).mpr (by decide))
 
-/-- **回灌（环面 $3\times3$）**：上游 `dX` 即本库 `toric3_dx`。 -/
+/-- **Upstream agreement (toric $3\times3$)**: the upstream `dX` is `toric3_dx` of this library. -/
 theorem toric3Pair_dX : CSS_pair.dX toric3Pair = 3 := toric3_dx
 
-/-- **回灌（环面 $3\times3$）**：上游 `dZ` 即本库 `toric3_dz`。 -/
+/-- **Upstream agreement (toric $3\times3$)**: the upstream `dZ` is `toric3_dz` of this library. -/
 theorem toric3Pair_dZ : CSS_pair.dZ toric3Pair = 3 := toric3_dz
 
 end QECCertificates

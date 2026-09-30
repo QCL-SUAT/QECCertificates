@@ -1,30 +1,39 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Codes.CaseMatrix
 
 /-!
-# BB $[[144,12,12]]$：witness 上界的内核内断言（IBM 主推码）
+# BB $[[144,12,12]]$: kernel-checked assertions of the witness upper bound (the code promoted by IBM)
 
-校验矩阵由 IBM 参数（$l=12, m=6$，$A=x^3+y+y^2$，$B=y^3+x+x^2$）构造，
-规模 $72\times144$、行重 6。本模块给出**两侧距离上界** $d_X\le12$、$d_Z\le12$：
-显式重量-12 的 X/Z 逻辑算符，三件事——在核里、不在另一侧的行空间里、重量为 12——
-全部由内核 `by decide` 逐项核出。非成员判定走**对偶见证**（与另一侧校验对易、
-且与见证配对为 1 的向量），不用 `inSpanB`：宽矩阵上这是数量级的差别。
+The parity-check matrices are built from the IBM parameters ($l=12, m=6$,
+$A=x^3+y+y^2$, $B=y^3+x+x^2$); their size is $72\times144$ and the row weight is 6. This
+module gives the **distance upper bound on both sides**, $d_X\le12$ and $d_Z\le12$, by way
+of explicit weight-12 X and Z logical operators: three facts, lying in the kernel, not lying
+in the row space of the other side, and having weight 12, are all checked component by
+component by `by decide` inside the kernel. Non-membership is decided through a **dual
+witness** (a vector commuting with the checks of the other side and pairing to 1 with the
+witness) rather than through `inSpanB`, which on a wide matrix differs by orders of
+magnitude.
 
-本模块**接入默认构建与公理审计区**（见 `lean/QECCertificates.lean`）。代价须知道：
-字面 $72\times144$ 矩阵上的点积由内核直接归约，本模块实测约 5 分钟、峰值 RSS 数 GB，
-比库内其他模块贵；这是一次性开销，olean 落盘后增量构建不再重算。把每个点积从
-144 项降到 12 项（支撑分解：`dotProduct` 对 $\sum_{i\in s} e_i$ 展开成
-$\sum_{i\in s} v_i$）可以再降一个量级，留作后续优化。
+This module **is part of the default build and of the axiom audit** (see the root module
+`QECCertificates.lean`). Its cost is worth stating: the dot products over the literal
+$72\times144$ matrices are reduced directly by the kernel, and this module takes about
+5 minutes at a peak RSS of a few GB, more expensive than the other modules of the library.
+That is a one-off cost, since once the olean is on disk an incremental build does not
+recompute it. Reducing each dot product from 144 terms to 12 (support decomposition:
+`dotProduct` of $\sum_{i\in s} e_i$ expands to $\sum_{i\in s} v_i$) would cut a further
+order of magnitude and is left for later optimisation.
 
-**证据形态对照**：QECLean 以逐码解析证明在内核内闭合了该码的精确距离 $d=12$，
-Lean-QEC 的 BB144 走 SAT/位爆破（`bv_decide`，未关内核检查）。本模块只给**上界**
-$d_X,d_Z\le12$；下界 $\ge12$ 由 `cadical` 给出，证明经自写的 RUP 检查器与第三方
-`drat-trim` 逐条复算（`tools/bb144_server/`），两侧合拢得
-$d_X=d_Z=12$。把该证书搬进 Lean 内核回放是下一步。
+**Comparison of forms of evidence**: QECLean closes the exact distance $d=12$ of this code
+inside the kernel by a code-by-code analysis, and Lean-QEC treats BB144 by SAT and bit
+blasting (`bv_decide`, with the kernel check switched off). This module gives only the
+**upper bound** $d_X,d_Z\le12$; the lower bound $\ge12$ is produced by `cadical`, with the
+proof recomputed clause by clause by an in-house RUP checker and by the third-party
+`drat-trim`, so that the two sides together give $d_X=d_Z=12$. Replaying that certificate
+inside the Lean kernel is a further step.
 -/
 
 namespace QECCertificates
@@ -34,7 +43,7 @@ open _root_.Matrix
 set_option maxRecDepth 100000
 set_option maxHeartbeats 8000000
 
-/-- BB144 的 X 型校验 $H_X=[A\mid B]$（72 行 × 144 列，行重 6）。 -/
+/-- The X-type checks of BB144, $H_X=[A\mid B]$ (72 rows by 144 columns, row weight 6). -/
 def bb144Hx : Matrix (Fin 72) (Fin 144) (ZMod 2) :=
   Matrix.of ![
     (e 1 + e 2 + e 18 + e 75 + e 78 + e 84 : Vec 144),
@@ -111,7 +120,7 @@ def bb144Hx : Matrix (Fin 72) (Fin 144) (ZMod 2) :=
     (e 17 + e 66 + e 67 + e 77 + e 83 + e 140 : Vec 144)
   ]
 
-/-- BB144 的 Z 型校验 $H_Z=[B^\top\mid A^\top]$。 -/
+/-- The Z-type checks of BB144, $H_Z=[B^\top\mid A^\top]$. -/
 def bb144Hz : Matrix (Fin 72) (Fin 144) (ZMod 2) :=
   Matrix.of ![
     (e 3 + e 60 + e 66 + e 76 + e 77 + e 126 : Vec 144),
@@ -188,20 +197,21 @@ def bb144Hz : Matrix (Fin 72) (Fin 144) (ZMod 2) :=
     (e 59 + e 65 + e 68 + e 125 + e 141 + e 142 : Vec 144)
   ]
 
-/-- X 型见证：重量 12 的 X 逻辑算符。 -/
+/-- The X-type witness: a weight-12 X logical operator. -/
 def bb144XW : Vec 144 := (e 0 + e 1 + e 4 + e 5 + e 18 + e 20 + e 36 + e 37 + e 40 + e 41 + e 54 + e 56 : Vec 144)
 
-/-- Z 型见证：与 X 见证配对为 1。 -/
+/-- The Z-type witness: it pairs with the X witness to give 1. -/
 def bb144ZW : Vec 144 := (e 0 + e 1 + e 3 + e 4 + e 6 + e 7 + e 9 + e 10 + e 72 + e 73 + e 75 + e 76 : Vec 144)
 
-/-- **$dX \le 12$**：X 见证在 $\ker H_X$ 中、不在 $H_Z$ 行空间中、重量 12。 -/
+/-- **$dX \le 12$**: the X witness lies in $\ker H_X$, not in the row space of $H_Z$, and
+has weight 12. -/
 theorem bb144_X_logical :
     bb144Hx *ᵥ bb144XW = 0 ∧ bb144XW ∉ bb144Hz.rowSpace ∧ hammingNorm bb144XW = 12 :=
   ⟨by decide,
     not_mem_rowSpace_of_dualCheck bb144Hz (w := bb144ZW) (by decide) (by decide),
     by decide⟩
 
-/-- **$dZ \le 12$**：Z 侧对称。 -/
+/-- **$dZ \le 12$**: the Z side, symmetric. -/
 theorem bb144_Z_logical :
     bb144Hz *ᵥ bb144ZW = 0 ∧ bb144ZW ∉ bb144Hx.rowSpace ∧ hammingNorm bb144ZW = 12 :=
   ⟨by decide,

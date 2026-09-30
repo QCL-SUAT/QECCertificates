@@ -1,35 +1,37 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.Basic
 
 /-!
-# 可信 GF(2) 行消元（ 第一交付物）
+# Verified GF(2) row reduction
 
-Lean-QEC 把"行消元本身未形式化"列为其最具体的后续工程缺口：
-"A verified row-reduction routine would close this remaining preprocessor step."
-本模块补上这一步：把校验矩阵的**行简化**做成机器检验的算法，
-使该预处理不再需要信任外部脚本。
+LeanQEC lists "row reduction itself is not formalized" as its most concrete remaining
+engineering gap: "A verified row-reduction routine would close this remaining
+preprocessor step." This module supplies that step, turning the **row simplification**
+of a parity-check matrix into a machine-checked algorithm, so that the preprocessing no
+longer requires trusting an external script.
 
-## 不变量
+## Invariants
 
-行消元的状态是一列**枢轴行** `PivRow n = Vec n × Fin n`（行向量 + 它做枢轴的列）。
-`IsReduced D` 要求：
+The state of the reduction is a list of **pivot rows** `PivRow n = Vec n × Fin n`,
+a row vector together with the column at which it pivots. `IsReduced D` requires:
 
-* **(R1)** 每一行在自己的枢轴列上取 1；
-* **(R2)** 每一行在**别的**行的枢轴列上取 0。
+* **(R1)** every row takes the value 1 at its own pivot column;
+* **(R2)** every row takes the value 0 at the pivot column of every **other** row.
 
-(R2) 是**对称**的——不预设行的先后顺序，因此消元次序无关，
-这是下面所有正确性证明能走通的关键。
+(R2) is **symmetric**: it does not presuppose an order on the rows, so the result is
+independent of the elimination order. This is what makes all the correctness proofs
+below go through.
 
-## 主结果
+## Main results
 
-* `reduceAgainst_apply_piv`：约化后的行在所有枢轴列上取 0。
-* `add_reduceAgainst_mem`：`v + reduceAgainst D v` 落在 `D` 的行空间里。
-* `spanL_rowReduce`：**行空间不变**——消元后的行空间与原来相同（码没被改动）。
-* `isReduced_rowReduce`：输出满足 `IsReduced`。
+* `reduceAgainst_apply_piv`: the reduced vector is 0 at every pivot column.
+* `add_reduceAgainst_mem`: `v + reduceAgainst D v` lies in the row space of `D`.
+* `spanL_rowReduce`: **the row space is unchanged**, so the code is not modified.
+* `isReduced_rowReduce`: the output satisfies `IsReduced`.
 -/
 
 namespace QECCertificates
@@ -38,10 +40,10 @@ open scoped BigOperators
 
 variable {n : ℕ}
 
-/-- 一个枢轴行：行向量，以及它做枢轴（首非零元）的列。 -/
+/-- A pivot row: a row vector together with the column at which it pivots, that is, its leading nonzero entry. -/
 abbrev PivRow (n : ℕ) := Vec n × Fin n
 
-/-- 取出枢轴行列表的行部分。 -/
+/-- The row part of a list of pivot rows. -/
 def rowList (D : List (PivRow n)) : List (Vec n) := D.map (·.1)
 
 @[simp] lemma rowList_nil : rowList ([] : List (PivRow n)) = [] := rfl
@@ -50,13 +52,13 @@ def rowList (D : List (PivRow n)) : List (Vec n) := D.map (·.1)
 @[simp] lemma rowList_append (D E : List (PivRow n)) :
     rowList (D ++ E) = rowList D ++ rowList E := List.map_append
 
-/-- **互约化不变量**：(R1) 每行在自己枢轴列为 1；(R2) 每行在别的行的枢轴列为 0。 -/
+/-- **The mutual-reduction invariant**: (R1) every row is 1 at its own pivot column, and (R2) every row is 0 at the pivot column of every other row. -/
 def IsReduced (D : List (PivRow n)) : Prop :=
   (∀ ri ∈ D, ri.1 ri.2 = 1) ∧ (∀ ri ∈ D, ∀ rj ∈ D, ri ≠ rj → ri.1 rj.2 = 0)
 
 lemma isReduced_nil : IsReduced ([] : List (PivRow n)) := ⟨by simp, by simp⟩
 
-/-- (R2) 的直接推论：枢轴列互不相同。 -/
+/-- Immediate consequence of (R2): the pivot columns are pairwise distinct. -/
 lemma IsReduced.pivot_inj {D : List (PivRow n)} (h : IsReduced D) :
     ∀ ri ∈ D, ∀ rj ∈ D, ri.2 = rj.2 → ri = rj := by
   intro ri hri rj hrj hij
@@ -67,9 +69,9 @@ lemma IsReduced.pivot_inj {D : List (PivRow n)} (h : IsReduced D) :
   rw [h1] at h2
   exact one_ne_zero h2
 
-/-! ## 约化：把一行在所有枢轴列上清零 -/
+/-! ## Reduction: clearing a row at every pivot column -/
 
-/-- 用 `D` 中的每一行在其枢轴列上消去 `v`。GF(2) 上系数恰为 `v` 在该列的分量。 -/
+/-- Eliminate `v` at its pivot column using each row of `D`. Over GF(2) the coefficient is exactly the component of `v` at that column. -/
 def reduceAgainst (D : List (PivRow n)) (v : Vec n) : Vec n :=
   D.foldl (fun w ri => w + (w ri.2) • ri.1) v
 
@@ -79,7 +81,7 @@ lemma reduceAgainst_cons (ri : PivRow n) (D : List (PivRow n)) (v : Vec n) :
     reduceAgainst (ri :: D) v = reduceAgainst D (v + (v ri.2) • ri.1) := by
   simp [reduceAgainst, List.foldl_cons]
 
-/-- 若 `D` 的每一行在列 `q` 上取 0，且 `v q = 0`，则约化后第 `q` 位仍为 0。 -/
+/-- If every row of `D` is 0 at column `q` and `v q = 0`, then the reduced vector is still 0 at position `q`. -/
 lemma reduceAgainst_eq_zero_of_rows_zero {D : List (PivRow n)} {q : Fin n} {v : Vec n}
     (hrows : ∀ ri ∈ D, ri.1 q = 0) (hv : v q = 0) : reduceAgainst D v q = 0 := by
   induction D generalizing v with
@@ -92,7 +94,7 @@ lemma reduceAgainst_eq_zero_of_rows_zero {D : List (PivRow n)} {q : Fin n} {v : 
       · rw [Pi.add_apply, Pi.smul_apply, hrows ri (List.mem_cons_self ..), smul_eq_mul, hv,
           mul_zero, add_zero]
 
-/-- **核心引理**：`D` 互约化时，约化后的向量在每个枢轴列上取 0。 -/
+/-- **Core lemma**: when `D` is mutually reduced, the reduced vector is 0 at every pivot column. -/
 lemma reduceAgainst_apply_piv {D : List (PivRow n)} (hD : IsReduced D) (v : Vec n) :
     ∀ ri ∈ D, reduceAgainst D v ri.2 = 0 := by
   revert hD
@@ -117,7 +119,7 @@ lemma reduceAgainst_apply_piv {D : List (PivRow n)} (hD : IsReduced D) (v : Vec 
             (fun h => hrD (h ▸ hrk))
       · exact ih _ hD' ri hriD
 
-/-- **约化量的落点**：`v + reduceAgainst D v` 是 `D` 的行向量的线性组合。 -/
+/-- **Where the reduced part lands**: `v + reduceAgainst D v` is a linear combination of the row vectors of `D`. -/
 lemma add_reduceAgainst_mem (D : List (PivRow n)) (v : Vec n) :
     v + reduceAgainst D v ∈ spanL (rowList D) := by
   induction D generalizing v with
@@ -139,7 +141,7 @@ lemma add_reduceAgainst_mem (D : List (PivRow n)) (v : Vec n) :
       rw [key]
       exact hmem
 
-/-! ## 枢轴选取与插入 -/
+/-! ## Choosing a pivot and inserting -/
 
 lemma support_nonempty {v : Vec n} (h : v ≠ 0) :
     (Finset.univ.filter (fun i => v i ≠ 0)).Nonempty := by
@@ -149,7 +151,7 @@ lemma support_nonempty {v : Vec n} (h : v ≠ 0) :
     exact h (funext hc)
   exact ⟨i, by simp [hi]⟩
 
-/-- 首个非零分量的位置（`v ≠ 0` 时有定义）。 -/
+/-- The position of the first nonzero component, defined when `v ≠ 0`. -/
 def leadIdx (v : Vec n) (h : v ≠ 0) : Fin n :=
   (Finset.univ.filter (fun i => v i ≠ 0)).min' (support_nonempty h)
 
@@ -161,7 +163,7 @@ lemma leadIdx_spec (v : Vec n) (h : v ≠ 0) : v (leadIdx v h) ≠ 0 := by
 lemma leadIdx_eq_one (v : Vec n) (h : v ≠ 0) : v (leadIdx v h) = 1 :=
   eq_one_of_ne_zero (leadIdx_spec v h)
 
-/-- 把新行 `w`（枢轴列 `p`）并入枢轴行集：先让旧行在列 `p` 上消去，再追加 `w`。 -/
+/-- Insert the new row `w`, whose pivot column is `p`, into the set of pivot rows: first clear the old rows at column `p`, then append `w`. -/
 def insertPivot (D : List (PivRow n)) (w : Vec n) (p : Fin n) : List (PivRow n) :=
   D.map (fun ri => (ri.1 + (ri.1 p) • w, ri.2)) ++ [(w, p)]
 
@@ -169,13 +171,13 @@ lemma rowList_insertPivot (D : List (PivRow n)) (w : Vec n) (p : Fin n) :
     rowList (insertPivot D w p) = (rowList D).map (fun r => r + (r p) • w) ++ [w] := by
   simp [rowList, insertPivot, List.map_map, Function.comp_def]
 
-/-- 插入不改变行空间。 -/
+/-- Insertion does not change the row space. -/
 lemma spanL_rowList_insertPivot (D : List (PivRow n)) (w : Vec n) (p : Fin n) :
     spanL (rowList (insertPivot D w p)) = spanL (rowList D ++ [w]) := by
   rw [rowList_insertPivot]
   exact spanL_map_addSmul_append _ _ _
 
-/-- 插入保持互约化不变量：要求 `w` 在 `D` 的所有枢轴列上取 0、在新枢轴列上取 1。 -/
+/-- Insertion preserves the mutual-reduction invariant: it requires `w` to be 0 at every pivot column of `D` and 1 at the new pivot column. -/
 lemma isReduced_insertPivot {D : List (PivRow n)} (hD : IsReduced D) {w : Vec n} {p : Fin n}
     (hp : w p = 1) (hz : ∀ ri ∈ D, w ri.2 = 0) : IsReduced (insertPivot D w p) := by
   constructor
@@ -211,9 +213,9 @@ lemma isReduced_insertPivot {D : List (PivRow n)} (hD : IsReduced D) {w : Vec n}
       have hwj : rj = (w, p) := by simpa using hsj
       exact absurd (hwi.trans hwj.symm) hne
 
-/-! ## 主循环 -/
+/-! ## The main loop -/
 
-/-- 一步：把 `v` 约化后若不为零，则作为新枢轴行并入。 -/
+/-- One step: reduce `v` and, if the result is nonzero, insert it as a new pivot row. -/
 def step (D : List (PivRow n)) (v : Vec n) : List (PivRow n) :=
   if hw : reduceAgainst D v = 0 then D
   else insertPivot D (reduceAgainst D v) (leadIdx (reduceAgainst D v) hw)
@@ -245,7 +247,7 @@ lemma isReduced_step {D : List (PivRow n)} (hD : IsReduced D) (v : Vec n) :
     exact isReduced_insertPivot hD (leadIdx_eq_one (reduceAgainst D v) hw)
       (reduceAgainst_apply_piv hD v)
 
-/-- 从累积状态 `D` 出发把 `rest` 逐行并入。 -/
+/-- Insert the rows of `rest` one by one, starting from the accumulated state `D`. -/
 def rowReduceFrom (D : List (PivRow n)) : List (Vec n) → List (PivRow n)
   | [] => D
   | v :: rest => rowReduceFrom (step D v) rest
@@ -271,15 +273,15 @@ lemma isReduced_rowReduceFrom {D : List (PivRow n)} (hD : IsReduced D) (rest : L
   | nil => exact hD
   | cons v rest ih => rw [rowReduceFrom_cons]; exact ih (isReduced_step hD v)
 
-/-- **可信行消元**：把一列行化为互约化的枢轴行集。 -/
+/-- **Verified row reduction**: reduce a list of rows to a mutually reduced set of pivot rows. -/
 def rowReduce (L : List (Vec n)) : List (PivRow n) := rowReduceFrom [] L
 
-/-- **行空间不变**：消元不改变行空间，因而也不改变所定义的码。 -/
+/-- **The row space is unchanged**: elimination does not change the row space, hence does not change the code it defines. -/
 theorem spanL_rowReduce (L : List (Vec n)) : spanL (rowList (rowReduce L)) = spanL L := by
   have h := spanL_rowList_rowReduceFrom ([] : List (PivRow n)) L
   simpa [rowReduce] using h
 
-/-- **输出互约化**：消元结果是枢轴行集（每行在自己枢轴列为 1、在别的枢轴列为 0）。 -/
+/-- **The output is mutually reduced**: the result is a set of pivot rows, each of them 1 at its own pivot column and 0 at the others. -/
 theorem isReduced_rowReduce (L : List (Vec n)) : IsReduced (rowReduce L) :=
   isReduced_rowReduceFrom isReduced_nil L
 

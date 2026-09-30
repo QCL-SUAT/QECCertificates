@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Codes.BB144Witness
 import QECCertificates.Codes.DistanceLabel
@@ -10,35 +10,43 @@ import LeanQEC.Stabilizer.CSS
 import QEC.Stabilizer.Codes.BivariateBicycle.Gross.Distance
 
 /-!
-# BB $[[144,12,12]]$：下界 $d\ge12$ 的内核内证明（走 QECLean 的 Gross 形式化）
+# BB $[[144,12,12]]$: the lower bound $d\ge12$, checked by the kernel (via QECLean's Gross formalization)
 
-这是 `Codes/BB144Witness.lean` 的**另一半**。那一片给的是**上界** $d_X,d_Z\le12$
-（显式重量-12 逻辑算符、三事实内核 `by decide`）；本片给**下界** $d_X,d_Z\ge12$，
-两侧合拢得 $d_X=d_Z=12$——全程在内核内，零 `native_decide`、零 `bv_decide`，
-也不碰 Lean-QEC 那条 3.26 GB olean 的路线。
+This is the **other half** of `Codes/BB144Witness.lean`. That module supplies the
+**upper bound** $d_X,d_Z\le12$ (explicit weight-12 logical operators, three facts
+discharged by `by decide` in the kernel); this one supplies the **lower bound**
+$d_X,d_Z\ge12$, and the two together give $d_X=d_Z=12$. Everything is checked by the
+kernel: no `native_decide`, no `bv_decide`, and none of Lean-QEC's 3.26 GB olean route.
 
-## 证据形态
+## Shape of the evidence
 
-下界不是"求解器说 UNSAT"，而是**逐码解析证明**的搬运：QECLean 在其同调形式化里
-闭合了该码的链级距离（`gross_chain_distance_eq_12`，无条件给出），本模块把它的
-链级量——`cycles`、`boundaries`、`chainWeight`——与本库的 GF(2) 语言对起来：
-`LE_X`/`LE_Z` 的逐行恒等式、核的对应、行空间的对应、重量的一致。于是
-"链级距离 $=12$" 直接给出 `min_weight_ker_not_mem_rowspace` 上的两条界。
+The lower bound is not "the solver says UNSAT" but the transport of an analytical,
+per-code proof: QECLean closes this code's chain-level distance inside its homological
+formalization (`gross_chain_distance_eq_12`, stated unconditionally), and this module
+lines up its chain-level quantities, `cycles`, `boundaries` and `chainWeight`, with
+this library's GF(2) language: row-by-row identities for `LE_X`/`LE_Z`, matching
+kernels, matching row spaces, and matching weights. The chain-level distance of 12 then
+gives the two bounds on `min_weight_ker_not_mem_rowspace` directly.
 
-**对照**：Lean-QEC 的同一下界走 SAT/位爆破（`bv_decide`），定理带 `_native` 公理、
-所在模块 olean 3.26 GB；本模块的两条定理只依赖三条标准公理，审计见根文件。
+**Contrast.** Lean-QEC's lower bound for the same code goes through SAT and bit
+blasting (`bv_decide`); its theorems carry `_native` axioms and its module's olean is
+3.26 GB. The two theorems here depend only on the three standard axioms (the audit is
+in the root file).
 
-## 索引约定与**尚未合拢的一里**
+## Index conventions and the last remaining gap
 
-`LE_X`/`LE_Z` 与 Lean-QEC 的 `BB144_X_mat`/`BB144_Z_mat` 是同一个码；`e144` 是两者
-之间的索引双射（列序块在前：`e144 c = (e72 (c % 72), c / 72)`）。
+`LE_X`/`LE_Z` and Lean-QEC's `BB144_X_mat`/`BB144_Z_mat` are the same code; `e144` is
+the index bijection between them (blocks first: `e144 c = (e72 (c % 72), c / 72)`).
 
-本片给出的是**对 `LE_X`/`LE_Z` 的下界**。`Codes/BB144Witness.lean` 用的是同一组矩阵
-的另一种写法（72 条字面行），它的上界由该模块给出。两者由 `Codes/BB144Literal.lean`
-的矩阵同一性（`bb144Hx_eq_LE_X`、`bb144Hz_eq_LE_Z`）接上，于是"本库字面矩阵的
-$d=12$"在本库自己的矩阵上闭环。那条同一性**不是**能顺手带过的计算：直接对整条
-72×144 等式做 `by decide`，在 8000000 心跳下仍超时（`LE_X` 的条目要展开 QECLean 的
-群环多项式）；该模块改走逐行桥接，把判定拆成可归约的片段才过。
+What is proved here is the lower bound **for `LE_X`/`LE_Z`**. `Codes/BB144Witness.lean`
+uses another description of the same matrices (72 literal rows), and it supplies the
+upper bound. The two are joined by the matrix identities of `Codes/BB144Literal.lean`
+(`bb144Hx_eq_LE_X`, `bb144Hz_eq_LE_Z`), so that $d=12$ for this library's literal
+matrices is closed on this library's own matrices. Those identities are **not** a
+computation to be waved through: a single `by decide` over the whole 72×144 equation
+still times out at 8000000 heartbeats (the entries of `LE_X` unfold QECLean's
+group-algebra polynomials), and that module goes row by row instead, splitting the
+decision into reducible pieces.
 -/
 
 namespace QECCertificates.BB144Distance
@@ -898,24 +906,28 @@ theorem BB144_toBSM_distance_ge_12 (C : CSS_pair 144 72 72)
   rw [hX, hZ]
   exact le_min BB144_dX_ge_12 BB144_dZ_ge_12
 
-/-! ## T5  本库字面矩阵的**上界**（下界见上，对 `LE_X` / `LE_Z`）
+/-! ## T5  Upper bound for this library's literal matrices (the lower bound is above, for `LE_X` / `LE_Z`)
 
-`Codes/BB144Witness.lean` 用 72 条字面行写同一组矩阵，其重量-12 见证给出上界。
-这里把两条上界也用 `Codes/DistanceLabel.lean` 的具名标签写出来，便于与下界对照：
-`libDX` 以 X 型校验作核、`libDZ` 以 Z 型校验作核。
+`Codes/BB144Witness.lean` writes the same matrices as 72 literal rows, and its
+weight-12 witnesses give the upper bound. The two upper bounds are restated here under
+the named labels of `Codes/DistanceLabel.lean`, so that they can be read against the
+lower bound: `libDX` takes the X-type checks as its kernel, `libDZ` the Z-type checks.
 
-**这一里已补齐**：下界（`BB144_dX_ge_12` / `BB144_dZ_ge_12`）是对 `LE_X` / `LE_Z` 证的，
-搬到本库字面矩阵所需的 $72\times144$ 矩阵同一性由 `Codes/BB144Literal.lean` 给出
-（`bb144Hx_eq_LE_X` / `bb144Hz_eq_LE_Z`），本模块下面两条 `_eq_12` 正是经它们运输。
-那条同一性走**逐条目** `fin_cases`：整条一次 `by decide` 在 8000000 心跳下不收敛。 -/
+**The last gap is now closed.** The lower bound (`BB144_dX_ge_12` / `BB144_dZ_ge_12`)
+is proved for `LE_X` / `LE_Z`, and the $72\times144$ matrix identity needed to move it
+to this library's literal matrices is supplied by `Codes/BB144Literal.lean`
+(`bb144Hx_eq_LE_X` / `bb144Hz_eq_LE_Z`); the two `_eq_12` theorems below are
+transported through them. That identity goes **entry by entry**, through `fin_cases`:
+a single `by decide` over the whole equation does not converge at 8000000 heartbeats. -/
 
 open QECCertificates
 open QECCertificates (libDX libDZ)
 
-/-- **上界**：重量-12 的显式逻辑算符给出 `libDX ≤ 12`。
+/-- **Upper bound**: an explicit weight-12 logical operator gives `libDX ≤ 12`.
 
-三件事分开写（`have` 里各自的期望类型是确定的），最后再拼——直接内联会让
-`minWeight_le_of_witness` 的隐式参数留成元变量。 -/
+The three facts are stated separately, so that the expected type of each `have` is
+determined, and combined at the end; writing them inline leaves the implicit arguments
+of `minWeight_le_of_witness` as metavariables. -/
 theorem bb144_libDX_le_12 : libDX bb144Hx bb144Hz ≤ 12 := by
   have hker : bb144XW ∈ LinearMap.ker bb144Hx.toLin' :=
     mem_ker_of_inKerB bb144Hx (v := bb144XW) (by decide)
@@ -924,7 +936,7 @@ theorem bb144_libDX_le_12 : libDX bb144Hx bb144Hz ≤ 12 := by
   have hw : hammingNorm bb144XW = 12 := by decide
   exact minWeight_le_of_witness bb144Hx bb144Hz hker hnot hw
 
-/-- **上界**：对称的一侧。 -/
+/-- **Upper bound**: the symmetric side. -/
 theorem bb144_libDZ_le_12 : libDZ bb144Hx bb144Hz ≤ 12 := by
   have hker : bb144ZW ∈ LinearMap.ker bb144Hz.toLin' :=
     mem_ker_of_inKerB bb144Hz (v := bb144ZW) (by decide)

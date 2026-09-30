@@ -1,82 +1,91 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Reflect.LRAT
 import QECCertificates.Reflect.SymmetryBreak
 
 /-!
-# 词典序比较器子句的可靠性（A3 的 CNF 层）
+# Soundness of the lexicographic-comparator clauses (the CNF layer of A3)
 
-`Reflect/SymmetryBreak.lean` 证的是**语义**：若破缺谓词可满足则原谓词可满足。
-要把工具生成的那份 **CNF** 接上，还差一条：
+`Reflect/SymmetryBreak.lean` proves the **semantics**: if the symmetry-broken predicate is
+satisfiable then so is the original predicate. To connect the **CNF** produced by the tool, one
+more step is needed:
 
     `SatFormula σ (lexClauses key img c)  ⟹  key ≤_lex img`
 
-本模块给出它——把 `tools/bb144_server/bb144_sb.py` 的 `lex_leader` 逐字移植成 Lean 的
-子句生成器 `lexClauses`，并证明**每条子句都被满足 ⟹ 比较器断言的词典序成立**。
+This module supplies it: the `lex_leader` of the external encoder is ported word for word into the
+Lean clause generator `lexClauses`, and it is proved that **satisfying every clause implies the
+lexicographic order asserted by the comparator**.
 
-## 编码回顾（与工具的 `lex_leader` 一一对应）
+## Recap of the encoding (one-to-one with `lex_leader`)
 
-设比较向量有 `n` 位，`key i` 是第 `i` 位的变量号、`img i` 是它在 `g·v` 下的取值来源
-（工具那边传的是置换的**逆**，于是 `img i` 正是 `(g·v)_i`）。辅助变量 `e i`（`1 ≤ i`）断言
-"前 `i` 位相等"，`e 0` 是常量真、不分配变量。子句四族：
+Let the comparison vector have `n` bits, let `key i` be the variable number of bit `i` and `img i`
+the source of its value under `g·v` (the tool passes the **inverse** of the permutation, so `img i`
+is exactly `(g·v)_i`). The auxiliary variable `e i` (`1 ≤ i`) asserts that the first `i` bits are
+equal, and `e 0` is the constant true, to which no variable is assigned. The clauses fall into four
+families:
 
-| 族 | 条数 | 子句 |
+| Family | Count | Clause |
 |---|---|---|
-| `lexHead` | 4 | 定义 `e 1 ↔ (key 0 ↔ img 0)` |
-| `lexStep i`（`2 ≤ i < n`） | 5 | 定义 `e i ↔ (e (i-1) ∧ (key (i-1) ↔ img (i-1)))` |
-| `lexOrder` | 1 | `¬key 0 ∨ img 0`（`i = 0` 处没有 `e`） |
-| `lexConstraint i`（`1 ≤ i < n`） | 1 | `¬e i ∨ ¬key i ∨ img i` |
+| `lexHead` | 4 | defines `e 1 ↔ (key 0 ↔ img 0)` |
+| `lexStep i` (`2 ≤ i < n`) | 5 | defines `e i ↔ (e (i-1) ∧ (key (i-1) ↔ img (i-1)))` |
+| `lexOrder` | 1 | `¬key 0 ∨ img 0` (there is no `e` at `i = 0`) |
+| `lexConstraint i` (`1 ≤ i < n`) | 1 | `¬e i ∨ ¬key i ∨ img i` |
 
-四条/五条的那两族合起来**恰好**定义 `e`（不多不少），这正是"编码不过紧"的地方；
-`Reflect/SymmetryBreak.lean` 的 `⟸` 半边要的就是它。末族禁止"前缀相等且 `key i = 1,
-img i = 0`"，即禁止 `key >_lex img` 的唯一形状。
+The families with four and five clauses together define `e` **exactly**, no more and no less, which
+is where the encoding avoids being too tight; the `⟸` half of `Reflect/SymmetryBreak.lean` is what
+needs this. The last family forbids "prefix equal with `key i = 1, img i = 0`", the only shape that
+has `key >_lex img`.
 
-## 结论的形态
+## Shape of the conclusion
 
-`LexLe v w` 写成"存在使 `v >_lex w` 的那种位置不存在"：
+`LexLe v w` is written as "there is no position at which `v >_lex w`":
 
-    ∀ i, (前缀相等) → v i = true → w i = true
+    ∀ i, (prefix equal) → v i = true → w i = true
 
-它与族 3/4 的子句逐字对应，因此证明是**顺着子句走**而不是顺着序关系走。
+It corresponds word for word to the clauses of families 3 and 4, so the proof **follows the
+clauses** rather than the order relation.
 -/
 
 namespace QECCertificates.LRAT
 
-/-! ## 文字量与词典序 -/
+/-! ## Literals and the lexicographic order -/
 
-/-- 正文字面量（变量取真）。 -/
+/-- A positive literal (the variable is true). -/
 def pos (v : Nat) : Lit := (v, true)
 
-/-- 负文字面量（变量取假）。 -/
+/-- A negative literal (the variable is false). -/
 def neg (v : Nat) : Lit := (v, false)
 
-/-- 比较器辅助变量 `e i`（`i ≥ 1`）的变量号；`e 0` 是常量真、不分配。 -/
+/-- The variable number of the comparator auxiliary variable `e i` (`i ≥ 1`); `e 0` is the constant
+true and is not assigned one. -/
 def eVar (c i : Nat) : Nat := c + (i - 1)
 
-/-- 向量 `v` 的第 `i` 位；越界取 `0`（调用方带界，故不触发）。 -/
+/-- Bit `i` of the vector `v`; out of range it is `0` (callers supply the bound, so this never
+happens). -/
 def idx (v : List Nat) (i : Nat) : Nat := v.getD i 0
 
-/-- **词典序 `≤`**：不存在"前缀相等、`v` 为真而 `w` 为假"的位置。
+/-- **Lexicographic order `≤`**: there is no position at which the prefixes are equal, `v` is true
+and `w` is false.
 
-用这个形态而不是递归定义，是因为它与 `lexConstraint` 的子句逐字对应——
-证明顺着子句走。 -/
+This shape is used rather than a recursive definition because it corresponds word for word to the
+clauses of `lexConstraint`: the proof follows the clauses. -/
 def LexLe (v w : List Bool) : Prop :=
   ∀ i, (∀ j, j < i → v.getD j false = w.getD j false) →
     v.getD i false = true → w.getD i false = true
 
-/-! ## 逐族的子句（与 `lex_leader` 逐字对应） -/
+/-! ## The clauses of each family (word for word with `lex_leader`) -/
 
-/-- 族 1：定义 `e 1 ↔ (key 0 ↔ img 0)`（4 条）。 -/
+/-- Family 1: defines `e 1 ↔ (key 0 ↔ img 0)` (4 clauses). -/
 def lexHead (key img : List Nat) (c : Nat) : CNF :=
   [[neg (eVar c 1), neg (idx key 0), pos (idx img 0)],
    [neg (eVar c 1), pos (idx key 0), neg (idx img 0)],
    [neg (idx key 0), neg (idx img 0), pos (eVar c 1)],
    [pos (idx key 0), pos (idx img 0), pos (eVar c 1)]]
 
-/-- 族 2：定义 `e i ↔ (e (i-1) ∧ (key (i-1) ↔ img (i-1)))`（5 条）。 -/
+/-- Family 2: defines `e i ↔ (e (i-1) ∧ (key (i-1) ↔ img (i-1)))` (5 clauses). -/
 def lexStep (key img : List Nat) (c i : Nat) : CNF :=
   [[neg (eVar c i), pos (eVar c (i - 1))],
    [neg (eVar c i), neg (idx key (i - 1)), pos (idx img (i - 1))],
@@ -84,49 +93,51 @@ def lexStep (key img : List Nat) (c i : Nat) : CNF :=
    [neg (eVar c (i - 1)), neg (idx key (i - 1)), neg (idx img (i - 1)), pos (eVar c i)],
    [neg (eVar c (i - 1)), pos (idx key (i - 1)), pos (idx img (i - 1)), pos (eVar c i)]]
 
-/-- 族 3：`¬key 0 ∨ img 0`。 -/
+/-- Family 3: `¬key 0 ∨ img 0`. -/
 def lexOrder (key img : List Nat) : CNF :=
   [[neg (idx key 0), pos (idx img 0)]]
 
-/-- 族 4：`¬e i ∨ ¬key i ∨ img i`。 -/
+/-- Family 4: `¬e i ∨ ¬key i ∨ img i`. -/
 def lexConstraint (key img : List Nat) (c i : Nat) : CNF :=
   [[neg (eVar c i), neg (idx key i), pos (idx img i)]]
 
-/-- **比较器的全部子句**（`lex_leader` 的逐字移植）。 -/
+/-- **All clauses of the comparator** (a word-for-word port of `lex_leader`). -/
 def lexClauses (key img : List Nat) (c : Nat) : CNF :=
   lexHead key img c
   ++ (List.range' 2 (key.length - 2)).flatMap (lexStep key img c)
   ++ lexOrder key img
   ++ (List.range' 1 (key.length - 1)).flatMap (lexConstraint key img c)
 
-/-! ## 两个组合子句的小引理
+/-! ## Small lemmas for the two combining clauses
 
-族 1 与族 2 的从句都是"定义某个 `e` 等于一个布尔组合"。先把这两种组合抽成引理，
-后面归纳时就不必反复展开子句。 -/
+The clauses of families 1 and 2 each define some `e` to be equal to a Boolean combination. Those
+two combinations are extracted as lemmas first, so that the induction below does not have to unfold
+the clauses again and again. -/
 
-/-- 把 `SatClause` 在三个字面量上的展开写成布尔析取，后面的引理都从这里起步。 -/
+/-- Write the expansion of `SatClause` over three literals as a Boolean disjunction; the lemmas below
+all start from here. -/
 theorem satClause_three {σ : Assign} {x y z : Nat} {sx sy sz : Bool}
     (h : SatClause σ [(x, sx), (y, sy), (z, sz)]) :
     σ x = sx ∨ σ y = sy ∨ σ z = sz := by
   simpa [SatClause] using h
 
-/-- 四字面量同上。 -/
+/-- The same for four literals. -/
 theorem satClause_four {σ : Assign} {w x y z : Nat} {sw sx sy sz : Bool}
     (h : SatClause σ [(w, sw), (x, sx), (y, sy), (z, sz)]) :
     σ w = sw ∨ σ x = sx ∨ σ y = sy ∨ σ z = sz := by
   simpa [SatClause] using h
 
-/-- 单字面量同上。 -/
+/-- The same for one literal. -/
 theorem satClause_one {σ : Assign} {x : Nat} {sx : Bool}
     (h : SatClause σ [(x, sx)]) : σ x = sx := by
   simpa [SatClause] using h
 
-/-- 双字面量同上。 -/
+/-- The same for two literals. -/
 theorem satClause_two {σ : Assign} {x y : Nat} {sx sy : Bool}
     (h : SatClause σ [(x, sx), (y, sy)]) : σ x = sx ∨ σ y = sy := by
   simpa [SatClause] using h
 
-/-- **族 1 的可靠性**：四条子句合起来恰好定义 `e ↔ (a ↔ b)`。 -/
+/-- **Soundness of family 1**: the four clauses together define `e ↔ (a ↔ b)` exactly. -/
 theorem head_iff {σ : Assign} {a b e : Nat}
     (h1 : SatClause σ [neg e, neg a, pos b])
     (h2 : SatClause σ [neg e, pos a, neg b])
@@ -139,7 +150,7 @@ theorem head_iff {σ : Assign} {a b e : Nat}
   rcases satClause_three (σ := σ) h4 with h''' | h''' | h''' <;>
   simp_all [neg, pos]
 
-/-- **族 2 的可靠性**：五条子句合起来恰好定义 `e ↔ (e' ∧ (a ↔ b))`。 -/
+/-- **Soundness of family 2**: the five clauses together define `e ↔ (e' ∧ (a ↔ b))` exactly. -/
 theorem step_iff {σ : Assign} {a b e e' : Nat}
     (h1 : SatClause σ [neg e, pos e'])
     (h2 : SatClause σ [neg e, neg a, pos b])
@@ -155,9 +166,10 @@ theorem step_iff {σ : Assign} {a b e e' : Nat}
   simp_all [neg, pos]
 
 
-/-! ## 族的成员关系：具体子句确实在 `lexClauses` 里
+/-! ## Family membership: the concrete clauses really are in `lexClauses`
 
-`lexClauses` 是四族的连接，故"某条具体子句在它里面"是纯列表运算，`simp` 可判。 -/
+`lexClauses` is the concatenation of the four families, so "a given clause is in it" is pure list
+arithmetic, which `simp` decides. -/
 
 variable {σ : Assign} {key img : List Nat} {c : Nat}
 
@@ -179,10 +191,11 @@ theorem mem_constraint {C : Clause} {i : Nat} (hi : i ∈ List.range' 1 (key.len
   simp only [lexClauses, List.mem_append, List.mem_flatMap]
   exact Or.inr ⟨i, hi, h⟩
 
-/-! ## 核心：`e i` 恰好是前 `i` 位相等的指示 -/
+/-! ## Core: `e i` is exactly the indicator that the first `i` bits are equal -/
 
-/-- 族 1 与族 2 是 `e` 的**定义式**（两个方向都齐全），故 `e` 的取值被唯一确定。
-本引理把它写成一串：**若前 `i` 位相等则 `e i` 为真，且 `e i` 为真则前 `i` 位相等**。 -/
+/-- Families 1 and 2 are a **definition** of `e` (both directions are present), so the value of `e` is
+uniquely determined. This lemma states it in one line: **if the first `i` bits are equal then
+`e i` is true, and if `e i` is true then the first `i` bits are equal**. -/
 theorem eVar_spec (h : SatFormula σ (lexClauses key img c)) :
     ∀ i, 1 ≤ i → i < key.length →
       (σ (eVar c i) = true ↔ ∀ j, j < i → σ (idx key j) = σ (idx img j)) := by
@@ -246,22 +259,25 @@ theorem eVar_spec (h : SatFormula σ (lexClauses key img c)) :
       · intro hall
         refine ⟨fun j hj => hall j (by omega), hall (i - 1) (by omega)⟩
 
-/-! ## 主定理：比较器子句全被满足 ⟹ 词典序成立 -/
+/-! ## Main theorem: satisfying every comparator clause implies the lexicographic order -/
 
-/-- **比较器断言的词典序形态**，写成与 `lexConstraint` 的子句逐字对应的形式：
-不存在"前缀相等、`key i` 为真而 `img i` 为假"的位置。
+/-- **The lexicographic shape asserted by the comparator**, written in the form that corresponds word
+for word to the clauses of `lexConstraint`: there is no position at which the prefixes are equal,
+`key i` is true and `img i` is false.
 
-用 `idx` 而不是 `List.map`：子句里出现的就是 `idx key i`，两边用同一种写法，
-`i = 0` 那一格（没有 `e` 可用）才不必绕道 `List.getD` 与 `List.map` 的换算。 -/
+`idx` is used rather than `List.map` because the clauses contain `idx key i`, so both sides use the
+same notation, and the cell `i = 0` (where no `e` is available) does not have to go through the
+conversion between `List.getD` and `List.map`. -/
 def LexLeOver (key img : List Nat) (σ : Assign) : Prop :=
   ∀ i, i < key.length → (∀ j, j < i → σ (idx key j) = σ (idx img j)) →
     σ (idx key i) = true → σ (idx img i) = true
 
-/-- **`lexClauses` 的可靠性**（A3 的 CNF 层）：每条子句都被满足，则比较向量在自己的
-像之下**字典序不增**。
+/-- **Soundness of `lexClauses`** (the CNF layer of A3): if every clause is satisfied, the comparison
+vector is **lexicographically non-increasing** under its own image.
 
-证明只做两件事：族 4 在 `i ≥ 1` 上给出"前缀相等且 `key i` 为真 ⟹ `img i` 为真"，
-族 3 补上 `i = 0` 那一格；前缀相等这个前提由 `eVar_spec` 从 `e` 的取值翻译过来。 -/
+The proof does two things: family 4 gives "prefix equal and `key i` true implies `img i` true" for
+`i ≥ 1`, and family 3 covers the cell `i = 0`; the prefix-equality hypothesis is translated from
+the value of `e` by `eVar_spec`. -/
 theorem lexClauses_sat (himg : img.length = key.length)
     (h : SatFormula σ (lexClauses key img c)) : LexLeOver key img σ := by
   intro i hlt hpre hkey

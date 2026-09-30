@@ -1,53 +1,62 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.HGP
 
 /-!
-# HGP 第二片：压缩恒等式、转置码与单块重量下界（ 续）
+# HGP, part two: the compression identity, the transpose code, and the single-block weight lower bound (continued)
 
-第一片（`GF2/HGP`）给出了构造与 CSS 正交性。本模块给出**距离分析**所需的三块骨架。
+The first part (`GF2/HGP`) gives the construction and the CSS orthogonality. This module
+supplies the three building blocks needed for the **distance analysis**.
 
-## 一、压缩恒等式
+## 1. The compression identity
 
-把向量 `v` 按列空间的两个分块读成两个矩阵 `blockL v`（$n_1\times n_2$）与
-`blockR v`（$r_1\times r_2$）。逐条目计算给出
+Read a vector `v` as two matrices over the two blocks of the column space, `blockL v`
+($n_1\times n_2$) and `blockR v` ($r_1\times r_2$). Entrywise computation gives
 
 $$H_X\, v = 0 \iff H_1 \cdot \mathrm{blockL}\,v = \mathrm{blockR}\,v \cdot H_2,\qquad
 H_Z\, v = 0 \iff \mathrm{blockL}\,v \cdot H_2^\top = H_1^\top \cdot \mathrm{blockR}\,v.$$
 
-第二式把 $(U, R)$ 说成**交换方块**（$H_1 U = R H_2$）——这正是超图积的
-"链映射"图景在逐条目层面的形式。距离下界的一切 case 分析都从这条恒等式出发。
+The first of the two presents the pair $U = \mathrm{blockL}\,v$, $R = \mathrm{blockR}\,v$
+as a **commuting square** ($H_1 U = R H_2$), which is exactly the entrywise form of the
+"chain map" picture of the hypergraph product. Every case of the distance lower bound
+starts from the identity on that same side.
 
-## 二、转置码
+## 2. The transpose code
 
-把输入取转置后当作**新的**校验矩阵：`hgpHZ H₁ᵀ H₂ᵀ` 的列空间是
-$(r_1 r_2) \oplus (n_1 n_2)$（两块的形状互换），其行 `(a, d)` 在"交换两分块"
-后的条目**逐字等于** `hgpHX H₁ H₂` 的同行条目：
+Take the inputs transposed and use them as **new** parity-check matrices. Then the column
+space of `hgpHZ H₁ᵀ H₂ᵀ` is $(r_1 r_2) \oplus (n_1 n_2)$ (the two blocks exchange their
+shapes), and after "swapping the two blocks" its row `(a, d)` agrees **entrywise** with the
+same row of `hgpHX H₁ H₂`:
 
-`hgpHZ H₁ᵀ H₂ᵀ x c = hgpHX H₁ H₂ x (sumComm c)`。
+`hgpHZ H₁ᵀ H₂ᵀ x c = hgpHX H₁ H₂ x (sumComm c)`.
 
-于是 `HGP(H₁ᵀ, H₂ᵀ)` 正是 `HGP(H₁, H₂)` 的**转置码**：X 侧分析与 Z 侧分析是
-同一条论证的两次应用——下界公式里出现 `ker H₂ᵀ` 的距离（转置码距离）的根源。
+So `HGP(H₁ᵀ, H₂ᵀ)` is exactly the **transpose code** of `HGP(H₁, H₂)`: the X-side analysis
+and the Z-side analysis are two applications of one and the same argument, which is the
+source of the distance of `ker H₂ᵀ` (the transpose-code distance) appearing in the lower
+bound formula.
 
-## 三、单块重量下界
+## 3. The single-block weight lower bound
 
-若 X 型算符只在左半块有支撑（`blockR v = 0`），则压缩恒等式迫使
-"每一列都是 $H_1$ 的核向量"；任一非零列的重量 ≥ 左码距离 `d₁`，
-而单列重量不超过全向量重量：
+If an X-type operator has support only in the left block (`blockR v = 0`), the compression
+identity forces every column to be a kernel vector of $H_1$; the weight of any nonzero
+column is at least the left-code distance `d₁`, and the weight of a single column is at
+most the weight of the whole vector:
 
-  `d₁ ≤ hammingNorm (列) ≤ hammingNorm v`
+  `d₁ ≤ hammingNorm (column) ≤ hammingNorm v`
 
-右半块同理给出 `d₂ᵀ`（$\ker H_2^\top$ 的距离）。**两块同时非零的情形**
-（即两条贡献相互抵消）需要"清洗/商"论证，仍未形式化——本模块只做已形式化的那一半，不声称这一条。
+The right block gives `d₂ᵀ` (the distance of $\ker H_2^\top$) in the same way. **The case
+where both blocks are nonzero at once**, that is, where the two contributions cancel each
+other, needs a cleaning/quotient argument and is still not formalized; this module covers
+only the half that is formalized and makes no claim about that case.
 
-## 主结果
+## Main results
 
-* `hgpHX_mulVec_eq_zero_iff` / `hgpHZ_mulVec_eq_zero_iff`：压缩恒等式。
-* `hgpHZ_transpose_inputs_apply`：转置码关系。
-* `hgp_hammingNorm_ge_of_pure_left` / `_of_pure_right`：单块重量下界。
+* `hgpHX_mulVec_eq_zero_iff` / `hgpHZ_mulVec_eq_zero_iff`: the compression identity.
+* `hgpHZ_transpose_inputs_apply`: the transpose-code relation.
+* `hgp_hammingNorm_ge_of_pure_left` / `_of_pure_right`: the single-block weight lower bound.
 -/
 
 namespace QECCertificates
@@ -58,14 +67,14 @@ open scoped BigOperators
 
 variable {r₁ n₁ r₂ n₂ : ℕ}
 
-/-! ## 分块读取 -/
+/-! ## Reading the blocks -/
 
-/-- 把向量在左半块（$n_1\times n_2$）上读成矩阵。 -/
+/-- Read a vector as a matrix on the left block ($n_1\times n_2$). -/
 def blockL (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) :
     Matrix (Fin n₁) (Fin n₂) (ZMod 2) :=
   fun a b => v (Sum.inl (a, b))
 
-/-- 把向量在右半块（$r_1\times r_2$）上读成矩阵。 -/
+/-- Read a vector as a matrix on the right block ($r_1\times r_2$). -/
 def blockR (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) :
     Matrix (Fin r₁) (Fin r₂) (ZMod 2) :=
   fun s t => v (Sum.inr (s, t))
@@ -76,9 +85,9 @@ def blockR (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) :
 @[simp] lemma blockR_apply (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2)
     (s : Fin r₁) (t : Fin r₂) : blockR v s t = v (Sum.inr (s, t)) := rfl
 
-/-! ## 逐条目计算的切片引理 -/
+/-! ## Slicing lemmas for the entrywise computation -/
 
-/-- 乘积索引上的"取一列"：`Σ_{a,b} A a · [j = b] · F a b = Σ_a A a · F a j`。 -/
+/-- "Take one column" on a product index: `Σ_{a,b} A a · [j = b] · F a b = Σ_a A a · F a j`. -/
 lemma sum_prod_slice_snd {m k : ℕ} (A : Fin m → ZMod 2) (F : Fin m → Fin k → ZMod 2)
     (j : Fin k) :
     (∑ p : Fin m × Fin k, A p.1 * (if j = p.2 then 1 else 0) * F p.1 p.2)
@@ -94,7 +103,7 @@ lemma sum_prod_slice_snd {m k : ℕ} (A : Fin m → ZMod 2) (F : Fin m → Fin k
   · intro h
     exact absurd (Finset.mem_univ j) h
 
-/-- 乘积索引上的"取一行"：`Σ_{a,b} [i = a] · B b · F a b = Σ_b B b · F i b`。 -/
+/-- "Take one row" on a product index: `Σ_{a,b} [i = a] · B b · F a b = Σ_b B b · F i b`. -/
 lemma sum_prod_slice_fst {m k : ℕ} (B : Fin k → ZMod 2) (F : Fin m → Fin k → ZMod 2)
     (i : Fin m) :
     (∑ p : Fin m × Fin k, (if i = p.1 then 1 else 0) * B p.2 * F p.1 p.2)
@@ -110,13 +119,14 @@ lemma sum_prod_slice_fst {m k : ℕ} (B : Fin k → ZMod 2) (F : Fin m → Fin k
   · intro h
     exact absurd (Finset.mem_univ i) h
 
-/-! ## 压缩恒等式 -/
+/-! ## The compression identity -/
 
-/-- **X 侧逐条目**：`(H_X v)_{(i,j)} = (H_1 · U)_{ij} + (R · H_2)_{ij}`，
-其中 `U = blockL v`、`R = blockR v`。
+/-- **X side, entrywise**: `(H_X v)_{(i,j)} = (H_1 · U)_{ij} + (R · H_2)_{ij}`, where
+`U = blockL v` and `R = blockR v`.
 
-两个和式分别按 `H_X`、`H_1 ⊗ I`、`I ⊗ H_2` 的**定义**归约（`rfl` 级），
-再各用一次切片引理把乘积索引上的和塌成单指标和。 -/
+The two sums reduce by the **definitions** of `H_X`, `H_1 ⊗ I` and `I ⊗ H_2` (at the `rfl`
+level), and one slicing lemma each then collapses the sum over the product index into a
+sum over a single index. -/
 theorem hgpHX_mulVec_apply (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) (i : Fin r₁) (j : Fin n₂) :
@@ -136,7 +146,7 @@ theorem hgpHX_mulVec_apply (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     sum_prod_slice_snd (A := fun a => H₁ i a) (F := fun a b => v (Sum.inl (a, b))) j,
     sum_prod_slice_fst (B := fun t => H₂ t j) (F := fun s t => v (Sum.inr (s, t))) i]
 
-/-- **Z 侧逐条目**：`(H_Z v)_{(a,d)} = (U · H_2ᵀ)_{ad} + (H_1ᵀ · R)_{ad}`。 -/
+/-- **Z side, entrywise**: `(H_Z v)_{(a,d)} = (U · H_2ᵀ)_{ad} + (H_1ᵀ · R)_{ad}`. -/
 theorem hgpHZ_mulVec_apply (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) (a : Fin n₁) (d : Fin r₂) :
@@ -158,9 +168,10 @@ theorem hgpHZ_mulVec_apply (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     sum_prod_slice_fst (B := fun b => H₂ d b) (F := fun a b => v (Sum.inl (a, b))) a,
     sum_prod_slice_snd (A := fun s => H₁ s a) (F := fun s t => v (Sum.inr (s, t))) d]
 
-/-- **压缩恒等式（X 侧）**：$H_X v = 0 \iff H_1\,U = R\,H_2$。
+/-- **Compression identity (X side)**: $H_X v = 0 \iff H_1\,U = R\,H_2$.
 
-右端的等式正是"$(U, R)$ 是链映射"的陈述；距离下界的 case 分析全部由此展开。 -/
+The equality on the right is the statement that $(U, R)$ is a chain map; the whole case
+analysis of the distance lower bound unfolds from it. -/
 theorem hgpHX_mulVec_eq_zero_iff (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) :
@@ -179,7 +190,7 @@ theorem hgpHX_mulVec_eq_zero_iff (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     simp only [Pi.zero_apply]
     exact CharTwo.add_self_eq_zero _
 
-/-- **压缩恒等式（Z 侧）**：$H_Z v = 0 \iff U\,H_2^\top = H_1^\top\,R$。 -/
+/-- **Compression identity (Z side)**: $H_Z v = 0 \iff U\,H_2^\top = H_1^\top\,R$. -/
 theorem hgpHZ_mulVec_eq_zero_iff (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) :
@@ -198,11 +209,13 @@ theorem hgpHZ_mulVec_eq_zero_iff (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     simp only [Pi.zero_apply]
     exact CharTwo.add_self_eq_zero _
 
-/-! ## 转置码 -/
+/-! ## The transpose code -/
 
-/-- **转置码关系**：把输入转置后得到的 Z 校验矩阵，在"交换两个分块"的列重标号下
-逐条目等于原 X 校验矩阵。于是 `HGP(H₁ᵀ, H₂ᵀ)` 是 `HGP(H₁, H₂)` 的转置码——
-X 侧与 Z 侧的距离分析是同一条论证的两次应用。 -/
+/-- **Transpose-code relation**: the Z parity-check matrix obtained from the transposed
+inputs agrees entrywise with the original X parity-check matrix, under the column
+relabelling that swaps the two blocks. Hence `HGP(H₁ᵀ, H₂ᵀ)` is the transpose code of
+`HGP(H₁, H₂)`, and the X-side and Z-side distance analyses are two applications of one
+and the same argument. -/
 theorem hgpHZ_transpose_inputs_apply (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)) (x : Fin r₁ × Fin n₂)
     (c : (Fin r₁ × Fin r₂) ⊕ (Fin n₁ × Fin n₂)) :
@@ -212,9 +225,10 @@ theorem hgpHZ_transpose_inputs_apply (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 
   · obtain ⟨s, t⟩ := st; rfl
   · obtain ⟨a, b⟩ := ab; rfl
 
-/-! ## 单块重量下界 -/
+/-! ## The single-block weight lower bound -/
 
-/-- 沿单射拉回的重量不超过原重量（支撑集在单射下嵌入）。 -/
+/-- Pulling a vector back along an injection does not increase its weight (the support
+embeds under the injection). -/
 lemma hammingNorm_le_of_injective {α β : Type*} [Fintype α] [Fintype β] (e : α → β)
     (he : Function.Injective e) (v : β → ZMod 2) :
     hammingNorm (fun a => v (e a)) ≤ hammingNorm v := by
@@ -226,10 +240,12 @@ lemma hammingNorm_le_of_injective {α β : Type*} [Fintype α] [Fintype β] (e :
   · intro a _ b _ h
     exact he h
 
-/-- **单块重量下界（左）**：X 型算符若只在左半块有支撑，其重量 ≥ 左码距离 `d₁`。
+/-- **Single-block weight lower bound (left)**: an X-type operator supported only in the
+left block has weight at least the left-code distance `d₁`.
 
-左半块的每一列都落在 `ker H₁` 里（压缩恒等式 + `blockR v = 0`），
-非零列的重量 ≥ `d₁`，而单列重量 ≤ 全向量重量。 -/
+Every column of the left block lies in `ker H₁` (compression identity plus `blockR v = 0`),
+a nonzero column has weight at least `d₁`, and a single column weighs no more than the
+whole vector. -/
 theorem hgp_hammingNorm_ge_of_pure_left {H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)}
     {H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)}
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -260,10 +276,12 @@ theorem hgp_hammingNorm_ge_of_pure_left {H₁ : Matrix (Fin r₁) (Fin n₁) (ZM
         hammingNorm_le_of_injective (fun p : Fin n₁ × Fin n₂ => Sum.inl p)
           Sum.inl_injective v
 
-/-- **单块重量下界（右）**：X 型算符若只在右半块有支撑，其重量 ≥ `ker H₂ᵀ` 的距离
-（**转置码距离** `d₂ᵀ`）——这正是下界公式里出现转置码的根源。
+/-- **Single-block weight lower bound (right)**: an X-type operator supported only in the
+right block has weight at least the distance of `ker H₂ᵀ` (the **transpose-code distance**
+`d₂ᵀ`), which is exactly why the transpose code appears in the lower bound formula.
 
-右半块的每一行 `r_i` 满足 `H₂ᵀ r_i = 0`（压缩恒等式 + `blockL v = 0`）。 -/
+Every row `r_i` of the right block satisfies `H₂ᵀ r_i = 0` (compression identity plus
+`blockL v = 0`). -/
 theorem hgp_hammingNorm_ge_of_pure_right {H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)}
     {H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)}
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}

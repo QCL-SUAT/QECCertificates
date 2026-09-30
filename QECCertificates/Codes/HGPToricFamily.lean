@@ -1,37 +1,45 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.HGPKunneth
 import QECCertificates.GF2.HGPCleaning
 import QECCertificates.GF2.HGPCleaningDual
 
 /-!
-# HGP 族 $n\ge144$ 实例与环面族全族定理（路线图 F 节点）
+# HGP family instances for $n\ge144$, and the all-$m$ toric family theorem
 
-`GF2/HGPKunneth`（维数张量公式）与 `GF2/HGPCleaning(±Dual)`（两侧距离下界）
-给出的是**族级**结构定理。本模块把它们实例化到 $m$-圈种子 $\mathrm{cyc}_m$
-的超图积上：$m=9$ 得 $[[162,2,9]]$、$m=12$ 得 $[[288,2,12]]$、$m=16$ 得
-$[[512,2,16]]$，且进一步给出**全族定理** `hgp_toric_family`：对任意
-$m\ge2$，HGP($\mathrm{cyc}_m$,$\mathrm{cyc}_m$) 是 $[[\,2m^2,\,2,\,m\,]]$——
-种子三事实（行和为偶、秩 $m-1$、两个方向的核最小重量 $m$）由**核常值性**
-（`cycMat_ker_const`：行方程 $w_i+w_{i+1}=0$ 在特征 2 下沿链传递 ⟹ 核向量
-必为常值）结构化给出，**零枚举、对每个 $m$ 成立**。全程不做任何
-宽度 $\ge100$ 的求秩或枚举，证书量级 $O(m^2)$：
+The structural theorems of `GF2/HGPKunneth` (the dimension tensor formula) and of
+`GF2/HGPCleaning(±Dual)` (the two distance lower bounds) are **family-level**. This
+module instantiates them on the hypergraph product of the $m$-cycle seed
+$\mathrm{cyc}_m$: $m=9$ gives $[[162,2,9]]$, $m=12$ gives $[[288,2,12]]$ and $m=16$
+gives $[[512,2,16]]$. It then goes further and gives an **all-$m$ theorem**,
+`hgp_toric_family`: for every $m\ge2$, HGP($\mathrm{cyc}_m$,$\mathrm{cyc}_m$) is
+$[[\,2m^2,\,2,\,m\,]]$. The three seed facts (even row sums, rank $m-1$, kernel minimum
+weight $m$ in both directions) come structurally from **constancy of the kernel**
+(`cycMat_ker_const`: the row equation $w_i+w_{i+1}=0$ propagates along the cycle in
+characteristic 2, so a kernel vector must be constant): **no enumeration, and it holds
+for every $m$**. Nothing here ranks or enumerates anything of width $\ge100$, and the
+certificate stays $O(m^2)$:
 
-* **维数 $k=2$**（`hgp_toric9_k` / `hgp_toric12_k`）：Künneth 公式只需要
-  $m\times m$ 种子矩阵的秩，$162$（或 $288$）宽大矩阵的秩从不计算；
-* **两侧距离下界 $d\ge m$**（`hgp_toric9_dx_lb` 等）：清洗定理只需要种子
-  核最小重量（$2^m$ 空间上的 `by decide`）；
-* **witness 上界 $d\le m$**（`hgp_toric9_X_logical` 等）：显式重量-$m$ 逻辑
-  算符——核成员经压缩恒等式化归为两个 $m\times m$ 分块等式，非成员经
-  **一般索引的对偶见证**（`not_mem_rowSpace_of_ker_dot`，本模块新增：
-  `GF2/LowerBound.lean` 的同名 Fin 版不覆盖积/和索引）由一条点积证书给出。
+* **the dimension $k=2$** (`hgp_toric9_k` / `hgp_toric12_k`): the Künneth formula needs
+  only the rank of the $m\times m$ seed matrix, and the rank of the $162$-wide (or
+  $288$-wide) matrix is never computed;
+* **the two distance lower bounds $d\ge m$** (`hgp_toric9_dx_lb` and the like): the
+  cleaning theorem needs only the kernel minimum weight of the seed (a `by decide` over a
+  space of size $2^m$);
+* **the witness upper bounds $d\le m$** (`hgp_toric9_X_logical` and the like): explicit
+  logical operators of weight $m$. Kernel membership reduces, through the compression
+  identity, to two $m\times m$ block equations, and non-membership is given by a single
+  dot-product certificate through the **dual witness for general indices**
+  (`not_mem_rowSpace_of_ker_dot`, added in this module: the `Fin` version of that name in
+  `GF2/LowerBound.lean` does not cover product or sum indices).
 
-这也是与 QECLean 在 $[[144,12,12]]$ 上枚举式证据的**形态对照**：
-$n\ge144$ 时逐算符枚举（$\sum_{k<d}\binom nk$）在内核内不可行，
-而结构化断言的证书仍是 $O(m^2)$。
+This is also the shape contrast with the enumerative evidence that QECLean uses on
+$[[144,12,12]]$: for $n\ge144$ a per-operator enumeration ($\sum_{k<d}\binom nk$) is
+infeasible in the kernel, whereas the certificate of a structural assertion is still
+$O(m^2)$.
 -/
 
 namespace QECCertificates
@@ -43,15 +51,17 @@ open scoped BigOperators
 set_option maxRecDepth 100000
 set_option maxHeartbeats 8000000
 
-/-! ## 一、一般索引的对偶见证引理 -/
+/-! ## 1. The dual-witness lemma for general indices -/
 
-/-- **对偶见证（任意索引版）**：若 `w` 与 `M` 的每一行正交（`M *ᵥ w = 0`），
-而 `w ⬝ᵥ E = 1`，则 `E` 不在 `M` 的行空间中。
+/-- **Dual witness (arbitrary index version)**: if `w` is orthogonal to every row of `M`
+(`M *ᵥ w = 0`) and `w ⬝ᵥ E = 1`, then `E` is not in the row space of `M`.
 
-`GF2/LowerBound.lean` 的 `not_mem_rowSpace_of_dualCheck` 限定行/列索引为
-`Fin`；HGP 校验矩阵的索引是积/和类型，这里给出可直接使用的一般版本。
-证明即"行空间里的向量与核正交"：把 `E` 按 `M` 的行展开后逐项配对即塌缩为
-`∑ cᵢ·(M *ᵥ w)ᵢ = 0`，与点积为 1 矛盾。 -/
+`not_mem_rowSpace_of_dualCheck` in `GF2/LowerBound.lean` restricts the row and column
+indices to `Fin`; the HGP parity-check matrices are indexed by product and sum types, so a
+directly usable general version is given here. The proof is the statement that a vector in
+the row space is orthogonal to the kernel: expanding `E` along the rows of `M` and pairing
+term by term collapses the sum to `∑ cᵢ·(M *ᵥ w)ᵢ = 0`, contradicting that the dot
+product is 1. -/
 theorem not_mem_rowSpace_of_ker_dot {ι κ : Type*} [Fintype ι] [Fintype κ]
     (M : Matrix ι κ (ZMod 2)) {E w : κ → ZMod 2}
     (hker : M *ᵥ w = 0) (hdot : w ⬝ᵥ E = 1) : E ∉ M.rowSpace := by
@@ -84,37 +94,41 @@ theorem not_mem_rowSpace_of_ker_dot {ι κ : Type*} [Fintype ι] [Fintype κ]
   rw [Finset.sum_congr rfl (fun i _ => hzero i), Finset.sum_const_zero] at hdot
   exact absurd hdot (by simp)
 
-/-! ## 二、$m$-圈种子与环面族 witness（通用定义） -/
+/-! ## 2. The $m$-cycle seed and the toric-family witnesses (general definitions) -/
 
-/-- **$m$-圈关联矩阵** $\mathrm{cyc}_m$：第 $i$ 行在第 $i$ 与第 $i{+}1$
-（模 $m$）列为 1——每行恰两个 1（行和为偶），秩为 $m-1$，核由全 1 向量
-张成。$\mathrm{HGP}(\mathrm{cyc}_m,\mathrm{cyc}_m)$ 即 $m\times m$ 环面码
-$[[2m^2, 2, m]]$（$m=3$ 时为案例矩阵的 toric3，见 `Codes/HGPAnchor.lean`）。 -/
+/-- **The $m$-cycle incidence matrix** $\mathrm{cyc}_m$: row $i$ has a 1 in columns $i$ and
+$i{+}1$ (modulo $m$). Every row has exactly two 1s (so the row sums are even), the rank is
+$m-1$, and the kernel is spanned by the all-ones vector.
+$\mathrm{HGP}(\mathrm{cyc}_m,\mathrm{cyc}_m)$ is the $m\times m$ toric code
+$[[2m^2, 2, m]]$ (for $m=3$ this is the `toric3` case matrix of
+`Codes/CaseMatrix.lean`). -/
 def cycMat (m : ℕ) : Matrix (Fin m) (Fin m) (ZMod 2) :=
   fun i j => if (j : ℕ) = (i : ℕ) ∨ (j : ℕ) = ((i : ℕ) + 1) % m then 1 else 0
 
-/-- **X 型 witness**：左半块（$n_1\times n_2$ 格点）上第 $0$ 列全 1、
-右半块全 0——环面上沿一个方向的闭环，重量 $m$。 -/
+/-- **X-type witness**: all 1s in column $0$ of the left block (the $n_1\times n_2$
+lattice) and all 0s in the right block: a closed loop on the torus in one direction, of
+weight $m$. -/
 def hgpToricXW (m : ℕ) : (Fin m × Fin m) ⊕ (Fin m × Fin m) → ZMod 2 :=
   Sum.elim (fun ab => if (ab.2 : ℕ) = 0 then 1 else 0) (fun _ => 0)
 
-/-- **Z 型 witness**：左半块上第 $0$ 行全 1、右半块全 0——沿另一方向的
-闭环，与 `hgpToricXW` 恰在一个格点相交（点积为 1）。 -/
+/-- **Z-type witness**: all 1s in row $0$ of the left block and all 0s in the right block:
+the closed loop in the other direction, meeting `hgpToricXW` in exactly one lattice point
+(dot product 1). -/
 def hgpToricZW (m : ℕ) : (Fin m × Fin m) ⊕ (Fin m × Fin m) → ZMod 2 :=
   Sum.elim (fun ab => if (ab.1 : ℕ) = 0 then 1 else 0) (fun _ => 0)
 
-/-! ## 三、witness 的结构化核成员（对任意 $m$，只依赖"行和为偶"） -/
+/-! ## 3. Structured kernel membership of the witnesses (any $m$, using only that the row sums are even) -/
 
-/-- X 型 witness 的右半块为空（定义性事实）。 -/
+/-- The right block of the X-type witness is empty (a definitional fact). -/
 theorem blockR_toricXW_zero (m : ℕ) : blockR (hgpToricXW m) = 0 := by
   ext s t; rfl
 
-/-- Z 型 witness 的右半块为空（定义性事实）。 -/
+/-- The right block of the Z-type witness is empty (a definitional fact). -/
 theorem blockR_toricZW_zero (m : ℕ) : blockR (hgpToricZW m) = 0 := by
   ext s t; rfl
 
-/-- X 型 witness 左半块被 $\mathrm{cyc}_m$ 作用为零：每一列要么是全 1
-（被"行和为偶"杀死）要么是零。 -/
+/-- The left block of the X-type witness is annihilated by $\mathrm{cyc}_m$: each column is
+either all 1s (killed by the even row sums) or zero. -/
 theorem cycMat_mul_blockL_XW {m : ℕ} (hone : cycMat m *ᵥ (fun _ => 1) = 0) :
     cycMat m * blockL (hgpToricXW m) = 0 := by
   ext i j
@@ -128,8 +142,9 @@ theorem cycMat_mul_blockL_XW {m : ℕ} (hone : cycMat m *ᵥ (fun _ => 1) = 0) :
       intro a; simp [hgpToricXW, hj]
     rw [Finset.sum_congr rfl (fun a _ => he a), Finset.sum_const_zero]
 
-/-- Z 型 witness 左半块右乘 $\mathrm{cyc}_m^\top$ 为零：每一行要么是全 1
-（转置不改行和）要么是零。 -/
+/-- The left block of the Z-type witness becomes zero when multiplied on the right by
+$\mathrm{cyc}_m^\top$: each row is either all 1s (transposition does not change row sums)
+or zero. -/
 theorem blockL_ZW_mul_transpose {m : ℕ} (hone : cycMat m *ᵥ (fun _ => 1) = 0) :
     blockL (hgpToricZW m) * (cycMat m).transpose = 0 := by
   ext a d
@@ -146,22 +161,24 @@ theorem blockL_ZW_mul_transpose {m : ℕ} (hone : cycMat m *ᵥ (fun _ => 1) = 0
       intro b; simp [hgpToricZW, ha]
     rw [Finset.sum_congr rfl (fun b _ => he b), Finset.sum_const_zero]
 
-/-- **X 型 witness 是 X 校验的核向量**（压缩恒等式 + 两个分块事实）。 -/
+/-- **The X-type witness is a kernel vector of the X checks** (the compression identity
+plus two block facts). -/
 theorem toricXW_ker {m : ℕ} (hone : cycMat m *ᵥ (fun _ => 1) = 0) :
     hgpHX (cycMat m) (cycMat m) *ᵥ hgpToricXW m = 0 := by
   rw [hgpHX_mulVec_eq_zero_iff, cycMat_mul_blockL_XW hone, blockR_toricXW_zero, zero_mul]
 
-/-- **Z 型 witness 是 Z 校验的核向量**。 -/
+/-- **The Z-type witness is a kernel vector of the Z checks**. -/
 theorem toricZW_ker {m : ℕ} (hone : cycMat m *ᵥ (fun _ => 1) = 0) :
     hgpHZ (cycMat m) (cycMat m) *ᵥ hgpToricZW m = 0 := by
   rw [hgpHZ_mulVec_eq_zero_iff, blockL_ZW_mul_transpose hone, blockR_toricZW_zero,
     Matrix.mul_zero]
 
-/-! ## 四、族级组装器：种子三事实 ⟹ HGP 环面实例参数 -/
+/-! ## 4. The family-level assembler: the three seed facts give the HGP toric parameters -/
 
-/-- **族级维数**：种子秩 $m-1$ ⟹ $\mathrm{HGP}(\mathrm{cyc}_m,\mathrm{cyc}_m)$
-的逻辑比特数 $k = (m-(m-1))^2 + (m-(m-1))^2 = 2$（Künneth 公式，
-大矩阵的秩从不计算）。 -/
+/-- **Family-level dimension**: seed rank $m-1$ gives
+$k = (m-(m-1))^2 + (m-(m-1))^2 = 2$ logical qubits for
+$\mathrm{HGP}(\mathrm{cyc}_m,\mathrm{cyc}_m)$ (the Künneth formula; the rank of the large
+matrix is never computed). -/
 theorem hgp_toric_k {m : ℕ} (hm : 1 ≤ m) (hrank : (cycMat m).rank = m - 1) :
     (m * m + m * m) - (hgpHX (cycMat m) (cycMat m)).rank
       - (hgpHZ (cycMat m) (cycMat m)).rank = 2 := by
@@ -169,8 +186,9 @@ theorem hgp_toric_k {m : ℕ} (hm : 1 ≤ m) (hrank : (cycMat m).rank = m - 1) :
   have h1 : m - (m - 1) = 1 := by omega
   rw [h1]
 
-/-- **族级 X 距离下界**：种子核最小重量 $m$（两个方向）⟹ 任何非平凡
-X 型逻辑算符重量 $\ge m$（清洗定理）。 -/
+/-- **Family-level X-distance lower bound**: kernel minimum weight $m$ for the seed (in
+both directions) gives weight $\ge m$ for every nontrivial X-type logical operator (the
+cleaning theorem). -/
 theorem hgp_toric_dx_lb {m : ℕ}
     (hmin : ∀ w : Vec m, w ≠ 0 → cycMat m *ᵥ w = 0 → m ≤ hammingNorm w)
     (hminT : ∀ w : Vec m, w ≠ 0 → (cycMat m).transpose *ᵥ w = 0 → m ≤ hammingNorm w)
@@ -181,7 +199,7 @@ theorem hgp_toric_dx_lb {m : ℕ}
   have h := hgp_X_distance_ge (cycMat m) (cycMat m) hv hlog hmin hminT
   rwa [min_self] at h
 
-/-- **族级 Z 距离下界**。 -/
+/-- **Family-level Z-distance lower bound**. -/
 theorem hgp_toric_dz_lb {m : ℕ}
     (hmin : ∀ w : Vec m, w ≠ 0 → cycMat m *ᵥ w = 0 → m ≤ hammingNorm w)
     (hminT : ∀ w : Vec m, w ≠ 0 → (cycMat m).transpose *ᵥ w = 0 → m ≤ hammingNorm w)
@@ -192,73 +210,79 @@ theorem hgp_toric_dz_lb {m : ℕ}
   have h := hgp_Z_distance_ge (cycMat m) (cycMat m) hv hlog hminT hmin
   rwa [min_self] at h
 
-/-- **族级 witness 非成员**：X 型 witness 不在 Z 校验行空间中，证书是
-Z witness 的核成员 + 一条点积。 -/
+/-- **Family-level witness non-membership**: the X-type witness is not in the row space of
+the Z checks; the certificate is the kernel membership of the Z witness plus one dot
+product. -/
 theorem toricXW_not_mem {m : ℕ} (hone : cycMat m *ᵥ (fun _ => 1) = 0)
     (hdot : hgpToricXW m ⬝ᵥ hgpToricZW m = 1) :
     hgpToricXW m ∉ (hgpHZ (cycMat m) (cycMat m)).rowSpace := by
   refine not_mem_rowSpace_of_ker_dot _ (toricZW_ker hone) ?_
   rw [dotProduct_comm]; exact hdot
 
-/-- **族级 witness 非成员（Z 侧）**。 -/
+/-- **Family-level witness non-membership (Z side)**. -/
 theorem toricZW_not_mem {m : ℕ} (hone : cycMat m *ᵥ (fun _ => 1) = 0)
     (hdot : hgpToricXW m ⬝ᵥ hgpToricZW m = 1) :
     hgpToricZW m ∉ (hgpHX (cycMat m) (cycMat m)).rowSpace :=
   not_mem_rowSpace_of_ker_dot _ (toricXW_ker hone) hdot
 
-/-! ## 五、实例一：$m=9$，$[[162,2,9]]$ -/
+/-! ## 5. Instance one: $m=9$, $[[162,2,9]]$ -/
 
-/-- 种子行和为偶（全 1 向量在核中）。 -/
+/-- The seed row sums are even (the all-ones vector is in the kernel). -/
 theorem cyc9_one_ker : cycMat 9 *ᵥ (fun _ : Fin 9 => 1) = 0 := by decide
 
-/-- 种子秩为 $8$。 -/
+/-- The seed has rank $8$. -/
 theorem rank_cyc9 : (cycMat 9).rank = 8 := by
   rw [Matrix.rank_eq_length_rowReduce]; decide
 
-/-- 种子核最小重量为 $9$（$2^9$ 空间逐向量核出）。 -/
+/-- The kernel minimum weight of the seed is $9$ (checked vector by vector over a space of
+size $2^9$). -/
 theorem cyc9_ker_min : ∀ w : Vec 9, w ≠ 0 → cycMat 9 *ᵥ w = 0 →
     9 ≤ hammingNorm w := by decide
 
-/-- 种子转置核最小重量为 $9$。 -/
+/-- The kernel minimum weight of the transposed seed is $9$. -/
 theorem cyc9T_ker_min : ∀ w : Vec 9, w ≠ 0 → (cycMat 9).transpose *ᵥ w = 0 →
     9 ≤ hammingNorm w := by decide
 
-/-- 两个 witness 的点积恰为 1（各 162 项的求和，逐项核出）。 -/
+/-- The dot product of the two witnesses is exactly 1 (a sum of 162 terms each, checked
+term by term). -/
 theorem toric9_dot : hgpToricXW 9 ⬝ᵥ hgpToricZW 9 = 1 := by decide
 
-/-- X 型 witness 重量为 9。 -/
+/-- The X-type witness has weight 9. -/
 theorem toric9_XW_weight : hammingNorm (hgpToricXW 9) = 9 := by decide
 
-/-- Z 型 witness 重量为 9。 -/
+/-- The Z-type witness has weight 9. -/
 theorem toric9_ZW_weight : hammingNorm (hgpToricZW 9) = 9 := by decide
 
-/-- 码长 $n = 81 + 81 = 162$。 -/
+/-- The code length is $n = 81 + 81 = 162$. -/
 theorem toric9_n : Fintype.card ((Fin 9 × Fin 9) ⊕ (Fin 9 × Fin 9)) = 162 := by
   simp [Fintype.card_sum, Fintype.card_prod]
 
-/-- **$[[162,2,9]]$ 之 $k$**：$\mathrm{HGP}(\mathrm{cyc}_9,\mathrm{cyc}_9)$
-的逻辑比特数为 2（Künneth + 种子秩 8；宽度 162 的矩阵秩从不计算）。 -/
+/-- **$k$ for $[[162,2,9]]$**: $\mathrm{HGP}(\mathrm{cyc}_9,\mathrm{cyc}_9)$ has 2
+logical qubits (Künneth plus seed rank 8; the rank of the 162-wide matrix is never
+computed). -/
 theorem hgp_toric9_k :
     (9 * 9 + 9 * 9) - (hgpHX (cycMat 9) (cycMat 9)).rank
       - (hgpHZ (cycMat 9) (cycMat 9)).rank = 2 :=
   hgp_toric_k (by decide) rank_cyc9
 
-/-- **$[[162,2,9]]$ 之 $d_X \ge 9$**：任何非平凡 X 型逻辑算符重量 ≥ 9。 -/
+/-- **$d_X \ge 9$ for $[[162,2,9]]$**: every nontrivial X-type logical operator has weight
+at least 9. -/
 theorem hgp_toric9_dx_lb {v : (Fin 9 × Fin 9) ⊕ (Fin 9 × Fin 9) → ZMod 2}
     (hv : hgpHX (cycMat 9) (cycMat 9) *ᵥ v = 0)
     (hlog : v ∉ (hgpHZ (cycMat 9) (cycMat 9)).rowSpace) :
     9 ≤ hammingNorm v :=
   hgp_toric_dx_lb cyc9_ker_min cyc9T_ker_min hv hlog
 
-/-- **$[[162,2,9]]$ 之 $d_Z \ge 9$**。 -/
+/-- **$d_Z \ge 9$ for $[[162,2,9]]$**. -/
 theorem hgp_toric9_dz_lb {v : (Fin 9 × Fin 9) ⊕ (Fin 9 × Fin 9) → ZMod 2}
     (hv : hgpHZ (cycMat 9) (cycMat 9) *ᵥ v = 0)
     (hlog : v ∉ (hgpHX (cycMat 9) (cycMat 9)).rowSpace) :
     9 ≤ hammingNorm v :=
   hgp_toric_dz_lb cyc9_ker_min cyc9T_ker_min hv hlog
 
-/-- **$[[162,2,9]]$ 之 $d_X \le 9$**：重量 9 的 X 型逻辑算符实物
-（核成员结构化，非成员由对偶见证证书给出）。 -/
+/-- **$d_X \le 9$ for $[[162,2,9]]$**: an explicit X-type logical operator of weight 9
+(kernel membership is structural, and non-membership comes from a dual-witness
+certificate). -/
 theorem hgp_toric9_X_logical :
     hgpHX (cycMat 9) (cycMat 9) *ᵥ hgpToricXW 9 = 0
       ∧ hgpToricXW 9 ∉ (hgpHZ (cycMat 9) (cycMat 9)).rowSpace
@@ -266,7 +290,7 @@ theorem hgp_toric9_X_logical :
   ⟨toricXW_ker cyc9_one_ker, toricXW_not_mem cyc9_one_ker toric9_dot,
     toric9_XW_weight⟩
 
-/-- **$[[162,2,9]]$ 之 $d_Z \le 9$**。 -/
+/-- **$d_Z \le 9$ for $[[162,2,9]]$**. -/
 theorem hgp_toric9_Z_logical :
     hgpHZ (cycMat 9) (cycMat 9) *ᵥ hgpToricZW 9 = 0
       ∧ hgpToricZW 9 ∉ (hgpHX (cycMat 9) (cycMat 9)).rowSpace
@@ -274,57 +298,59 @@ theorem hgp_toric9_Z_logical :
   ⟨toricZW_ker cyc9_one_ker, toricZW_not_mem cyc9_one_ker toric9_dot,
     toric9_ZW_weight⟩
 
-/-! ## 六、实例二：$m=12$，$[[288,2,12]]$ -/
+/-! ## 6. Instance two: $m=12$, $[[288,2,12]]$ -/
 
-/-- 种子行和为偶。 -/
+/-- The seed row sums are even. -/
 theorem cyc12_one_ker : cycMat 12 *ᵥ (fun _ : Fin 12 => 1) = 0 := by decide
 
-/-- 种子秩为 $11$。 -/
+/-- The seed has rank $11$. -/
 theorem rank_cyc12 : (cycMat 12).rank = 11 := by
   rw [Matrix.rank_eq_length_rowReduce]; decide
 
-/-- 种子核最小重量为 $12$（$2^{12}$ 空间逐向量核出）。 -/
+/-- The kernel minimum weight of the seed is $12$ (checked vector by vector over a space of
+size $2^{12}$). -/
 theorem cyc12_ker_min : ∀ w : Vec 12, w ≠ 0 → cycMat 12 *ᵥ w = 0 →
     12 ≤ hammingNorm w := by decide
 
-/-- 种子转置核最小重量为 $12$。 -/
+/-- The kernel minimum weight of the transposed seed is $12$. -/
 theorem cyc12T_ker_min : ∀ w : Vec 12, w ≠ 0 → (cycMat 12).transpose *ᵥ w = 0 →
     12 ≤ hammingNorm w := by decide
 
-/-- 两个 witness 的点积恰为 1（各 288 项的求和，逐项核出）。 -/
+/-- The dot product of the two witnesses is exactly 1 (a sum of 288 terms each, checked
+term by term). -/
 theorem toric12_dot : hgpToricXW 12 ⬝ᵥ hgpToricZW 12 = 1 := by decide
 
-/-- X 型 witness 重量为 12。 -/
+/-- The X-type witness has weight 12. -/
 theorem toric12_XW_weight : hammingNorm (hgpToricXW 12) = 12 := by decide
 
-/-- Z 型 witness 重量为 12。 -/
+/-- The Z-type witness has weight 12. -/
 theorem toric12_ZW_weight : hammingNorm (hgpToricZW 12) = 12 := by decide
 
-/-- 码长 $n = 144 + 144 = 288$。 -/
+/-- The code length is $n = 144 + 144 = 288$. -/
 theorem toric12_n : Fintype.card ((Fin 12 × Fin 12) ⊕ (Fin 12 × Fin 12)) = 288 := by
   simp [Fintype.card_sum, Fintype.card_prod]
 
-/-- **$[[288,2,12]]$ 之 $k$**。 -/
+/-- **$k$ for $[[288,2,12]]$**. -/
 theorem hgp_toric12_k :
     (12 * 12 + 12 * 12) - (hgpHX (cycMat 12) (cycMat 12)).rank
       - (hgpHZ (cycMat 12) (cycMat 12)).rank = 2 :=
   hgp_toric_k (by decide) rank_cyc12
 
-/-- **$[[288,2,12]]$ 之 $d_X \ge 12$**。 -/
+/-- **$d_X \ge 12$ for $[[288,2,12]]$**. -/
 theorem hgp_toric12_dx_lb {v : (Fin 12 × Fin 12) ⊕ (Fin 12 × Fin 12) → ZMod 2}
     (hv : hgpHX (cycMat 12) (cycMat 12) *ᵥ v = 0)
     (hlog : v ∉ (hgpHZ (cycMat 12) (cycMat 12)).rowSpace) :
     12 ≤ hammingNorm v :=
   hgp_toric_dx_lb cyc12_ker_min cyc12T_ker_min hv hlog
 
-/-- **$[[288,2,12]]$ 之 $d_Z \ge 12$**。 -/
+/-- **$d_Z \ge 12$ for $[[288,2,12]]$**. -/
 theorem hgp_toric12_dz_lb {v : (Fin 12 × Fin 12) ⊕ (Fin 12 × Fin 12) → ZMod 2}
     (hv : hgpHZ (cycMat 12) (cycMat 12) *ᵥ v = 0)
     (hlog : v ∉ (hgpHX (cycMat 12) (cycMat 12)).rowSpace) :
     12 ≤ hammingNorm v :=
   hgp_toric_dz_lb cyc12_ker_min cyc12T_ker_min hv hlog
 
-/-- **$[[288,2,12]]$ 之 $d_X \le 12$**。 -/
+/-- **$d_X \le 12$ for $[[288,2,12]]$**. -/
 theorem hgp_toric12_X_logical :
     hgpHX (cycMat 12) (cycMat 12) *ᵥ hgpToricXW 12 = 0
       ∧ hgpToricXW 12 ∉ (hgpHZ (cycMat 12) (cycMat 12)).rowSpace
@@ -332,7 +358,7 @@ theorem hgp_toric12_X_logical :
   ⟨toricXW_ker cyc12_one_ker, toricXW_not_mem cyc12_one_ker toric12_dot,
     toric12_XW_weight⟩
 
-/-- **$[[288,2,12]]$ 之 $d_Z \le 12$**。 -/
+/-- **$d_Z \le 12$ for $[[288,2,12]]$**. -/
 theorem hgp_toric12_Z_logical :
     hgpHZ (cycMat 12) (cycMat 12) *ᵥ hgpToricZW 12 = 0
       ∧ hgpToricZW 12 ∉ (hgpHX (cycMat 12) (cycMat 12)).rowSpace
@@ -340,9 +366,10 @@ theorem hgp_toric12_Z_logical :
   ⟨toricZW_ker cyc12_one_ker, toricZW_not_mem cyc12_one_ker toric12_dot,
     toric12_ZW_weight⟩
 
-/-! ## 七、全族结构化：核常值性 ⟹ 种子事实零枚举（对任意 $m$） -/
+/-! ## 7. The structural route for the whole family: kernel constancy gives the seed facts with no enumeration (any $m$) -/
 
-/-- **双热点求和**：指示恰在两个不同位置非零的求和等于两处取值之和。 -/
+/-- **Two-hot sum**: a sum whose indicator is nonzero at exactly two distinct positions
+equals the sum of the two values there. -/
 theorem sum_two_hot {m : ℕ} (a b : Fin m) (hab : a ≠ b) (f : Fin m → ZMod 2) :
     (∑ j : Fin m, if (j : ℕ) = (a : ℕ) ∨ (j : ℕ) = (b : ℕ) then f j else 0) = f a + f b := by
   rw [← Finset.sum_filter
@@ -355,7 +382,7 @@ theorem sum_two_hot {m : ℕ} (a b : Fin m) (hab : a ≠ b) (f : Fin m → ZMod 
   rw [hset]
   exact Finset.sum_pair hab
 
-/-- 第 $i$ 行的两个热点列互不相同（$m\ge2$）。 -/
+/-- The two hot columns of row $i$ are distinct ($m\ge2$). -/
 theorem cycMat_ne_next {m : ℕ} (hm : 2 ≤ m) (i : Fin m) :
     (i : ℕ) ≠ ((i : ℕ) + 1) % m := by
   intro heq
@@ -364,7 +391,8 @@ theorem cycMat_ne_next {m : ℕ} (hm : 2 ≤ m) (i : Fin m) :
   · have him : (i : ℕ) + 1 = m := by omega
     rw [him, Nat.mod_self] at heq; omega
 
-/-- **行方程**：$m$-圈矩阵作用于向量的第 $i$ 个分量恰为 $w_i + w_{(i+1)\bmod m}$。 -/
+/-- **The row equation**: the $i$-th component of the $m$-cycle matrix acting on a vector
+is exactly $w_i + w_{(i+1)\bmod m}$. -/
 theorem cycMat_mulVec_apply {m : ℕ} (hm : 2 ≤ m) (w : Vec m) (i : Fin m) :
     (cycMat m *ᵥ w) i = w i + w ⟨((i : ℕ) + 1) % m, Nat.mod_lt ((i : ℕ) + 1) (by omega)⟩ := by
   have hot : ∀ j : Fin m, cycMat m i j * w j
@@ -379,14 +407,16 @@ theorem cycMat_mulVec_apply {m : ℕ} (hm : 2 ≤ m) (w : Vec m) (i : Fin m) :
     sum_two_hot i ⟨((i : ℕ) + 1) % m, Nat.mod_lt ((i : ℕ) + 1) (by omega)⟩
       (by intro heq; exact cycMat_ne_next hm i (congrArg Fin.val heq)) w]
 
-/-- **行和为偶（结构化）**：全 1 向量在核中——每个行方程是 $1+1=0$。 -/
+/-- **Even row sums (structural)**: the all-ones vector is in the kernel, since every row
+equation reads $1+1=0$. -/
 theorem cycMat_one_ker {m : ℕ} (hm : 2 ≤ m) : cycMat m *ᵥ (fun _ => 1) = 0 := by
   funext i
   rw [cycMat_mulVec_apply hm _ i]
   exact CharTwo.add_self_eq_zero _
 
-/-- **核常值性**：$m$-圈矩阵的核向量必为常值——行方程 $w_i + w_{i+1} = 0$
-在特征 2 下即 $w_{i+1} = w_i$，沿链传递。 -/
+/-- **Kernel constancy**: a kernel vector of the $m$-cycle matrix must be constant, since
+the row equation $w_i + w_{i+1} = 0$ reads $w_{i+1} = w_i$ in characteristic 2 and
+propagates along the cycle. -/
 theorem cycMat_ker_const {m : ℕ} (hm : 2 ≤ m) {w : Vec m} (h : cycMat m *ᵥ w = 0) :
     ∃ c : ZMod 2, w = fun _ => c := by
   have hstep : ∀ k : ℕ, (hk : k + 1 < m) → w ⟨k + 1, by omega⟩ = w ⟨k, by omega⟩ := by
@@ -404,7 +434,8 @@ theorem cycMat_ker_const {m : ℕ} (hm : 2 ≤ m) {w : Vec m} (h : cycMat m *ᵥ
         exact (hstep n (by omega)).trans (ih (by omega))
   refine ⟨w ⟨0, by omega⟩, funext fun i => key (i : ℕ) i.isLt⟩
 
-/-- **转置的行方程**（$j\ge1$ 的行）：两个热点在 $j-1$ 与 $j$。 -/
+/-- **The row equation for the transpose** (rows with $j\ge1$): the two hot positions are
+$j-1$ and $j$. -/
 theorem cycMatT_mulVec_pred {m : ℕ} (_hm : 2 ≤ m) (w : Vec m) {j : Fin m} (hj : 1 ≤ (j : ℕ)) :
     ((cycMat m).transpose *ᵥ w) j
       = w ⟨(j : ℕ) - 1, by have := j.isLt; omega⟩ + w j := by
@@ -445,7 +476,8 @@ theorem cycMatT_mulVec_pred {m : ℕ} (_hm : 2 ≤ m) (w : Vec m) {j : Fin m} (h
           have := j.isLt
           omega) w]
 
-/-- **转置核常值性**：转置的核向量也必为常值（沿 $j-1$ 方向的同一论证）。 -/
+/-- **Kernel constancy for the transpose**: a kernel vector of the transpose is constant
+as well (the same argument along the $j-1$ direction). -/
 theorem cycMatT_ker_const {m : ℕ} (hm : 2 ≤ m) {w : Vec m}
     (h : (cycMat m).transpose *ᵥ w = 0) : ∃ c : ZMod 2, w = fun _ => c := by
   have hstep : ∀ k : ℕ, (hk : k + 1 < m) → w ⟨k + 1, by omega⟩ = w ⟨k, by omega⟩ := by
@@ -463,7 +495,8 @@ theorem cycMatT_ker_const {m : ℕ} (hm : 2 ≤ m) {w : Vec m}
         exact (hstep n (by omega)).trans (ih (by omega))
   refine ⟨w ⟨0, by omega⟩, funext fun i => key (i : ℕ) i.isLt⟩
 
-/-- 常值向量的重量：非零常值为 $m$、零常值为 $0$。 -/
+/-- The weight of a constant vector: $m$ for a nonzero constant and $0$ for the zero
+constant. -/
 theorem hammingNorm_const {m : ℕ} {c : ZMod 2} (hc : c ≠ 0) :
     hammingNorm (fun _ : Fin m => c) = m := by
   change (Finset.univ.filter (fun i : Fin m => (fun _ : Fin m => c) i ≠ 0)).card = m
@@ -471,7 +504,8 @@ theorem hammingNorm_const {m : ℕ} {c : ZMod 2} (hc : c ≠ 0) :
     Finset.ext fun x => by simp [hc]
   rw [hfil, Finset.card_univ, Fintype.card_fin]
 
-/-- **种子核最小重量（结构化，零枚举）**：非零核向量是常值，重量即 $m$。 -/
+/-- **Seed kernel minimum weight (structural, no enumeration)**: a nonzero kernel vector is
+constant, so its weight is $m$. -/
 theorem cycMat_ker_min {m : ℕ} (hm : 2 ≤ m) {w : Vec m} (hne : w ≠ 0)
     (h : cycMat m *ᵥ w = 0) : m ≤ hammingNorm w := by
   obtain ⟨c, rfl⟩ := cycMat_ker_const hm h
@@ -480,7 +514,7 @@ theorem cycMat_ker_min {m : ℕ} (hm : 2 ≤ m) {w : Vec m} (hne : w ≠ 0)
     exact hne (by rw [hc0]; rfl)
   rw [hammingNorm_const hc]
 
-/-- **转置核最小重量（结构化）**。 -/
+/-- **Kernel minimum weight for the transpose (structural)**. -/
 theorem cycMatT_ker_min {m : ℕ} (hm : 2 ≤ m) {w : Vec m} (hne : w ≠ 0)
     (h : (cycMat m).transpose *ᵥ w = 0) : m ≤ hammingNorm w := by
   obtain ⟨c, rfl⟩ := cycMatT_ker_const hm h
@@ -489,7 +523,8 @@ theorem cycMatT_ker_min {m : ℕ} (hm : 2 ≤ m) {w : Vec m} (hne : w ≠ 0)
     exact hne (by rw [hc0]; rfl)
   rw [hammingNorm_const hc]
 
-/-- **种子秩（结构化）**：核 = 常值向量的张成（一维），秩—零化度给出 $m-1$。 -/
+/-- **Seed rank (structural)**: the kernel is the span of the constant vectors
+(one-dimensional), and rank plus nullity gives $m-1$. -/
 theorem rank_cycMat {m : ℕ} (hm : 2 ≤ m) : (cycMat m).rank = m - 1 := by
   have hspan : LinearMap.ker (cycMat m).mulVecLin
       = Submodule.span (ZMod 2) {fun _ => (1 : ZMod 2)} := by
@@ -516,13 +551,16 @@ theorem rank_cycMat {m : ℕ} (hm : 2 ≤ m) : (cycMat m).rank = m - 1 := by
   change Module.finrank (ZMod 2) ↥(LinearMap.range (cycMat m).mulVecLin) = m - 1
   omega
 
-/-- **环面族全族定理**：对任意 $m \ge 2$，$\mathrm{HGP}(\mathrm{cyc}_m,\mathrm{cyc}_m)$
-是 $[[\,2m^2,\,2,\,m\,]]$——维数经 Künneth 公式、两侧距离下界经清洗定理，
-而全部种子事实（行和为偶、秩 $=m-1$、两个方向的核最小重量 $=m$）都由
-**核常值性**结构化给出：**零枚举，对每个 $m$ 成立**。
+/-- **The all-$m$ toric family theorem**: for every $m \ge 2$,
+$\mathrm{HGP}(\mathrm{cyc}_m,\mathrm{cyc}_m)$ is $[[\,2m^2,\,2,\,m\,]]$. The dimension
+comes from the Künneth formula and the two distance lower bounds from the cleaning
+theorem, while all the seed facts (even row sums, rank $=m-1$, kernel minimum weight $=m$
+in both directions) are given structurally by **kernel constancy**: **no enumeration, and
+it holds for every $m$**.
 
-这是"结构化证据 vs 逐实例枚举"形态对照的极限形态：$m$ 任意大时
-种子侧不再需要任何 $2^m$ 计算，证书量级只剩 witness 的 $O(m^2)$ 逐项核对。 -/
+This is the extreme form of the contrast between structural evidence and per-instance
+enumeration: for arbitrarily large $m$ the seed side needs no computation over $2^m$ at
+all, and the certificate is only the $O(m^2)$ term-by-term check of the witnesses. -/
 theorem hgp_toric_family {m : ℕ} (hm : 2 ≤ m) :
     (m * m + m * m) - (hgpHX (cycMat m) (cycMat m)).rank
         - (hgpHZ (cycMat m) (cycMat m)).rank = 2
@@ -538,38 +576,40 @@ theorem hgp_toric_family {m : ℕ} (hm : 2 ≤ m) :
    fun v hv hlog => hgp_toric_dz_lb (fun w hne h => cycMat_ker_min hm hne h)
      (fun w hne h => cycMatT_ker_min hm hne h) hv hlog⟩
 
-/-! ## 八、实例三：$m=16$，$[[512,2,16]]$（全族定理的种子事实 + witness 逐项核对） -/
+/-! ## 8. Instance three: $m=16$, $[[512,2,16]]$ (the seed facts of the all-$m$ theorem plus a term-by-term check of the witnesses) -/
 
-/-- 两个 witness 的点积恰为 1（512 项求和，逐项核出）。 -/
+/-- The dot product of the two witnesses is exactly 1 (a sum of 512 terms, checked term by
+term). -/
 theorem toric16_dot : hgpToricXW 16 ⬝ᵥ hgpToricZW 16 = 1 := by decide
 
-/-- X 型 witness 重量为 16。 -/
+/-- The X-type witness has weight 16. -/
 theorem toric16_XW_weight : hammingNorm (hgpToricXW 16) = 16 := by decide
 
-/-- Z 型 witness 重量为 16。 -/
+/-- The Z-type witness has weight 16. -/
 theorem toric16_ZW_weight : hammingNorm (hgpToricZW 16) = 16 := by decide
 
-/-- **$[[512,2,16]]$ 之 $k$**（Künneth + 结构化种子秩）。 -/
+/-- **$k$ for $[[512,2,16]]$** (Künneth plus the structural seed rank). -/
 theorem hgp_toric16_k :
     (16 * 16 + 16 * 16) - (hgpHX (cycMat 16) (cycMat 16)).rank
       - (hgpHZ (cycMat 16) (cycMat 16)).rank = 2 :=
   hgp_toric_k (by decide) (rank_cycMat (by decide))
 
-/-- **$[[512,2,16]]$ 之 $d_X \ge 16$**（清洗定理 + 结构化种子事实）。 -/
+/-- **$d_X \ge 16$ for $[[512,2,16]]$** (the cleaning theorem plus the structural seed
+facts). -/
 theorem hgp_toric16_dx_lb {v : (Fin 16 × Fin 16) ⊕ (Fin 16 × Fin 16) → ZMod 2}
     (hv : hgpHX (cycMat 16) (cycMat 16) *ᵥ v = 0)
     (hlog : v ∉ (hgpHZ (cycMat 16) (cycMat 16)).rowSpace) :
     16 ≤ hammingNorm v :=
   hgp_toric_dx_lb (fun w hne h => cycMat_ker_min (by decide) hne h) (fun w hne h => cycMatT_ker_min (by decide) hne h) hv hlog
 
-/-- **$[[512,2,16]]$ 之 $d_Z \ge 16$**。 -/
+/-- **$d_Z \ge 16$ for $[[512,2,16]]$**. -/
 theorem hgp_toric16_dz_lb {v : (Fin 16 × Fin 16) ⊕ (Fin 16 × Fin 16) → ZMod 2}
     (hv : hgpHZ (cycMat 16) (cycMat 16) *ᵥ v = 0)
     (hlog : v ∉ (hgpHX (cycMat 16) (cycMat 16)).rowSpace) :
     16 ≤ hammingNorm v :=
   hgp_toric_dz_lb (fun w hne h => cycMat_ker_min (by decide) hne h) (fun w hne h => cycMatT_ker_min (by decide) hne h) hv hlog
 
-/-- **$[[512,2,16]]$ 之 $d_X \le 16$**。 -/
+/-- **$d_X \le 16$ for $[[512,2,16]]$**. -/
 theorem hgp_toric16_X_logical :
     hgpHX (cycMat 16) (cycMat 16) *ᵥ hgpToricXW 16 = 0
       ∧ hgpToricXW 16 ∉ (hgpHZ (cycMat 16) (cycMat 16)).rowSpace
@@ -577,7 +617,7 @@ theorem hgp_toric16_X_logical :
   ⟨toricXW_ker (cycMat_one_ker (by decide)),
     toricXW_not_mem (cycMat_one_ker (by decide)) toric16_dot, toric16_XW_weight⟩
 
-/-- **$[[512,2,16]]$ 之 $d_Z \le 16$**。 -/
+/-- **$d_Z \le 16$ for $[[512,2,16]]$**. -/
 theorem hgp_toric16_Z_logical :
     hgpHZ (cycMat 16) (cycMat 16) *ᵥ hgpToricZW 16 = 0
       ∧ hgpToricZW 16 ∉ (hgpHX (cycMat 16) (cycMat 16)).rowSpace

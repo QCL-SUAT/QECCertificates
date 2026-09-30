@@ -1,44 +1,52 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Reflect.Encode
 import QECCertificates.Reflect.LexLeader
 
 /-!
-# 破缺 CNF 的装配：`buildPair` ＋ `lexClauses`
+# Assembling a symmetry-broken CNF: `buildPair` plus `lexClauses`
 
-`tools/bb144_server/bb144_sb.py` 产出的破缺 CNF 是**两段的拼接**：基础对编码
-（`Reflect/Encode.lean` 的 `buildPair`）＋ 逐群元的词典序比较器块
-（`Reflect/LexLeader.lean` 的 `lexClauses`），比较器的辅助变量紧接基础段的变量号之后分配。
-本模块把这条装配写成 Lean 的定义 `sbCNF`，并给出它的**可靠性**：
+The symmetry-broken CNF produced by an external Python tool is a **concatenation of two
+parts**: the base pair encoding (`buildPair` in `Reflect/Encode.lean`) and one lexicographic
+comparator block per group element (`lexClauses` in `Reflect/LexLeader.lean`), the auxiliary
+variables of the comparators being allocated immediately after the variable numbers of the base
+part. This module writes that assembly as the Lean definition `sbCNF` and proves its
+**soundness**:
 
     `SatFormula σ (sbCNF base key imgs c)`
-      ⟹  `SatFormula σ base`  ∧  每个群元 `img ∈ imgs` 的 `LexLeOver key img σ`
+      implies  `SatFormula σ base`  and  `LexLeOver key img σ` for every group element
+      `img ∈ imgs`
 
-## 与工具的两个对应
+## Two correspondences with the tool
 
-* **辅助变量编号**。工具的 `lex_leader` 每处理一个群元就新分配 `n - 1` 个变量
-  （`n = len(key)`；`e 0` 是常量真、不占变量），下一个群元从上一块的末尾接着走。
-  `sbBlocks` 的累加参数 `c + (key.length - 1)` 就是这件事。
-* **子句条数**。实测量得**每群元 `6n - 6` 条**（沉积 `paper/data/bb144_sb.json` 的
-  `sb_clauses_per_elem`：$n = 144$ 给 $858$，$n = 288$ 给 $1722$）。
-  下面的 `lexClauses_length` / `sbBlocks_length` 把这条算术证成定理——
-  工具的读数与 Lean 的移植落在**同一个式子**上。这不是巧合：`lexClauses` 是
-  `lex_leader` 的逐字移植，把四族的条数加起来正是 $4 + 5(n-2) + 1 + (n-1)$。
+* **Auxiliary variable numbering.** The `lex_leader` of the external tool allocates `n - 1`
+  fresh variables per group element (`n = len(key)`; `e 0` is the constant true and occupies no
+  variable), and the next group element continues from the end of the previous block. The
+  accumulating parameter `c + (key.length - 1)` of `sbBlocks` is exactly this.
+* **Clause counts.** Measured on the tool side at **`6n - 6` per group element** (the
+  `sb_clauses_per_elem` of the external deposit: $n = 144$ gives $858$ and $n = 288$ gives
+  $1722$). The lemmas `lexClauses_length` / `sbBlocks_length` below turn that arithmetic into
+  theorems, so the reading of the tool and the Lean port land on **the same formula**. This is
+  no coincidence, since `lexClauses` is a verbatim port of `lex_leader` and adding up the four
+  families gives exactly $4 + 5(n-2) + 1 + (n-1)$.
 
-## 本模块**不做**的那一步（如实标注）
+## The step this module does **not** take (stated plainly)
 
-工具的 CNF 是 **Python 拼出来的字节串**；本模块给的是**装配的数学**，
-不是"那份字节串等于本定义"。后者要按 `Reflect/Faithful.lean` 的办法把实例 CNF
-转录成字面量再 `by decide`（该模块对四个小档做的就是这件事），属另一件事。
-**两者都接上，A4 的回放才算闭合**；本模块是其中的前一环，且是**与实例无关**的那一环。
+The CNF of the tool is a **byte string assembled in Python**; what this module provides is the
+**mathematics of the assembly**, not the statement that "that byte string equals this
+definition". The latter would require transcribing the instance CNF into literals and running
+`by decide`, as `Reflect/Faithful.lean` does (that module does exactly this for four small
+entries), and it is a separate matter. **Both links have to be in place before the replay is
+closed**; this module is the earlier of the two, and it is the one that is **independent of any
+instance**.
 -/
 
 namespace QECCertificates.LRAT
 
-/-! ## 四族的条数（逐族，供上面的算术引用） -/
+/-! ## The sizes of the four families (one at a time, used by the arithmetic above) -/
 
 theorem lexHead_length (key img : List Nat) (c : Nat) : (lexHead key img c).length = 4 := by
   simp [lexHead]
@@ -53,7 +61,7 @@ theorem lexConstraint_length (key img : List Nat) (c i : Nat) :
     (lexConstraint key img c i).length = 1 := by
   simp [lexConstraint]
 
-/-- `flatMap` 到**常条数**的族上：长度等于元素个数乘该常数。 -/
+/-- `flatMap` over a family of **constant size**: the length is the number of elements times that constant. -/
 theorem length_flatMap_const {α β : Type*} (f : α → List β) (l : List α) (m : Nat)
     (h : ∀ a, (f a).length = m) : (l.flatMap f).length = l.length * m := by
   induction l with
@@ -62,8 +70,8 @@ theorem length_flatMap_const {α β : Type*} (f : α → List β) (l : List α) 
       simp only [List.flatMap_cons, List.length_append, List.length_cons, h a, ih]
       ring
 
-/-- **比较器的条数**：一族 4 条、一族 $5(n-2)$ 条、一族 1 条、一族 $n-1$ 条，
-合计 $6n - 6$——正是沉积里 `sb_clauses_per_elem` 的那个数。 -/
+/-- **The clause count of the comparator**: one family of 4 clauses, one of $5(n-2)$, one of 1 and one
+of $n-1$, for a total of $6n - 6$, which is exactly the `sb_clauses_per_elem` of the external deposit. -/
 theorem lexClauses_length {key : List Nat} (h2 : 2 ≤ key.length) (img : List Nat) (c : Nat) :
     (lexClauses key img c).length = 6 * key.length - 6 := by
   have hs : ((List.range' 2 (key.length - 2)).flatMap (lexStep key img c)).length
@@ -78,19 +86,22 @@ theorem lexClauses_length {key : List Nat} (h2 : 2 ≤ key.length) (img : List N
   simp only [lexClauses, List.length_append, lexHead_length, lexOrder_length, hs, hc]
   omega
 
-/-! ## 装配 -/
+/-! ## Assembly -/
 
-/-- **逐群元的比较器块**：辅助变量号从 `c` 起，每块占 `key.length - 1` 个，下一块接着走。
+/-- **The comparator block of one group element**: the auxiliary variable numbers start at `c`, each
+block takes `key.length - 1` of them, and the next block continues from there.
 
-与工具的对应见模块头。空列表给空 CNF（`--perms` 只挑非单位元，故单位元不在 `imgs` 里）。 -/
+The correspondence with the external tool is in the module header. The empty list gives the empty
+CNF (only non-identity elements are selected, so the identity is not in `imgs`). -/
 def sbBlocks (key : List Nat) : List (List Nat) → Nat → CNF
   | [], _ => []
   | img :: rest, c => lexClauses key img c ++ sbBlocks key rest (c + (key.length - 1))
 
-/-- **破缺 CNF**：基础段 `base` 接上逐群元的比较器块。
+/-- **The symmetry-broken CNF**: the base part `base` followed by one comparator block per group element.
 
-工具的调用形态是 `build_from(...)` 得到 `base` 与其变量数 `c`，再对每个群元追加一块；
-本定义把"块"与"累加变量号"两件事都显式写出来。 -/
+On the tool side the call is: `build_from(...)` produces `base` and its variable count `c`, and then
+one block is appended per group element; this definition makes both "the block" and "the
+accumulating variable number" explicit. -/
 def sbCNF (base : CNF) (key : List Nat) (imgs : List (List Nat)) (c : Nat) : CNF :=
   base ++ sbBlocks key imgs c
 
@@ -105,22 +116,25 @@ theorem sbBlocks_length {key : List Nat} (h2 : 2 ≤ key.length)
       rw [ih, hA]
       ring
 
-/-- **装配的条数**：基础段加上每群元 $6n - 6$ 条。
+/-- **The clause count of the assembly**: the base part plus $6n - 6$ per group element.
 
-两个 `--perms` 档的读数由此可核：`gens`（2 个生成元、$n = 144$）给基础段 $+\,1716$，
-与沉积的 $12238 - 10522 = 1716$ 逐位相同。 -/
+The readings of the two entries of the external tool can be checked against this: `gens` (2
+generators, $n = 144$) adds $1716$ to the base part, matching $12238 - 10522 = 1716$ in the
+external deposit exactly. -/
 theorem sbCNF_length (base : CNF) {key : List Nat} (h2 : 2 ≤ key.length)
     (imgs : List (List Nat)) (c : Nat) :
     (sbCNF base key imgs c).length = base.length + imgs.length * (6 * key.length - 6) := by
   simp [sbCNF, List.length_append, sbBlocks_length h2]
 
-/-! ## 可靠性 -/
+/-! ## Soundness -/
 
-/-- 单步：**头与尾是真正的定理变量**，不是归纳的 case 绑定。
+/-- Single step: **the head and the tail are genuine theorem variables**, not induction case bindings.
 
-这样写是有原因的：`induction … with | cons …` 里，若陈述中的假设也用 `img` 当绑定名
-（这里 `hlen` 就是），Lean 会把 case 的头/尾降成**不可及名**（`head✝`/`tail✝`），
-`intro` 之后便引用不到。把头和尾提成定理变量，整段就与"case 绑定叫什么"无关了。 -/
+This is deliberate: in `induction … with | cons …`, if an assumption of the statement also uses
+`img` as its binding name (as `hlen` here does), Lean degrades the head and the tail of the case to
+**inaccessible names** (`head✝`/`tail✝`) that can no longer be referred to after `intro`. Pulling the
+head and the tail out into theorem variables makes the whole passage independent of what the case
+bindings happen to be called. -/
 theorem sbBlocks_sat_cons {σ : Assign} {key : List Nat} (hd : List Nat) (tl : List (List Nat))
     {c : Nat}
     (hlen : ∀ img ∈ hd :: tl, img.length = key.length)
@@ -141,8 +155,9 @@ theorem sbBlocks_sat_cons {σ : Assign} {key : List Nat} (hd : List Nat) (tl : L
   · exact ihh (fun x hx => hlen x (List.mem_cons_of_mem _ hx))
       (c + (key.length - 1)) h'.2 w hmem
 
-/-- **每个比较器块都给出它那条词典序断言**。归纳即可：块与块之间只差累加的变量号，
-而 `lexClauses_sat` 对**任何**起点 `c` 成立，故累加不影响结论。 -/
+/-- **Every comparator block contributes its lexicographic assertion.** An induction suffices: blocks
+differ only in the accumulated variable number, and `lexClauses_sat` holds for **any** starting point
+`c`, so the accumulation does not affect the conclusion. -/
 theorem sbBlocks_sat {σ : Assign} {key : List Nat} {imgs : List (List Nat)}
     (hlen : ∀ img ∈ imgs, img.length = key.length) :
     ∀ c, SatFormula σ (sbBlocks key imgs c) → ∀ img ∈ imgs, LexLeOver key img σ := by
@@ -155,11 +170,13 @@ theorem sbBlocks_sat {σ : Assign} {key : List Nat} {imgs : List (List Nat)}
       intro c
       exact sbBlocks_sat_cons hd tl hlen ihh
 
-/-- **破缺 CNF 的可靠性**（本模块的主定理）：满足破缺编码的赋值，
-同时满足基础段与每一条破缺约束。
+/-- **Soundness of the symmetry-broken CNF** (the main theorem of this module): an assignment that
+satisfies the symmetry-broken encoding satisfies the base part and every symmetry-breaking
+constraint.
 
-这就是"破缺 CNF ＝ `buildPair` ＋ `lexClauses`"这条装配在**语义侧**的兑现——
-它把两半的可靠性（`Encode.lean` 与 `LexLeader.lean`）拼成一条。 -/
+This is the **semantic** counterpart of the assembly "symmetry-broken CNF = `buildPair` plus
+`lexClauses`": it joins the soundness of the two halves (`Encode.lean` and `LexLeader.lean`) into
+one. -/
 theorem sbCNF_sat {σ : Assign} {base : CNF} {key : List Nat} {imgs : List (List Nat)} {c : Nat}
     (hlen : ∀ img ∈ imgs, img.length = key.length)
     (h : SatFormula σ (sbCNF base key imgs c)) :
@@ -169,14 +186,18 @@ theorem sbCNF_sat {σ : Assign} {base : CNF} {key : List Nat} {imgs : List (List
     exact satFormula_append.mp h
   exact ⟨h'.1, sbBlocks_sat hlen c h'.2⟩
 
-/-- **破缺编码的忠实性（全链）**：满足破缺 CNF 的赋值给出
+/-- **Faithfulness of the symmetry-broken encoding (the whole chain)**: an assignment that satisfies
+the symmetry-broken CNF yields
 
-* 原编码的模型，即经 `buildPair_sat` 翻出的轻逻辑算符（重量 ≤ `k`、两侧核、
-  配对为 1——最后两条一起排除了它落在行空间里）；
-* 每一条破缺约束的词典序断言（经 `LexLeader.lexClauses_sat` 翻出）。
+* a model of the original encoding, that is, a light logical operator read off through
+  `buildPair_sat` (weight $\le k$, in the kernel on both sides, and pairing equal to 1, the last two
+  conditions together ruling out that it lies in the row space);
+* the lexicographic assertion of every symmetry-breaking constraint (read off through
+  `LexLeader.lexClauses_sat`).
 
-把 `LexLeOver` 再喂给 `Reflect/SymmetryBreak.lean` 的轨道引理，
-就得到"存在**轨道最小**的轻逻辑算符"——即破缺**没有把解切光**。 -/
+Feeding `LexLeOver` to the orbit lemma of `Reflect/SymmetryBreak.lean` then gives "there exists a
+light logical operator that is **minimal in its orbit**", that is, the symmetry breaking **does not
+cut away all the solutions**. -/
 theorem sbCNF_buildPair_sat {Rker Rpair : List (List Nat)} {n k : Nat} {σ : Assign}
     {key : List Nat} {imgs : List (List Nat)} {c : Nat}
     (hn : 0 < n) (hne₁ : ∀ r ∈ Rker, r ≠ []) (hne₂ : ∀ r ∈ Rpair, r ≠ [])

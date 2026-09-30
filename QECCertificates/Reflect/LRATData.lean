@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Reflect.LRAT
 
@@ -10,47 +10,56 @@ set_option maxRecDepth 1000000
 set_option maxHeartbeats 8000000
 
 /-!
-# 本包 SAT 证书的**内核回放**（由 `tools/gen_lrat_lean.py` 生成）
+# Kernel replay of this package's SAT certificates
 
-本模块由脚本从 `tools/bb144_server` 的编码器产物与 `cadical` 的 LRAT 证书**逐字节**
-翻译而成，请勿手改——重跑脚本即可再生成。
+This module was translated byte for byte by a script from the encoder's output and the
+LRAT certificates produced by cadical. Do not edit it by hand: re-running the generator
+reproduces it.
 
-每个实例一对数据（`<名>CNF` / `<名>Proof`）与一条定理 `<名>_unsat`：
-`¬ Satisfiable <名>CNF`，其证明是 `unsafe` 的**反面**——`by decide` 让**内核逐条复算**
-RUP 步，再由 `Reflect/LRAT.lean` 的 `unsat_of_checkSteps` 把它翻成不可满足性。
-端到端不含求解器、不含 `native_decide`、不含任何自定义公理。
+Each instance has a pair of data definitions (`<name>CNF` / `<name>Proof`) and one theorem
+`<name>_unsat` stating `¬ Satisfiable <name>CNF`. Its proof is the **opposite** of
+`unsafe`: `by decide` makes the **kernel recompute every RUP step**, and
+`unsat_of_checkSteps` from `Reflect/LRAT.lean` turns that into unsatisfiability. End to
+end there is no solver, no `native_decide` and no custom axiom.
 
-| 实例 | 断言 |
+| instance | assertion |
 |---|---|
-| `rep7` | 重复码 $[7,1,7]$：不存在重量 $\le6$ 的逻辑 |
-| `steane` | Steane $[[7,1,3]]$：不存在重量 $\le2$ 的逻辑 |
-| `hgp_toric3` | 环面 $[[18,2,3]]$：不存在重量 $\le2$ 的逻辑 |
-| `bb18_lb3` | 双变量自行车 $[[18,4,4]]$：不存在重量 $\le3$ 的逻辑 |
+| `rep7` | repetition code $[7,1,7]$: no logical operator of weight $\le6$ |
+| `steane` | Steane $[[7,1,3]]$: no logical operator of weight $\le2$ |
+| `hgp_toric3` | toric $[[18,2,3]]$: no logical operator of weight $\le2$ |
+| `bb18_lb3` | bivariate bicycle $[[18,4,4]]$: no logical operator of weight $\le3$ |
 
-**本模块只有上面四档。** 同一生成器另备 `bb144_lb3` / `bb144_lb4` 两档（双变量自行车
-$[[144,12,12]]$ 上重量 $\le3$ / $\le4$），**本模块不含这两档的数据**——其内核回放实测
-不可行：$k=3$ 档在出厂配置下 1171 s CPU / 21 GB 处触 8M 心跳上限**且远未收敛**
-（按标定曲线反推才走完证书的 0.5–2.5%），外推需 0.8–12 TB、3–43 h，最乐观的一条也已
-超过本机物理内存；$k=4$ 档在每个量上都不小于它。度量工具与证据见
-`tools/probeA/lrat_cost_probe.py`。
+**This module holds the four tiers above and nothing else.** The same generator also
+produces two further tiers, `bb144_lb3` / `bb144_lb4` (weights $\le3$ and $\le4$ on the
+bivariate bicycle code $[[144,12,12]]$), whose data **is not included here**, because
+their kernel replay is not feasible in practice. For the $k=3$ tier the out-of-the-box
+configuration reaches the 8M heartbeat limit at 1171 s CPU and 21 GB **and is nowhere near
+convergence** (extrapolating along the calibration curve it had completed between 0.5% and
+2.5% of the certificate), which extrapolates to 0.8–12 TB and 3–43 h; even the most
+optimistic figure exceeds the physical memory of this machine, and the $k=4$ tier is at
+least as large in every measure.
 
-**口径**：这些 CNF 是 `tools/bb144_server` 的编码器对"存在 $x\in\ker H_{\rm ker}$、
-$w\in\ker H_{\rm pair}$、$x\cdot w=1$、$\mathrm{wt}(x)\le k$"的 Tseitin 编码；
-本模块证明的是**该 CNF 不可满足**，到此为止。从"CNF 不可满足"到"该码没有重量 $\le k$
-的逻辑"那一步的**内核版本**由同目录的 `Reflect/Encode.lean`（可靠性）与
-`Reflect/Complete.lean`（完备性）给出：两者合成"可满足 $\Longleftrightarrow$ 轻逻辑算符存在"，
-于是不可满足判决直接给出距离下界；`Reflect/Certified.lean` 再把它接到具体码的命题上。
-衔接在别的模块里，本模块只负责"不可满足"这一环。
+These CNFs are the Tseitin encoding, produced by an external encoder, of the statement
+that there exist $x\in\ker H_{\rm ker}$ and $w\in\ker H_{\rm pair}$ with $x\cdot w=1$ and
+$\mathrm{wt}(x)\le k$. What this module proves is that **the CNF is unsatisfiable**, and
+nothing beyond that. The kernel-checked step from "the CNF is unsatisfiable" to "the code
+has no logical operator of weight $\le k$" is supplied by `Reflect/Encode.lean`
+(soundness) and `Reflect/Complete.lean` (completeness) in the same directory: the two
+combine into "satisfiable if and only if a light logical operator exists", so an
+unsatisfiability verdict yields a distance lower bound directly, and
+`Reflect/Certified.lean` connects it further to statements about concrete codes. The
+connection is made in those modules; this one covers the unsatisfiability step alone.
 
-**规模**：$d\ge12$ 那一档（BB144、$k=11$）的证书是 **2 125 006 步、835 MB**，
-比这里最大的一档还大三个数量级，内核回放不可行；可回放的上限由
-`tools/probeA/lrat_scale_probe.py` 的实测曲线给出。
+**Scale**: the certificate for the $d\ge12$ tier (BB144, $k=11$) has **2 125 006 steps and
+835 MB**, three orders of magnitude larger than the largest tier here, so its kernel replay
+is not feasible; the feasible ceiling is given by the measured curve of an independent
+implementation of the same route.
 -/
 
 namespace QECCertificates.LRAT
 
-/-! ## 一、实例 -/
-/-- rep7：编码器产出的 CNF（61 变量 / 175 子句）。 -/
+/-! ## 1. Instances -/
+/-- rep7: the CNF produced by the encoder (61 variables / 175 clauses). -/
 def rep7CNF : CNF :=
 [
   [(0,false),(1,false),(14,false)], [(0,false),(1,true),(14,true)], [(0,true),(1,false),(14,true)], [(0,true),(1,true),(14,false)],
@@ -99,7 +108,8 @@ def rep7CNF : CNF :=
   [(60,false),(6,true)], [(60,false),(53,true)], [(60,false)]
 ]
 
-/-- rep7：cadical 的 LRAT 证书（36 条引理、全部 RUP、号连续；另有 0 条删除步被忽略——见 `Reflect/LRAT.lean` 与生成器的口径说明）。 -/
+/-- rep7: the LRAT certificate from cadical (36 lemmas, all of them RUP, consecutive
+numbers; a further 0 deletion steps are dropped, see `Reflect/LRAT.lean`). -/
 def rep7Proof : List LStep :=
 [
   ⟨176,[(53,false)],[175,30,147,172,27]⟩, ⟨177,[(5,false)],[25,176,20,15,10,5,23,146,18,124,13,106,8,92,3,82,77]⟩,
@@ -122,11 +132,12 @@ def rep7Proof : List LStep :=
   ⟨210,[(34,false)],[204,191,81]⟩, ⟨211,[],[205,209,192,59]⟩
 ]
 
-/-- **rep7 的内核回放**：该 CNF 不可满足（证书逐条在核内复算）。 -/
+/-- **Kernel replay for rep7**: the CNF is unsatisfiable (the certificate is recomputed
+step by step in the kernel). -/
 theorem rep7_unsat : ¬ Satisfiable rep7CNF :=
   unsat_of_checkSteps (steps := rep7Proof) (by decide)
 
-/-- steane：编码器产出的 CNF（63 变量 / 187 子句）。 -/
+/-- steane: the CNF produced by the encoder (63 variables / 187 clauses). -/
 def steaneCNF : CNF :=
 [
   [(0,false),(2,false),(14,false)], [(0,false),(2,true),(14,true)], [(0,true),(2,false),(14,true)], [(0,true),(2,true),(14,false)],
@@ -178,7 +189,8 @@ def steaneCNF : CNF :=
   [(62,false),(59,true),(6,true)], [(62,false),(59,true),(58,true)], [(62,false)]
 ]
 
-/-- steane：cadical 的 LRAT 证书（44 条引理、全部 RUP、号连续；另有 0 条删除步被忽略——见 `Reflect/LRAT.lean` 与生成器的口径说明）。 -/
+/-- steane: the LRAT certificate from cadical (44 lemmas, all of them RUP, consecutive
+numbers; a further 0 deletion steps are dropped, see `Reflect/LRAT.lean`). -/
 def steaneProof : List LStep :=
 [
   ⟨188,[(59,false)],[187,183]⟩, ⟨189,[(56,false)],[188,172]⟩,
@@ -205,11 +217,12 @@ def steaneProof : List LStep :=
   ⟨230,[(39,false)],[223,228,103]⟩, ⟨231,[],[227,224,216,28]⟩
 ]
 
-/-- **steane 的内核回放**：该 CNF 不可满足（证书逐条在核内复算）。 -/
+/-- **Kernel replay for steane**: the CNF is unsatisfiable (the certificate is recomputed
+step by step in the kernel). -/
 theorem steane_unsat : ¬ Satisfiable steaneCNF :=
   unsat_of_checkSteps (steps := steaneProof) (by decide)
 
-/-- hgp_toric3：编码器产出的 CNF（176 变量 / 541 子句）。 -/
+/-- hgp_toric3: the CNF produced by the encoder (176 variables / 541 clauses). -/
 def hgp_toric3CNF : CNF :=
 [
   [(0,false),(1,false),(36,false)], [(0,false),(1,true),(36,true)], [(0,true),(1,false),(36,true)], [(0,true),(1,true),(36,false)],
@@ -350,7 +363,8 @@ def hgp_toric3CNF : CNF :=
   [(175,false)]
 ]
 
-/-- hgp_toric3：cadical 的 LRAT 证书（154 条引理、全部 RUP、号连续；另有 5 条删除步被忽略——见 `Reflect/LRAT.lean` 与生成器的口径说明）。 -/
+/-- hgp_toric3: the LRAT certificate from cadical (154 lemmas, all of them RUP,
+consecutive numbers; a further 5 deletion steps are dropped, see `Reflect/LRAT.lean`). -/
 def hgp_toric3Proof : List LStep :=
 [
   ⟨542,[(172,false)],[541,537]⟩, ⟨543,[(169,false)],[542,526]⟩,
@@ -432,11 +446,12 @@ def hgp_toric3Proof : List LStep :=
   ⟨694,[(122,true)],[691,617,352]⟩, ⟨695,[],[692,694,641,348]⟩
 ]
 
-/-- **hgp_toric3 的内核回放**：该 CNF 不可满足（证书逐条在核内复算）。 -/
+/-- **Kernel replay for hgp_toric3**: the CNF is unsatisfiable (the certificate is
+recomputed step by step in the kernel). -/
 theorem hgp_toric3_unsat : ¬ Satisfiable hgp_toric3CNF :=
   unsat_of_checkSteps (steps := hgp_toric3Proof) (by decide)
 
-/-- bb18_lb3：编码器产出的 CNF（227 变量 / 744 子句）。 -/
+/-- bb18_lb3: the CNF produced by the encoder (227 variables / 744 clauses). -/
 def bb18_lb3CNF : CNF :=
 [
   [(0,false),(1,false),(36,false)], [(0,false),(1,true),(36,true)], [(0,true),(1,false),(36,true)], [(0,true),(1,true),(36,false)],
@@ -627,7 +642,8 @@ def bb18_lb3CNF : CNF :=
   [(221,false),(17,false),(226,true)], [(226,false),(222,true),(17,true)], [(226,false),(222,true),(221,true)], [(226,false)]
 ]
 
-/-- bb18_lb3：cadical 的 LRAT 证书（244 条引理、全部 RUP、号连续；另有 21 条删除步被忽略——见 `Reflect/LRAT.lean` 与生成器的口径说明）。 -/
+/-- bb18_lb3: the LRAT certificate from cadical (244 lemmas, all of them RUP, consecutive
+numbers; a further 21 deletion steps are dropped, see `Reflect/LRAT.lean`). -/
 def bb18_lb3Proof : List LStep :=
 [
   ⟨745,[(222,false)],[744,740]⟩, ⟨746,[(218,false)],[745,725]⟩,
@@ -754,7 +770,8 @@ def bb18_lb3Proof : List LStep :=
   ⟨987,[(220,true)],[979,973,718]⟩, ⟨988,[],[979,980,860,722]⟩
 ]
 
-/-- **bb18_lb3 的内核回放**：该 CNF 不可满足（证书逐条在核内复算）。 -/
+/-- **Kernel replay for bb18_lb3**: the CNF is unsatisfiable (the certificate is recomputed
+step by step in the kernel). -/
 theorem bb18_lb3_unsat : ¬ Satisfiable bb18_lb3CNF :=
   unsat_of_checkSteps (steps := bb18_lb3Proof) (by decide)
 

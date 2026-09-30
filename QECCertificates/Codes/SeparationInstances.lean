@@ -1,32 +1,39 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Codes.Separation
 import QECCertificates.Codes.CaseMatrix
 import QECCertificates.Codes.BoundaryCollapse
 
 /-!
-#  实例：C1 的**双侧反例**（失效侧 / 保距侧）
+#  Two instances: **two-sided counterexamples** to C1 (a failing side and a
+distance-preserving side)
 
-两个实例都来自最小的环面码族 `toricHx`/`toricHz`（$[[8,2,2]]$，`Codes/CaseMatrix.lean`）。
-取定被测 X 逻辑 $L$ 与辅助图 $G$ 后，按 W–Y gauging 构造变形码：
+Both instances come from the smallest toric-code family `toricHx`/`toricHz`, the
+$[[8,2,2]]$ code of `Codes/CaseMatrix.lean`. Fix an X-type logical operator $L$ to be tested
+and an auxiliary graph $G$, then build the deformed code by W–Y gauging:
 
-* 数据位 $0..7$ 与原 X 校验 `toricHx` 保留；
-* 辅助图顶点 = `supp L`，每条边一个 ancilla（数据位数 $8$ 起编号）；
-* Gauss 律 $A_v = X_v\prod_{e\ni v}X_e$ 加入 X 校验；
-* 变形 Z 行 = 原 Z 行按各行匹配补上 $Z_e$ + 生成树弦基上的 flux 行。
+* the data qubits $0..7$ and the original X-type checks `toricHx` are kept;
+* the vertices of the auxiliary graph are `supp L`, and each edge carries an ancilla,
+  numbered from $8$ on after the data qubits;
+* the Gauss law $A_v = X_v\prod_{e\ni v}X_e$ is added to the X-type checks;
+* a deformed Z row is the original Z row completed by $Z_e$ along the matching of that row,
+  plus the flux rows on a spanning-tree cycle basis.
 
-**本模块的断言全部由内核 `by decide` 复核**（宽度 11 / 14 的小矩阵）：
+**Every assertion in this module is checked by the kernel with `by decide`**, on matrices of
+width 11 and 14:
 
-| 实例 | 辅助图 | C1 | 变形码的两侧距离 | 结论 |
+| instance | auxiliary graph | C1 | the two distances of the deformed code | conclusion |
 |---|---|---|---|---|
-| `sepFail*` | 路径（连通、$h<1$） | ✗ | X 侧 $5$、Z 侧 $1$ | C1 **不可再弱**（失效侧） |
-| `sepKeep*` | 连通稀疏图（$h<1$） | ✗ | X 侧 $3$、Z 侧 $2$ | C1 非必要（保距侧） |
+| `sepFail*` | a path (connected, $h<1$) | ✗ | $5$ on the X side, $1$ on the Z side | C1 **cannot be weakened further** (failing side) |
+| `sepKeep*` | a connected sparse graph ($h<1$) | ✗ | $3$ on the X side, $2$ on the Z side | C1 is not necessary (distance-preserving side) |
 
-**两个实例的两侧距离都不相等**，所以四个数各自成定理（§四），正文引用时按侧具名。
-只报一个数会把"有重量 2 的见证"读成"该变形码的距离是 2"，而 Z 侧是 2、X 侧是 3。
+**The two sides have unequal distances in both instances**, so the four numbers become four
+separate theorems (§4), and any reference to them has to name the side. Reporting a single
+number would read "there is a witness of weight 2" as "the distance of the deformed code is
+2", whereas the Z side is 2 and the X side is 3.
 -/
 
 namespace QECCertificates
@@ -34,9 +41,11 @@ namespace QECCertificates
 set_option maxRecDepth 100000
 set_option maxHeartbeats 8000000
 
-/-! ## 一、失效侧：辅助图 $P_4$（违反 C1），变形码出现重量 1 的逻辑 -/
+/-! ## 1. The failing side: the auxiliary graph $P_4$ violates C1, and the deformed code
+gains a weight-1 logical -/
 
-/-- 失效侧变形码的 X 校验（8 行 / 11 比特）（矩阵形态，`inKerB`/`lightSet` 吃矩阵）。 -/
+/-- The X-type checks of the failing-side deformed code, 8 rows over 11 bits, in matrix
+form, which `inKerB` and `lightSet` take. -/
 def sepFailHxM : Matrix (Fin 8) (Fin 11) (ZMod 2) :=
   Matrix.of ![(0 + e 0 + e 1 + e 4 + e 6 : Vec 11),
     (0 + e 0 + e 1 + e 5 + e 7 : Vec 11),
@@ -47,18 +56,19 @@ def sepFailHxM : Matrix (Fin 8) (Fin 11) (ZMod 2) :=
     (0 + e 4 + e 9 + e 10 : Vec 11),
     (0 + e 5 + e 10 : Vec 11)]
 
-/-- 同一组校验的行列表形态（`inSpanB` 吃行列表）。 -/
+/-- The same checks in row-list form, which `inSpanB` takes. -/
 def sepFailHx : List (Vec 11) :=
   List.ofFn sepFailHxM
 
-/-- 失效侧变形码的 Z 校验（4 行 / 11 比特）（矩阵形态，`inKerB`/`lightSet` 吃矩阵）。 -/
+/-- The Z-type checks of the failing-side deformed code, 4 rows over 11 bits, in matrix
+form, which `inKerB` and `lightSet` take. -/
 def sepFailHzM : Matrix (Fin 4) (Fin 11) (ZMod 2) :=
   Matrix.of ![(0 + e 0 + e 2 + e 4 + e 5 + e 8 + e 10 : Vec 11),
     (0 + e 1 + e 3 + e 4 + e 5 + e 10 : Vec 11),
     (0 + e 0 + e 2 + e 6 + e 7 + e 8 : Vec 11),
     (0 + e 1 + e 3 + e 6 + e 7 : Vec 11)]
 
-/-- 同一组校验的行列表形态（`inSpanB` 吃行列表）。 -/
+/-- The same checks in row-list form, which `inSpanB` takes. -/
 def sepFailHz : List (Vec 11) :=
   List.ofFn sepFailHzM
 
@@ -66,7 +76,8 @@ def sepFailHz : List (Vec 11) :=
 -- 重量 1 的 ker(Hx)：[]；重量 1 的 ker(Hz)：[(9,)]
 -- 重量 2 的 ker(Hx)：[]；重量 2 的 ker(Hz)：[(0, 2), (0, 8)]
 
-/-- 保距侧变形码的 X 校验（10 行 / 14 比特）（矩阵形态，`inKerB`/`lightSet` 吃矩阵）。 -/
+/-- The X-type checks of the distance-preserving deformed code, 10 rows over 14 bits, in
+matrix form, which `inKerB` and `lightSet` take. -/
 def sepKeepHxM : Matrix (Fin 10) (Fin 14) (ZMod 2) :=
   Matrix.of ![(0 + e 0 + e 1 + e 4 + e 6 : Vec 14),
     (0 + e 0 + e 1 + e 5 + e 7 : Vec 14),
@@ -79,11 +90,12 @@ def sepKeepHxM : Matrix (Fin 10) (Fin 14) (ZMod 2) :=
     (0 + e 4 + e 11 + e 13 : Vec 14),
     (0 + e 5 + e 13 : Vec 14)]
 
-/-- 同一组校验的行列表形态（`inSpanB` 吃行列表）。 -/
+/-- The same checks in row-list form, which `inSpanB` takes. -/
 def sepKeepHx : List (Vec 14) :=
   List.ofFn sepKeepHxM
 
-/-- 保距侧变形码的 Z 校验（5 行 / 14 比特）（矩阵形态，`inKerB`/`lightSet` 吃矩阵）。 -/
+/-- The Z-type checks of the distance-preserving deformed code, 5 rows over 14 bits, in
+matrix form, which `inKerB` and `lightSet` take. -/
 def sepKeepHzM : Matrix (Fin 5) (Fin 14) (ZMod 2) :=
   Matrix.of ![(0 + e 0 + e 2 + e 4 + e 5 + e 9 + e 13 : Vec 14),
     (0 + e 1 + e 3 + e 4 + e 5 + e 12 + e 13 : Vec 14),
@@ -91,7 +103,7 @@ def sepKeepHzM : Matrix (Fin 5) (Fin 14) (ZMod 2) :=
     (0 + e 1 + e 3 + e 6 + e 7 + e 12 : Vec 14),
     (0 + e 8 + e 10 + e 12 : Vec 14)]
 
-/-- 同一组校验的行列表形态（`inSpanB` 吃行列表）。 -/
+/-- The same checks in row-list form, which `inSpanB` takes. -/
 def sepKeepHz : List (Vec 14) :=
   List.ofFn sepKeepHzM
 
@@ -99,32 +111,38 @@ def sepKeepHz : List (Vec 14) :=
 -- 重量 1 的 ker(Hx)：[]；重量 1 的 ker(Hz)：[(11,)]
 -- 重量 2 的 ker(Hx)：[]；重量 2 的 ker(Hz)：[(0, 2), (0, 9)]
 
-/-! ## 三、内核断言：C1 双侧反例
+/-! ## 3. Kernel assertions: two-sided counterexamples to C1
 
-两条断言链各自闭合：
+Each of the two chains closes on its own:
 
-* **失效侧**：辅助图（4 顶点路径）违反 C1 ⟹ 变形码存在**重量 1** 的逻辑算符
-  ⟹ 变形距离 $1 < d = 2$：C1 不可再弱。
-* **保距侧**：辅助图（6 顶点连通稀疏图）违反 C1 ⟹ 变形码**没有重量 ≤ 1 的逻辑**
-  且有重量 2 的见证 ⟹ 变形距离 $= d = 2$：C1 非必要。
+* **Failing side**: the auxiliary graph, a path on 4 vertices, violates C1, hence the
+  deformed code has a **weight-1** logical operator, hence the deformed distance is
+  $1 < d = 2$: C1 cannot be weakened further.
+* **Distance-preserving side**: the auxiliary graph, a connected sparse graph on 6 vertices,
+  violates C1, hence the deformed code has **no logical of weight ≤ 1** and does have a
+  witness of weight 2, hence the deformed distance is $= d = 2$: C1 is not necessary.
 
-两条结论用的都是**见证所在的那一侧**（$h$ 与距离的对照在两侧同时成立）；两侧的具体
-数值见 §四，它们不相等。
+Both conclusions are stated on **the side on which the witness lives**, the comparison of $h$
+with the distance holding on both sides at once; the two sides have unequal numerical values,
+given in §4.
 -/
 
-/-- **失效侧（C1 判定）**：辅助图是 4 顶点上的路径 ⟹ 膨胀 $<1$。 -/
+/-- **The failing side, the C1 verdict**: the auxiliary graph is a path on 4 vertices, so
+the expansion is $<1$. -/
 theorem sepFail_not_C1 :
     ¬ HasExpansionOne ([(0, 1), (0, 2), (2, 3)] : List (Fin 4 × Fin 4)) := by decide
 
-/-- **失效侧（见证）**：变形码存在重量 1 的逻辑算符（比特 9）——
-与所有 X 校验正交、且不在 Z 校验的行空间中。 -/
+/-- **The failing side, the witness**: the deformed code has a weight-1 logical operator,
+the single bit 9, orthogonal to every X-type check and outside the row space of the Z-type
+checks. -/
 theorem sepFail_lightLogical :
     ∃ v : Vec 11, v ≠ 0 ∧ inKerB sepFailHzM v = true ∧ inSpanB sepFailHx v = false ∧
       hammingNorm v = 1 :=
   ⟨(e 9 : Vec 11), by decide, by decide, by decide, by decide⟩
 
-/-- **失效侧（结论）**：C1 违反 + 变形码存在重量 1 的逻辑 + 基码距离 2
-⟹ 变形距离 $1 < 2 = d$：**C1 不可再弱**。 -/
+/-- **The failing side, the conclusion**: C1 is violated, the deformed code has a weight-1
+logical, and the base code has distance 2, so the deformed distance is $1 < 2 = d$: **C1
+cannot be weakened further**. -/
 theorem sepFail_summary :
     ¬ HasExpansionOne ([(0, 1), (0, 2), (2, 3)] : List (Fin 4 × Fin 4)) ∧
       (∃ v : Vec 11, v ≠ 0 ∧ inKerB sepFailHzM v = true ∧ inSpanB sepFailHx v = false ∧
@@ -132,27 +150,31 @@ theorem sepFail_summary :
       min_weight_ker_not_mem_rowspace toricHx toricHz = 2 :=
   ⟨sepFail_not_C1, sepFail_lightLogical, toric_dx⟩
 
-/-- **保距侧（C1 判定）**：6 顶点连通稀疏图（割 $\{4,5\}$ 处膨胀 $<1$）。 -/
+/-- **The distance-preserving side, the C1 verdict**: a connected sparse graph on 6
+vertices, whose expansion is $<1$ across the cut $\{4,5\}$. -/
 theorem sepKeep_not_C1 :
     ¬ HasExpansionOne ([(0, 1), (0, 2), (0, 3), (0, 4), (1, 3), (4, 5)] :
       List (Fin 6 × Fin 6)) := by decide
 
-/-- **保距侧（下界）**：变形码没有重量 $\le1$ 的逻辑算符（两侧都查；
-候选由重量限定枚举给出，15 个/侧）。 -/
+/-- **The distance-preserving side, the lower bound**: the deformed code has no logical
+operator of weight $\le1$. Both sides are checked, with 15 candidates per side supplied by
+weight-bounded enumeration. -/
 theorem sepKeep_no_lightLogical :
     (lightSet sepKeepHxM sepKeepHzM 2).card = 0 ∧
       (lightSet sepKeepHzM sepKeepHxM 2).card = 0 := by decide
 
-/-- **保距侧（上界）**：变形码有重量 2 的逻辑算符（比特对 $\{0,2\}$）——
-与下界合起来给出变形距离 $= 2 = d$：**C1 非必要**。 -/
+/-- **The distance-preserving side, the upper bound**: the deformed code has a weight-2
+logical operator, the bit pair $\{0,2\}$, which together with the lower bound gives the
+deformed distance $= 2 = d$: **C1 is not necessary**. -/
 theorem sepKeep_lightLogical_two :
     ∃ v : Vec 14, v ≠ 0 ∧ inKerB sepKeepHzM v = true ∧ inSpanB sepKeepHx v = false ∧
       hammingNorm v = 2 :=
   ⟨(e 0 + e 2 : Vec 14), by decide, by decide, by decide, by decide⟩
 
-/-- **保距侧（结论）**：C1 违反 + 变形码距离仍 $= d = 2$ ⟹ **C1 不是必要条件**
-（与失效侧合起来给出 C1 边界的双侧刻画：$h<1$ 时距离可保可失，
-$\min(h,1)\cdot d$ 的界在 $h<1$ 时确实只能给到 $<d$）。 -/
+/-- **The distance-preserving side, the conclusion**: C1 is violated and the distance of
+the deformed code is still $= d = 2$, so **C1 is not a necessary condition**. Together with
+the failing side this gives a two-sided picture of the C1 boundary: for $h<1$ the distance may
+survive or collapse, and the bound $\min(h,1)\cdot d$ indeed only reaches $<d$ when $h<1$. -/
 theorem sepKeep_summary :
     ¬ HasExpansionOne ([(0, 1), (0, 2), (0, 3), (0, 4), (1, 3), (4, 5)] :
         List (Fin 6 × Fin 6)) ∧
@@ -161,17 +183,21 @@ theorem sepKeep_summary :
       min_weight_ker_not_mem_rowspace toricHx toricHz = 2 :=
   ⟨sepKeep_not_C1, sepKeep_no_lightLogical.1, sepKeep_no_lightLogical.2, toric_dx⟩
 
-/-! ## 四、两侧距离：两个 C1 见证都是**两侧不等**的变形码
+/-! ## 4. The two-sided distances: both C1 witnesses are deformed codes whose **two sides
+differ**
 
-C1 的双侧性由这两个变形码承担，而它们的 X 侧与 Z 侧距离**不相等**。本库的
-`Codes/DistanceLabel.lean` 给每个两侧相等的实例留了一条 `_dx_eq_dz`，
-**唯独这两个没有**——那一条在这里证不出来。
+The two-sidedness of C1 is carried by these two deformed codes, and their X-side and Z-side
+distances **are not equal**. `Codes/DistanceLabel.lean` has an `_dx_eq_dz` line for
+every instance whose two sides agree, and **these two are the only ones without one**:
+that equation cannot be proved here.
 
-所以四个数各自成定理，正文引用时按侧具名。只报一个数会把"有重量 2 的见证"
-读成"该变形码的距离是 2"，而 Z 侧是 2、X 侧是 3。 -/
+So the four numbers become four separate theorems, and a reference to them has to name the
+side. Reporting a single number would read "there is a witness of weight 2" as "the distance
+of the deformed code is 2", whereas the Z side is 2 and the X side is 3. -/
 
-/-- **失效侧 X 距离 $=5$**（以 `sepFailHxM` 作核）：下界是重量 $\le4$ 的候选集为空，
-上界是比特 $\{0,1,4,6,9\}$ 的重量-5 逻辑算符。 -/
+/-- **Failing side, X distance $=5$**, with `sepFailHxM` as the kernel: the lower bound is
+that the candidate set of weight $\le4$ is empty, and the upper bound is the weight-5 logical
+operator on the bits $\{0,1,4,6,9\}$. -/
 theorem sepFail_dx : min_weight_ker_not_mem_rowspace sepFailHxM sepFailHzM = 5 :=
   eq_minWeight_of_decide (d := 5) sepFailHxM sepFailHzM (by decide) (by decide)
     (E := (e 0 + e 1 + e 4 + e 6 + e 9 : Vec 11))
@@ -179,7 +205,8 @@ theorem sepFail_dx : min_weight_ker_not_mem_rowspace sepFailHxM sepFailHzM = 5 :
     (not_mem_rowSpace_of_inSpanB_false sepFailHzM (by decide))
     (by decide)
 
-/-- **失效侧 Z 距离 $=1$**（以 `sepFailHzM` 作核）：见证是比特 9；重量 1 已是下限。 -/
+/-- **Failing side, Z distance $=1$**, with `sepFailHzM` as the kernel: the witness is bit
+9, and weight 1 is already the lower bound. -/
 theorem sepFail_dz : min_weight_ker_not_mem_rowspace sepFailHzM sepFailHxM = 1 :=
   eq_minWeight_of_decide (d := 1) sepFailHzM sepFailHxM (by decide) (by decide)
     (E := (e 9 : Vec 11))
@@ -187,8 +214,9 @@ theorem sepFail_dz : min_weight_ker_not_mem_rowspace sepFailHzM sepFailHxM = 1 :
     (not_mem_rowSpace_of_inSpanB_false sepFailHxM (by decide))
     (by decide)
 
-/-- **保距侧 X 距离 $=3$**（以 `sepKeepHxM` 作核）：下界是重量 $\le2$ 的候选集为空，
-上界是比特 $\{0,1,8\}$ 的重量-3 逻辑算符。 -/
+/-- **Distance-preserving side, X distance $=3$**, with `sepKeepHxM` as the kernel: the
+lower bound is that the candidate set of weight $\le2$ is empty, and the upper bound is the
+weight-3 logical operator on the bits $\{0,1,8\}$. -/
 theorem sepKeep_dx : min_weight_ker_not_mem_rowspace sepKeepHxM sepKeepHzM = 3 :=
   eq_minWeight_of_decide (d := 3) sepKeepHxM sepKeepHzM (by decide) (by decide)
     (E := (e 0 + e 1 + e 8 : Vec 14))
@@ -196,8 +224,9 @@ theorem sepKeep_dx : min_weight_ker_not_mem_rowspace sepKeepHxM sepKeepHzM = 3 :
     (not_mem_rowSpace_of_inSpanB_false sepKeepHzM (by decide))
     (by decide)
 
-/-- **保距侧 Z 距离 $=2$**（以 `sepKeepHzM` 作核）：见证是比特对 $\{0,2\}$，
-下界即 `sepKeep_no_lightLogical` 的 Z 侧那一半。 -/
+/-- **Distance-preserving side, Z distance $=2$**, with `sepKeepHzM` as the kernel: the
+witness is the bit pair $\{0,2\}$, and the lower bound is the Z-side half of
+`sepKeep_no_lightLogical`. -/
 theorem sepKeep_dz : min_weight_ker_not_mem_rowspace sepKeepHzM sepKeepHxM = 2 :=
   eq_minWeight_of_decide (d := 2) sepKeepHzM sepKeepHxM (by decide)
     sepKeep_no_lightLogical.2
@@ -206,43 +235,50 @@ theorem sepKeep_dz : min_weight_ker_not_mem_rowspace sepKeepHzM sepKeepHxM = 2 :
     (not_mem_rowSpace_of_inSpanB_false sepKeepHxM (by decide))
     (by decide)
 
-/-- **失效侧两侧不等**：$5 \ne 1$。 -/
+/-- **The failing side has unequal sides**: $5 \ne 1$. -/
 theorem sepFail_dx_ne_dz :
     min_weight_ker_not_mem_rowspace sepFailHxM sepFailHzM ≠
       min_weight_ker_not_mem_rowspace sepFailHzM sepFailHxM := by
   rw [sepFail_dx, sepFail_dz]
   decide
 
-/-- **保距侧两侧不等**：$3 \ne 2$。 -/
+/-- **The distance-preserving side has unequal sides**: $3 \ne 2$. -/
 theorem sepKeep_dx_ne_dz :
     min_weight_ker_not_mem_rowspace sepKeepHxM sepKeepHzM ≠
       min_weight_ker_not_mem_rowspace sepKeepHzM sepKeepHxM := by
   rw [sepKeep_dx, sepKeep_dz]
   decide
 
-/-! ## 五、失效侧的**机制引理**：零列 ⟹ 距离 1
+/-! ## 5. The **mechanism lemma** for the failing side: a zero column implies distance 1
 
-上面两个实例的"重量 1 逻辑算符"此前是**逐例 `by decide`** 读出来的。本节把它提成
-**一般引理**：变形 Z 校验矩阵里**某一列恒零**（那条 ancilla 不被任何 Z 行看见），
-而它的单位向量又不在 X 校验的行空间里——则 Z 侧距离 $\le 1$，
-配上"零向量不是逻辑算符"即**恰为 $1$**。
+The weight-1 logical operators of the two instances above were previously read off instance
+by instance with `by decide`. This section raises that to a **general lemma**: if some column
+of the deformed Z-type parity-check matrix is identically zero, that ancilla being seen by no
+Z row, while its unit vector is not in the row space of the X-type checks, then the Z-side
+distance is $\le 1$, and together with the fact that the zero vector is not a logical operator
+it is **exactly $1$**.
 
-这条引理就是 `sepFail` 的机制本身：辅助图的**路径**上，边 $(0,4)$ 落在**任何**有效匹配
-之外（把它配掉会剩下 $2$ 与 $5$，而 $2$–$5$ 不是路径的边），于是 ancilla $9$ 的列恒零。
-**引理与码无关**：给定矩阵，判据只有两条——列零、不在行空间。 -/
+This lemma is the mechanism of `sepFail` itself: on the **path** that forms the auxiliary
+graph, the edge $(0,4)$ lies outside **every** valid matching, since matching it off would
+leave $2$ and $5$ behind and $2$–$5$ is not an edge of the path, so the column of ancilla $9$
+is identically zero. **The lemma is independent of the code**: given the matrix, there are
+only two criteria, a zero column and absence from the row space. -/
 
-/-- **零列判据**：Z 校验矩阵的某一列恒零 ⟹ 单位向量在该侧的核里。 -/
+/-- **The zero-column criterion**: a column of the Z-type parity-check matrix that is
+identically zero puts the corresponding unit vector in the kernel on that side. -/
 theorem inKerB_e_of_zero_column {m₁ n : ℕ} (Hz : Matrix (Fin m₁) (Fin n) (ZMod 2))
     (q : Fin n) (hcol : ∀ i, Hz i q = 0) : inKerB Hz (e q) = true := by
   rw [inKerB_iff, mem_ker_iff_dotProd_rows_eq_zero]
   intro i
   rw [dot_e (Hz i) q, hcol i]
 
-/-- **失效侧机制（一般形态）**：Z 校验矩阵的某一列恒零、且该单位向量不在 X 校验的行空间里
-⟹ Z 侧距离 $\le 1$。
+/-- **The mechanism of the failing side, in general form**: if a column of the Z-type
+parity-check matrix is identically zero and the corresponding unit vector is not in the row
+space of the X-type checks, then the Z-side distance is $\le 1$.
 
-证明只用一条 witness：那个单位向量**自己**就是重量 $1$ 的不可探测非平凡算符
-（`minWeight_le_of_witness`，比逐例 `by decide` 便宜一个量级，且**与码的规模无关**）。 -/
+The proof uses a single witness: that unit vector **is itself** an undetectable nontrivial
+operator of weight $1$ (`minWeight_le_of_witness`), an order of magnitude cheaper than an
+instance-by-instance `by decide` and **independent of the size of the code**. -/
 theorem minWeight_le_one_of_zero_column {m₁ m₂ n : ℕ}
     (Hz : Matrix (Fin m₁) (Fin n) (ZMod 2)) (Hx : Matrix (Fin m₂) (Fin n) (ZMod 2))
     (q : Fin n) (hcol : ∀ i, Hz i q = 0) (hnot : e q ∉ Hx.rowSpace) :
@@ -252,40 +288,48 @@ theorem minWeight_le_one_of_zero_column {m₁ m₂ n : ℕ}
 
 
 
-/-- **失效侧的结构复现**：ancilla $9$（辅助图的边 $(0,4)$）的 Z 列恒零，
-   故距离 $\le 1$ 由机制引理直接给出——**不再逐例枚举整个轻算符集合**。
+/-- **The structure behind the failing side**: the Z column of ancilla $9$, the edge
+   $(0,4)$ of the auxiliary graph, is identically zero, so the mechanism lemma gives distance
+   $\le 1$ directly, **without enumerating the whole set of light operators instance by
+   instance**.
 
-   为什么 $(0,4)$ 的列恒零：变形 Z 行 = 原 Z 行 ＋ 该行在其支撑上的**匹配**，
-   而 $\{0,2,4,5\}$ 在这个路径上**只有一种**完美匹配 $\{(0,2),(4,5)\}$
-   （把 $0$ 配给 $4$ 会剩下 $2$ 与 $5$，而 $2$–$5$ 不是路径的边），
-   于是 $(0,4)$ 落在**任何**行的匹配之外。 -/
+   Why the column of $(0,4)$ is identically zero: a deformed Z row is the original Z row plus
+   the **matching** of that row on its support, and $\{0,2,4,5\}$ admits **only one** perfect
+   matching on this path, namely $\{(0,2),(4,5)\}$, since pairing $0$ with $4$ would leave $2$
+   and $5$ behind and $2$–$5$ is not an edge of the path, so $(0,4)$ falls outside the
+   matching of **every** row. -/
 theorem sepFail_dist_le_one_structural :
     min_weight_ker_not_mem_rowspace sepFailHzM sepFailHxM ≤ 1 :=
   minWeight_le_one_of_zero_column sepFailHzM sepFailHxM 9
     (by decide) (not_mem_rowSpace_of_inSpanB_false sepFailHxM (by decide))
 
-/-- 同一条结构复现的另一半：那一列**确实**恒零（把上面那条的假设单独留成定理，
-   供正文按"零列"这条判据引用）。 -/
+/-- The other half of the same structural reproduction: the column **is** identically zero.
+   The hypothesis of the theorem above is kept as a separate theorem, so that the text can
+   cite it as the zero-column criterion. -/
 theorem sepFail_ancilla_nine_column_zero : ∀ i : Fin 4, sepFailHzM i 9 = 0 := by decide
 
-/-! ## 六、**同一个逻辑上的第二条路径**：C1 不决定结果
+/-! ## 6. **A second route on the same logical operator**: C1 does not decide the outcome
 
-上面两个见证用的是**两个不同的**被测逻辑（支撑 $4$ 个顶点与 $6$ 个顶点），所以它们的差别
-同时落在 C1 与别处。本节补上**同码、同逻辑**的第二条路径——与失效侧 `sepFail` **共用同一个
-被测 X 逻辑**（支撑都是 $\{0,2,4,5\}$），**只换辅助图的连法**：
+The two witnesses above test **two different** logical operators, supported on 4 and on 6
+vertices, so their difference lies in C1 and elsewhere at the same time. This section adds a
+second route on the **same code and the same logical operator**: it **shares the tested X-type
+logical** with `sepFail` on the failing side, both supported on $\{0,2,4,5\}$, and **changes
+only the way the auxiliary graph is wired**:
 
-| | 辅助图 | C1 | Z 侧距离 |
+| | auxiliary graph | C1 | Z-side distance |
 |---|---|---|---|
-| `sepFail*` | 路径 $0$–$2$–$4$–$5$ | ✗ | $1$ |
-| `sepKeepPath*` | 路径 $0$–$4$–$5$–$2$ | ✗ | $2$ |
+| `sepFail*` | the path $0$–$2$–$4$–$5$ | ✗ | $1$ |
+| `sepKeepPath*` | the path $0$–$4$–$5$–$2$ | ✗ | $2$ |
 
-**两张图都是 $P_4$**，故 C1 的取值相同（都违反）——**而距离不同**。
-于是"失效即塌"**不能**由 C1 单独决定：在同一个码、同一个逻辑、同一个 C1 取值下，
-两种结局都出现。决定它的是**匹配**：失效侧那条路径上，边 $(0,4)$ 落在**任何**行的匹配之外
-（$\{0,2,4,5\}$ 在该图上只有一种完美匹配），于是 ancilla $9$ 的 Z 列恒零
-（`minWeight_le_one_of_zero_column`）。 -/
+**Both graphs are $P_4$**, so C1 takes the same value, violated in both, **and the distances
+differ**. Collapse on failure therefore **cannot** be decided by C1 alone: with the same code,
+the same logical operator and the same value of C1, both outcomes occur. What decides it is
+the **matching**: on the path of the failing side, the edge $(0,4)$ lies outside the matching
+of **every** row, since $\{0,2,4,5\}$ admits only one perfect matching on that graph, so the Z
+column of ancilla $9$ is identically zero (`minWeight_le_one_of_zero_column`). -/
 
-/-- 保距侧（同逻辑）变形码的 X 校验（8 行 / 11 比特）。 -/
+/-- The X-type checks of the distance-preserving deformed code on the same logical
+operator, 8 rows over 11 bits. -/
 def sepKeepPathHxM : Matrix (Fin 8) (Fin 11) (ZMod 2) :=
   Matrix.of ![(0 + e 0 + e 1 + e 4 + e 6 : Vec 11),
     (0 + e 0 + e 1 + e 5 + e 7 : Vec 11),
@@ -296,35 +340,40 @@ def sepKeepPathHxM : Matrix (Fin 8) (Fin 11) (ZMod 2) :=
     (0 + e 4 + e 8 + e 10 : Vec 11),
     (0 + e 5 + e 9 + e 10 : Vec 11)]
 
-/-- 同一组校验的行列表形态。 -/
+/-- The same checks in row-list form. -/
 def sepKeepPathHx : List (Vec 11) := List.ofFn sepKeepPathHxM
 
-/-- 保距侧（同逻辑）变形码的 Z 校验（4 行 / 11 比特）。 -/
+/-- The Z-type checks of the distance-preserving deformed code on the same logical
+operator, 4 rows over 11 bits. -/
 def sepKeepPathHzM : Matrix (Fin 4) (Fin 11) (ZMod 2) :=
   Matrix.of ![(0 + e 0 + e 2 + e 4 + e 5 + e 8 + e 9 : Vec 11),
     (0 + e 1 + e 3 + e 4 + e 5 + e 10 : Vec 11),
     (0 + e 0 + e 2 + e 6 + e 7 : Vec 11),
     (0 + e 1 + e 3 + e 6 + e 7 : Vec 11)]
 
-/-- 同一组校验的行列表形态。 -/
+/-- The same checks in row-list form. -/
 def sepKeepPathHz : List (Vec 11) := List.ofFn sepKeepPathHzM
 
-/-- **保距侧（C1 判定）**：路径 $0$–$4$–$5$–$2$ 同样违反 C1。 -/
+/-- **The distance-preserving side, the C1 verdict**: the path $0$–$4$–$5$–$2$ likewise
+violates C1. -/
 theorem sepKeepPath_not_C1 :
     ¬ HasExpansionOne ([(0, 4), (2, 5), (4, 5)] : List (Fin 4 × Fin 4)) := by decide
 
-/-- **保距侧（下界）**：变形码没有重量 $\le 1$ 的逻辑算符（两侧都查）。 -/
+/-- **The distance-preserving side, the lower bound**: the deformed code has no logical
+operator of weight $\le 1$. Both sides are checked. -/
 theorem sepKeepPath_no_lightLogical :
     (lightSet sepKeepPathHxM sepKeepPathHzM 2).card = 0 ∧
       (lightSet sepKeepPathHzM sepKeepPathHxM 2).card = 0 := by decide
 
-/-- **保距侧（上界）**：变形码有重量 $2$ 的逻辑算符。 -/
+/-- **The distance-preserving side, the upper bound**: the deformed code has a weight-2
+logical operator. -/
 theorem sepKeepPath_lightLogical_two :
     ∃ v : Vec 11, v ≠ 0 ∧ inKerB sepKeepPathHzM v = true ∧
       inSpanB sepKeepPathHx v = false ∧ hammingNorm v = 2 :=
   ⟨(e 0 + e 2 : Vec 11), by decide, by decide, by decide, by decide⟩
 
-/-- **保距侧（结论）**：C1 违反，而变形码的 Z 侧距离仍为 $2=d$。 -/
+/-- **The distance-preserving side, the conclusion**: C1 is violated, yet the Z-side
+distance of the deformed code is still $2=d$. -/
 theorem sepKeepPath_summary :
     ¬ HasExpansionOne ([(0, 4), (2, 5), (4, 5)] : List (Fin 4 × Fin 4)) ∧
       (lightSet sepKeepPathHxM sepKeepPathHzM 2).card = 0 ∧
@@ -334,21 +383,25 @@ theorem sepKeepPath_summary :
    sepKeepPath_no_lightLogical.2, toric_dx⟩
 
 
-/-! ## 七、**对照实例**：一个两侧校验各自独立的码
+/-! ## 7. A **control instance**: a code whose two sides are independent
 
-上面两个见证都落在 C4 之外——局部探测器来自**码本身**（环面码四条 X 校验线性相关，乘积是恒等）。
-本节的对照是 `[[9,1,3]]` Shor 码：**8 个稳定子生成元（6 个 Z 型 + 2 个 X 型）两两独立**，
-故 C4 在它上面成立，它不是"带局部关系"的码。
-（这解答了"本仓手上有没有两侧独立的码"：**没建在它上面的实例，但码本身有**。） -/
+The two witnesses above both fall outside C4, since their local detectors come from **the code
+itself**: the four X-type checks of the toric code are linearly dependent and their product is
+the identity. The control here is the `[[9,1,3]]` Shor code, whose **8 stabilizer generators,
+6 of Z type and 2 of X type, are pairwise independent**, so C4 holds for it and it is not a
+code carrying local relations. This answers the question whether a code with independent sides
+is at hand: **no instance is built on one, but the code itself qualifies**. -/
 
-/-- `[[9,1,3]]` Shor 码的 6 条 Z 型稳定子与 2 条 X 型稳定子（0 基比特编号）。 -/
+/-- The 6 Z-type and 2 X-type stabilizers of the `[[9,1,3]]` Shor code, with zero-based bit
+numbering. -/
 def shorGenerators : List (Vec 9) :=
   [ (e 0 + e 1 : Vec 9), (e 1 + e 2 : Vec 9), (e 3 + e 4 : Vec 9),
     (e 4 + e 5 : Vec 9), (e 6 + e 7 : Vec 9), (e 7 + e 8 : Vec 9),
     (e 0 + e 1 + e 2 + e 3 + e 4 + e 5 : Vec 9),
     (e 3 + e 4 + e 5 + e 6 + e 7 + e 8 : Vec 9) ]
 
-/-- **对照：两两独立**——每一个生成元都不在其余的行空间里。 -/
+/-- **The control: pairwise independence**: no generator lies in the row space of the
+others. -/
 theorem shor_generators_independent :
     ∀ r ∈ shorGenerators, inSpanB (shorGenerators.erase r) r = false := by decide
 

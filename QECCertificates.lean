@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 
 import QECCertificates.Codes.BB144Distance
@@ -65,69 +65,70 @@ import QECCertificates.Reflect.SymmetryBreak
 
 Certified code parameters and fault distances for quantum error correction
 
-本模块逐个 import 包内全部模块，并在文件末尾维护审计区：包内每个非 private 的
-theorem/lemma 都在那里被 `#print axioms` 打印，读的人不必相信任何人就能看到
-每一条只依赖三条标准公理。
+This module imports every module of the package, and maintains the audit region at the
+end of the file: every non-private theorem and lemma of the package is printed there by
+`#print axioms`, so that a reader can see, without trusting anyone, that each of them
+rests on exactly the three standard axioms.
 
-## 模块
+## Modules
 
-| 模块 | 内容 |
+| Module | Contents |
 |---|---|
-| `QECCertificates.Codes.BB144Distance` | BB $[[144,12,12]]$：下界 $d\ge12$ 的内核内证明（走 QECLean 的 Gross 形式化） |
-| `QECCertificates.Codes.BB144Literal` | BB $[[144,12,12]]$：字面矩阵与 QECLean 拼写的**同一性**（$d=12$ 的最后一步） |
-| `QECCertificates.Codes.BB144Rank` | $[[144,12,12]]$ 的维数 |
-| `QECCertificates.Codes.BB144Symmetry` | BB $[[144,12,12]]$ 的**平移对称性**（对称性破缺路线的第一步） |
-| `QECCertificates.Codes.BB144Witness` | BB $[[144,12,12]]$：witness 上界的内核内断言（IBM 主推码） |
-| `QECCertificates.Codes.BB18Anchor` | BB 锚点：$[[18,4,4]]$ 全参数（IBM BB 族最小实例，gauging 基码） |
-| `QECCertificates.Codes.BB24Gauged` | BB 族 gauging 实例：$[[18,4,4]]$ 经 $K_4$ 辅助图 $\to$ $[[24,3,4]]$（WP3a 真实例） |
-| `QECCertificates.Codes.BB24Separation` | BB $[[24,3,4]]$ 的两分量分离陈述（C1 由 $K_4$ 的膨胀免判定） |
-| `QECCertificates.Codes.BaconShor` | Bacon–Shor $[[9,1,3]]$：**子系统码**的结构与距离（内核内） |
-| `QECCertificates.Codes.BaconShorMeasurement` | Bacon–Shor $[[9,1,3]]$ 横向测量的两分量（内核内实例） |
-| `QECCertificates.Codes.BoundaryCollapse` | 删掉边界探测器，距离对**任何**码都塌到 $1$（族级形态） |
-| `QECCertificates.Codes.CSSPair` | 回灌 LeanQEC 的 `CSS_pair`：案例矩阵的距离结论接到上游接口（天元方向八 · 生态对齐） |
-| `QECCertificates.Codes.CaseMatrix` | 案例矩阵：码参数的机器检验断言（天元方向八 · WP2c 端到端） |
-| `QECCertificates.Codes.DistanceLabel` | X/Z 距离标签：把约定钉死，并把"两侧相等"做成机器核对的总账 |
-| `QECCertificates.Codes.FoldTransversal` | 折叠横截门（fold-transversal gates）：BB $[[18,4,4]]$ 的内核实例 |
-| `QECCertificates.Codes.FullProtocolFaults` | 全协议的故障模型：数据 / 辅助比特 / 测量三类错误（Bacon–Shor 实例） |
-| `QECCertificates.Codes.GaugeMeasurementInstance` | BB gauging 测量线路的时间型探测码：$/V/ = 4$ 条 Gauss 律、$T = 4 = d$ 轮 |
-| `QECCertificates.Codes.Gauging` | WP3a：gauging 两分量的形式化陈述（表示层） |
-| `QECCertificates.Codes.HGPToricFamily` | HGP 族 $n\ge144$ 实例与环面族全族定理（路线图 F 节点） |
-| `QECCertificates.Codes.LPAnchor` | Lifted-Product 锚点：$D_6$ 上的 2BGA 实例（天元方向八 · 方向八"Lifted-Product 族"） |
-| `QECCertificates.Codes.MeasurementProtocol` | WP3c：测量协议的表示层（时空故障模型与两分量的时间轴） |
-| `QECCertificates.Codes.Separation` | WP3b：C1–C4 分离条件的判定层（天元方向八 · 逻辑测量容错距离） |
-| `QECCertificates.Codes.SeparationClosedForm` | WP3f：分离条件的闭式（C1 免判定：完全图族的膨胀定理） |
-| `QECCertificates.Codes.SeparationInstances` | WP3b 实例：C1 的**双侧反例**（失效侧 / 保距侧） |
-| `QECCertificates.Codes.TimeLikeInstance` | 时间型分量的具名实例：$m = 3$ 个校验、$T = 4$ 轮的重复测量探测码 |
-| `QECCertificates.Codes.ToricFamilySpatial` | WP3g：环面族的**空间侧**（变形码两侧距离 $=m$，带重量 $m$ 的存活见证） |
-| `QECCertificates.GF2.Basic` | GF(2) 向量代数基元（天元方向八 · 编码理论层） |
-| `QECCertificates.GF2.Canonical` | 规范形唯一性：行空间的消元输出是规范不变量（天元方向八 · WP1 收官） |
-| `QECCertificates.GF2.HGP` | 超图积（HGP）校验矩阵的张量分解（天元方向八 · WP2d 第一片） |
-| `QECCertificates.GF2.HGPCleaning` | HGP 第三片：清洗论证与 X 距离下界（天元方向八 · WP2d 收官） |
-| `QECCertificates.GF2.HGPCleaningDual` | HGP 第三片（对偶侧）：Z 距离下界（转置码运输） |
-| `QECCertificates.GF2.HGPCompression` | HGP 第二片：压缩恒等式、转置码与单块重量下界（天元方向八 · WP2d 续） |
-| `QECCertificates.GF2.HGPKunneth` | HGP 的维数张量公式 `k = k₁k₂ + k₁ᵀk₂ᵀ`（天元方向八 · WP2d 收官） |
-| `QECCertificates.GF2.KernelBasis` | 核基提取与完备性（天元方向八 · WP1 第二交付物） |
-| `QECCertificates.GF2.KunnethCore` | 子空间张量交：`{X : 列 ⊆ U ∧ 行 ⊆ W}` 的维数（天元方向八 · WP2d 收官） |
-| `QECCertificates.GF2.LiftedProduct` | 提升乘积（lifted product）：群代数上的 HGP 与它对 HGP 的退化（天元方向八） |
-| `QECCertificates.GF2.LowerBound` | 距离下界的可计算证书：把「没有更轻的逻辑算符」交给内核（天元方向八 · WP2c） |
-| `QECCertificates.GF2.Membership` | 可计算的成员判定：让「精确距离」能由内核直接算（天元方向八 · WP2c） |
-| `QECCertificates.GF2.RankCertificate` | 秩证书：`finrank (rowSpace H) = #(行消元输出)`（天元方向八 · WP2a） |
-| `QECCertificates.GF2.RankEchelon` | 只追加的梯队形秩例程（宽度大的矩阵上可用的秩读数） |
-| `QECCertificates.GF2.RowReduce` | 可信 GF(2) 行消元（天元方向八 · WP1 第一交付物） |
-| `QECCertificates.GF2.WeightEnum` | 按重量限定的向量枚举：把搜索空间从 $2^n$ 压到 $\sum_{k\le w}\binom nk$ |
-| `QECCertificates.GF2.Witness` | 对偶见证证书与精确距离双定理（天元方向八 · WP2b/WP2c） |
-| `QECCertificates.Pauli.Expr` | 算符代数层（算符树）与判定层（GF(2) 辛表示）的翻译定理（天元方向八 · Q3） |
-| `QECCertificates.Reflect.Certified` | 证书即下界：把内核回放接成一条码距定理 |
-| `QECCertificates.Reflect.Complete` | 编码忠实性：完备性方向 |
-| `QECCertificates.Reflect.Encode` | 编码忠实性：CNF 的模型就是轻逻辑算符 |
-| `QECCertificates.Reflect.Faithful` | 编码忠实性：内核回放的那份 CNF 就是编码器的输出 |
-| `QECCertificates.Reflect.FaithfulCircuit` | 线路侧的编码忠实性：内核回放的那份 CNF 就是编码器的输出 |
-| `QECCertificates.Reflect.LRAT` | LRAT 证书的内核检查器与可靠性定理 |
-| `QECCertificates.Reflect.LRATData` | 本项目 SAT 证书的**内核回放**（由 `tools/gen_lrat_lean.py` 生成） |
-| `QECCertificates.Reflect.LRATDataCircuit` | **线路侧**（时间型）SAT 证书的内核回放（由 `tools/gen_circuit_lrat.py` 生成） |
-| `QECCertificates.Reflect.LexLeader` | 词典序比较器子句的可靠性（A3 的 CNF 层） |
-| `QECCertificates.Reflect.SBAssembly` | 破缺 CNF 的装配：`buildPair` ＋ `lexClauses` |
-| `QECCertificates.Reflect.SymmetryBreak` | 对称性破缺的忠实性：破缺后不可满足 ⟹ 原命题不可满足 |
+| `QECCertificates.Codes.BB144Distance` | BB $[[144,12,12]]$: an in-kernel proof of the lower bound $d\ge12$ (through QECLean's Gross formalization) |
+| `QECCertificates.Codes.BB144Literal` | BB $[[144,12,12]]$: **identity** of the literal matrices with the QECLean spelling (the last step towards $d=12$) |
+| `QECCertificates.Codes.BB144Rank` | the dimension of $[[144,12,12]]$ |
+| `QECCertificates.Codes.BB144Symmetry` | **translation symmetry** of BB $[[144,12,12]]$ (the first step of the symmetry-breaking route) |
+| `QECCertificates.Codes.BB144Witness` | BB $[[144,12,12]]$: in-kernel assertions for the witness upper bound |
+| `QECCertificates.Codes.BB18Anchor` | the BB anchor $[[18,4,4]]$: all parameters (the smallest instance of the family, and the base code for gauging) |
+| `QECCertificates.Codes.BB24Gauged` | a gauging instance of the BB family: $[[18,4,4]]$ through the $K_4$ auxiliary graph to $[[24,3,4]]$ |
+| `QECCertificates.Codes.BB24Separation` | the two-component separation statement for BB $[[24,3,4]]$ (C1 discharged by the expansion of $K_4$) |
+| `QECCertificates.Codes.BaconShor` | Bacon–Shor $[[9,1,3]]$: the structure and distance of a **subsystem code** (in-kernel) |
+| `QECCertificates.Codes.BaconShorMeasurement` | the two components of transversal measurement for Bacon–Shor $[[9,1,3]]$ (in-kernel instance) |
+| `QECCertificates.Codes.BoundaryCollapse` | removing the boundary detectors collapses the distance to $1$ for **every** code (family-level form) |
+| `QECCertificates.Codes.CSSPair` | feeding into LeanQEC's `CSS_pair`: the distance conclusions of the case matrix meet the upstream interface |
+| `QECCertificates.Codes.CaseMatrix` | the case matrix: machine-checked assertions of code parameters (end to end) |
+| `QECCertificates.Codes.DistanceLabel` | the X/Z distance labels: fixing the convention, and machine-checking that the two sides agree |
+| `QECCertificates.Codes.FoldTransversal` | fold-transversal gates: an in-kernel instance for BB $[[18,4,4]]$ |
+| `QECCertificates.Codes.FullProtocolFaults` | the fault model of the full protocol: data, ancilla and measurement errors (a Bacon–Shor instance) |
+| `QECCertificates.Codes.GaugeMeasurementInstance` | the timelike detector code of the BB gauging measurement circuit: $\lvert V\rvert = 4$ Gauss laws, $T = 4 = d$ rounds |
+| `QECCertificates.Codes.Gauging` | the formal statement of the two gauging components (representation layer) |
+| `QECCertificates.Codes.HGPToricFamily` | an HGP instance at $n\ge144$, and a whole-family theorem for the toric family |
+| `QECCertificates.Codes.LPAnchor` | the lifted-product anchor: a 2BGA instance over $D_6$ |
+| `QECCertificates.Codes.MeasurementProtocol` | the representation layer of the measurement protocol (spacetime fault model, and the time axis of the two components) |
+| `QECCertificates.Codes.Separation` | the decision layer for the C1–C4 separation conditions (fault-tolerant distance under logical measurement) |
+| `QECCertificates.Codes.SeparationClosedForm` | closed forms for the separation conditions (C1 discharged for complete-graph families by the expansion theorem) |
+| `QECCertificates.Codes.SeparationInstances` | instances of C1: **two-sided counterexamples** (a failing side and a distance-preserving side) |
+| `QECCertificates.Codes.TimeLikeInstance` | a named instance of the timelike component: a repetition-code detector with $m = 3$ checks and $T = 4$ rounds |
+| `QECCertificates.Codes.ToricFamilySpatial` | the **spacelike side** of the toric family (both distances of the deformed code are $m$, with a surviving witness of weight $m$) |
+| `QECCertificates.GF2.Basic` | GF(2) vector algebra primitives |
+| `QECCertificates.GF2.Canonical` | uniqueness of the canonical form: the row-reduction output of a row space is a canonical invariant |
+| `QECCertificates.GF2.HGP` | the tensor decomposition of the hypergraph-product parity-check matrix |
+| `QECCertificates.GF2.HGPCleaning` | HGP, part three: the cleaning argument and the X-distance lower bound |
+| `QECCertificates.GF2.HGPCleaningDual` | HGP, part three, dual side: the Z-distance lower bound (transport through the transpose code) |
+| `QECCertificates.GF2.HGPCompression` | HGP, part two: compression identities, the transpose code, and single-block weight lower bounds |
+| `QECCertificates.GF2.HGPKunneth` | the dimension formula `k = k₁k₂ + k₁ᵀk₂ᵀ` for HGP |
+| `QECCertificates.GF2.KernelBasis` | kernel basis extraction and completeness |
+| `QECCertificates.GF2.KunnethCore` | tensor intersections of subspaces: the dimension of `{X : columns ⊆ U ∧ rows ⊆ W}` |
+| `QECCertificates.GF2.LiftedProduct` | the lifted product: HGP over a group algebra, and its degeneration to HGP |
+| `QECCertificates.GF2.LowerBound` | a computable certificate for distance lower bounds: handing "no lighter logical operator" to the kernel |
+| `QECCertificates.GF2.Membership` | computable membership: letting the kernel compute an exact distance |
+| `QECCertificates.GF2.RankCertificate` | the rank certificate: `finrank (rowSpace H) = #(row-reduction output)` |
+| `QECCertificates.GF2.RankEchelon` | an append-only echelon-form rank routine (a rank reading available on wide matrices) |
+| `QECCertificates.GF2.RowReduce` | trusted GF(2) row reduction |
+| `QECCertificates.GF2.WeightEnum` | weight-bounded vector enumeration: shrinking the search space from $2^n$ to $\sum_{k\le w}\binom nk$ |
+| `QECCertificates.GF2.Witness` | dual-witness certificates, and the two exact-distance theorems |
+| `QECCertificates.Pauli.Expr` | translation theorems between the operator algebra (operator trees) and the decision layer (GF(2) symplectic representation) |
+| `QECCertificates.Reflect.Certified` | a certificate is a lower bound: connecting the in-kernel replay to a code-distance theorem |
+| `QECCertificates.Reflect.Complete` | encoding faithfulness: the completeness direction |
+| `QECCertificates.Reflect.Encode` | encoding faithfulness: a model of the CNF is a light logical operator |
+| `QECCertificates.Reflect.Faithful` | encoding faithfulness: the CNF that was replayed is the encoder's output |
+| `QECCertificates.Reflect.FaithfulCircuit` | circuit-side encoding faithfulness: the CNF that was replayed is the encoder's output |
+| `QECCertificates.Reflect.LRAT` | the in-kernel LRAT checker and its soundness theorem |
+| `QECCertificates.Reflect.LRATData` | **in-kernel replay** of the package's SAT certificates |
+| `QECCertificates.Reflect.LRATDataCircuit` | in-kernel replay of the **circuit-side** (timelike) SAT certificates |
+| `QECCertificates.Reflect.LexLeader` | soundness of the lexicographic-comparator clauses (the CNF layer of the symmetry break) |
+| `QECCertificates.Reflect.SBAssembly` | assembly of the broken-symmetry CNF: `buildPair` and `lexClauses` |
+| `QECCertificates.Reflect.SymmetryBreak` | faithfulness of symmetry breaking: unsatisfiability after breaking implies unsatisfiability of the original |
 -/
 
 -- 公理审计（包内全部非 private 定理/引理；期望三条标准公理）

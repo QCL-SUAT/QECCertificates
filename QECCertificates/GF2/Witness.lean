@@ -1,47 +1,60 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.RankCertificate
 
 /-!
-# 对偶见证证书与精确距离双定理（/）
+# Dual-witness certificates and the exact-distance pair of theorems
 
-码距的判定是双侧的：**下界**说"没有更轻的逻辑算符"（需要对低重量算符做穷举/归约），
-**上界**说"这里就有一个"（只需一个实物证据）。本模块把上界一侧做成
-**可独立检查的证书**，并与 LeanQEC 的距离定义合拢成"恰好等于 $d$"的封闭断言。
+Certifying a code distance is two-sided. The **lower bound** says that no lighter logical
+operator exists, which calls for enumeration or reduction over low-weight operators; the
+**upper bound** says that here is one, which needs only a concrete artefact. This module
+turns the upper-bound side into an **independently checkable certificate** and joins it
+with the LeanQEC distance definition into a closed assertion that the distance is exactly
+$d$.
 
-## 对偶见证
+## Dual witnesses
 
-要证明算符 `E` **不在**校验行空间里，不必穷举：只要拿出一个与所有校验对易、
-却与 `E` 反对易的向量 `w`——即
+To prove that an operator `E` is **not** in the parity-check row space one need not
+enumerate: it suffices to exhibit a vector `w` that commutes with every check and
+anticommutes with `E`, that is
 
-  `w ∈ ker H`　且　`w ⬝ᵥ E = 1`.
+  `w ∈ ker H` and `w ⬝ᵥ E = 1`.
 
-这是 LeanQEC `not_mem_rowspace_iff_exists_mem_ker` 的证书化包装：
-**证书只有两项、逐项可核**，且完备性（`E ∉ rowSpace → 存在这样的 w`）由该定理给出。
+This is a certificate-shaped wrapper around LeanQEC's
+`not_mem_rowspace_iff_exists_mem_ker`: **the certificate has two entries and each is
+checkable on its own**, and completeness (`E ∉ rowSpace` implies such a `w` exists) is
+given by that theorem.
 
-## 双矩阵形式
+## The two-matrix form
 
-下表（`M₁` 提供核、`M₂` 提供行空间）覆盖本包全部三类码：
+The table below (`M₁` supplies the kernel and `M₂` the row space) covers all three classes
+of code in this package:
 
-| 码类 | `M₁` | `M₂` | 重量 = |
+| Code class | `M₁` | `M₂` | weight = |
 |---|---|---|---|
-| 经典线性码 | 校验矩阵 `H` | 空矩阵 | 非零码字重量 |
-| CSS 码 | 一侧校验 | 另一侧校验 | X/Z 型逻辑算符重量 |
-| 一般稳定子码 | 生成元的**辛换位** | 生成元本身 | Pauli 重量（两半合计） |
+| classical linear code | the parity-check matrix `H` | the empty matrix | weight of a nonzero codeword |
+| CSS code | one side's checks | the other side's checks | weight of an X-type or Z-type logical operator |
+| general stabilizer code | the **symplectic transpose** of the generators | the generators themselves | Pauli weight (the two halves together) |
 
-后一类之所以成立：辛内积 `⟨g, v⟩ = (J g) ⬝ᵥ v`（`J` 交换"`Z` 半"与"`X` 半"），
-于是"与全部生成元对易"就是"落在 `J` 的行正交补（即 `ker J`）里"。
+The last class works because the symplectic inner product is `⟨g, v⟩ = (J g) ⬝ᵥ v` (the
+matrix `J` swaps the `Z` half with the `X` half), so commuting with all generators is the
+same as lying in the row orthogonal complement of `J`, that is, in `ker J`.
 
-## 主结果
+## Main results
 
-* `DualWitness`：对偶见证证书结构；`DualWitness.not_mem_rowSpace` 为其内核可检的结论。
-* `exists_dualWitness_iff`：**证书完备**——`E ∉ 行空间` 等价于存在对偶见证。
-* `minWeight_le_of_witness`：**上界定理**——一个实物证据给出码距上界。
-* `le_minWeight_of_lower`：**下界定理**——逐算符下界给出码距下界。
-* `eq_minWeight_of_bounds`：**精确距离**——两侧合拢即"恰好等于 $d$"。
+* `DualWitness`: the dual-witness certificate structure, with
+  `DualWitness.not_mem_rowSpace` as the conclusion the kernel checks.
+* `exists_dualWitness_iff`: **the certificate is complete**: `E ∉ rowSpace` is equivalent
+  to the existence of a dual witness.
+* `minWeight_le_of_witness`: **the upper-bound theorem**: one concrete artefact gives an
+  upper bound on the code distance.
+* `le_minWeight_of_lower`: **the lower-bound theorem**: a per-operator lower bound gives a
+  lower bound on the code distance.
+* `eq_minWeight_of_bounds`: **the exact distance**: the two sides together give a distance
+  exactly equal to $d$.
 -/
 
 namespace QECCertificates
@@ -50,29 +63,34 @@ open scoped BigOperators
 
 variable {n : ℕ}
 
-/-! ## 对偶见证 -/
+/-! ## Dual witnesses -/
 
-/-- **对偶见证**：与校验矩阵 `H` 的每一行都正交（对易），但与 `E` 的配对为 1。
+/-- **Dual witness**: orthogonal to (commuting with) every row of the parity-check matrix
+`H`, while pairing to 1 with `E`.
 
-两项数据、逐项可核：第一项是"与所有校验对易"，第二项是"与 `E` 反对易"。
-两者合起来证明 `E` 不是稳定子群的元素——这是"逻辑算符"判定的最小证书。 -/
+Two entries, each checkable on its own: the first says that it commutes with every check
+and the second that it anticommutes with `E`. Together they prove that `E` is not an
+element of the stabilizer group, which is the smallest certificate for the judgement that
+`E` is a logical operator. -/
 structure DualWitness {m : ℕ} (H : Matrix (Fin m) (Fin n) (ZMod 2)) (E : Vec n) where
-  /-- 见证向量。 -/
+  /-- The witness vector. -/
   w : Vec n
-  /-- 与所有校验行正交。 -/
+  /-- Orthogonal to every check row. -/
   mem_ker : w ∈ LinearMap.ker H.toLin'
-  /-- 与目标算符的配对为 1（GF(2) 上即"反对易"）。 -/
+  /-- Pairs to 1 with the target operator (that is, anticommutes over GF(2)). -/
   pairing : w ⬝ᵥ E = 1
 
-/-- **证书可靠性**：持有对偶见证即证明 `E` 不在校验行空间里（故为逻辑算符）。 -/
+/-- **Certificate soundness**: holding a dual witness proves that `E` is not in the
+parity-check row space, hence that it is a logical operator. -/
 theorem DualWitness.not_mem_rowSpace {m : ℕ} {H : Matrix (Fin m) (Fin n) (ZMod 2)} {E : Vec n}
     (hw : DualWitness H E) : E ∉ H.rowSpace :=
   (not_mem_rowspace_iff_exists_mem_ker H E).mpr ⟨hw.w, hw.mem_ker, hw.pairing⟩
 
-/-- **证书完备性**：`E` 不在行空间里 ⟺ 存在对偶见证。
+/-- **Certificate completeness**: `E` is not in the row space if and only if a dual
+witness exists.
 
-完备性由 LeanQEC 的 `not_mem_rowspace_iff_exists_mem_ker` 给出——
-本包把它的存在性输出包装成"可检查的证书"这一形态。 -/
+Completeness is LeanQEC's `not_mem_rowspace_iff_exists_mem_ker`; this package wraps its
+existential output in the shape of a checkable certificate. -/
 theorem exists_dualWitness_iff {m : ℕ} (H : Matrix (Fin m) (Fin n) (ZMod 2)) (E : Vec n) :
     (∃ _ : DualWitness H E, True) ↔ E ∉ H.rowSpace := by
   constructor
@@ -81,26 +99,32 @@ theorem exists_dualWitness_iff {m : ℕ} (H : Matrix (Fin m) (Fin n) (ZMod 2)) (
     obtain ⟨w, hker, hpair⟩ := (not_mem_rowspace_iff_exists_mem_ker H E).mp hE
     exact ⟨⟨w, hker, hpair⟩, trivial⟩
 
-/-! ## 码距的双侧刻画 -/
+/-! ## The two-sided characterization of the code distance -/
 
-/-- 不可探测非平凡算符的集合：与 `M₁` 的每一行正交、却不是 `M₂` 行空间元素。
+/-- The set of undetectable nontrivial operators: orthogonal to every row of `M₁` but not
+an element of the row space of `M₂`.
 
-`ker M₁ \ rowSpace M₂` 正是"逻辑算符模稳定子"的空间——不被探测、
-却不是稳定子群元素（真的翻转逻辑）的算符。标记 `@[reducible]` 是为了让下文
-`Set.toFinset` 的实例合成能展开它。 -/
+`ker M₁ \ rowSpace M₂` is exactly the space of logical operators modulo stabilizers:
+operators that are not detected and are yet not elements of the stabilizer group, so they
+really do flip the logic. The `@[reducible]` marker lets instance search unfold this
+definition for the `Set.toFinset` uses below. -/
 @[reducible] def undetectableSet {m₁ m₂ : ℕ}
     (M₁ : Matrix (Fin m₁) (Fin n) (ZMod 2)) (M₂ : Matrix (Fin m₂) (Fin n) (ZMod 2)) : Set (Vec n) :=
   (↑(LinearMap.ker M₁.toLin') : Set (Vec n)) \ (↑M₂.rowSpace : Set (Vec n))
 
-/-- **码距**：沿用 LeanQEC 的 `min_weight_ker_not_mem_rowspace`（不可探测非平凡算符的
-最低重量；集合为空时取 `n + 1`），并对角特化到"校验矩阵与行空间取同一个"。
+/-- **The code distance**: LeanQEC's `min_weight_ker_not_mem_rowspace` (the least weight of
+an undetectable nontrivial operator, taking the value `n + 1` when the set is empty),
+specialized to the diagonal case in which the parity-check matrix and the row space are
+one and the same.
 
-与上游定义**逐字相同**，故本模块的结论可直接回灌到 LeanQEC 的距离归约链。
-一般（双矩阵）情形请直接用 `min_weight_ker_not_mem_rowspace`。 -/
+It is **literally the same** as the upstream definition, so the conclusions of this module
+feed straight back into the LeanQEC distance reduction chain. For the general
+two-matrix case, use `min_weight_ker_not_mem_rowspace` directly. -/
 noncomputable abbrev codeDistance {m : ℕ} (H : Matrix (Fin m) (Fin n) (ZMod 2)) : ℕ :=
   min_weight_ker_not_mem_rowspace H H
 
-/-- 重量为 `d₀` 的不可探测非平凡算符的存在性，落入最小值集合。 -/
+/-- An undetectable nontrivial operator of weight `d₀` puts `d₀` among the values over
+which the minimum is taken. -/
 lemma mem_image_hammingNorm_of_witness {m₁ m₂ : ℕ}
     (M₁ : Matrix (Fin m₁) (Fin n) (ZMod 2)) (M₂ : Matrix (Fin m₂) (Fin n) (ZMod 2))
     {E : Vec n} {d₀ : ℕ} (hker : E ∈ LinearMap.ker M₁.toLin') (hnot : E ∉ M₂.rowSpace)
@@ -109,10 +133,12 @@ lemma mem_image_hammingNorm_of_witness {m₁ m₂ : ℕ}
   rw [Finset.mem_image]
   exact ⟨E, by rw [Set.mem_toFinset]; exact ⟨hker, hnot⟩, hw⟩
 
-/-- **上界定理**：存在重量为 `d₀` 的不可探测非平凡算符 ⟹ 码距 ≤ `d₀`。
+/-- **The upper-bound theorem**: if an undetectable nontrivial operator of weight `d₀`
+exists, then the code distance is at most `d₀`.
 
-这就是"witness 上界"：证书是一个具体的低重量逻辑算符，内核只需核
-`E ∈ ker M₁`、`E ∉ rowSpace M₂`、`hammingNorm E = d₀` 三项。 -/
+This is the witness upper bound: the certificate is a concrete low-weight logical
+operator, and the kernel only has to check the three assertions `E ∈ ker M₁`,
+`E ∉ rowSpace M₂` and `hammingNorm E = d₀`. -/
 theorem minWeight_le_of_witness {m₁ m₂ : ℕ}
     (M₁ : Matrix (Fin m₁) (Fin n) (ZMod 2)) (M₂ : Matrix (Fin m₂) (Fin n) (ZMod 2))
     {E : Vec n} {d₀ : ℕ} (hker : E ∈ LinearMap.ker M₁.toLin') (hnot : E ∉ M₂.rowSpace)
@@ -136,11 +162,13 @@ theorem minWeight_le_of_witness {m₁ m₂ : ℕ}
     rw [ha] at hle
     exact WithTop.coe_le_coe.mp hle
 
-/-- **下界定理**：若每个不可探测非平凡算符的重量都不少于 `d₀`，则码距 ≥ `d₀`。
+/-- **The lower-bound theorem**: if every undetectable nontrivial operator has weight at
+least `d₀`, then the code distance is at least `d₀`.
 
-下界一侧没有短证书（除非有结构化论证），正是 LeanQEC 走 SAT/UNSAT 归约的原因；
-本定理的作用是给"下界侧的结果"与"上界侧的 witness"提供同一个合拢接口。
-下界侧的可计算证书见 `QECCertificates.GF2.LowerBound`。 -/
+The lower-bound side admits no short certificate unless there is a structural argument,
+which is why LeanQEC reduces to SAT and UNSAT; this theorem provides the common interface
+at which a lower-bound result and an upper-bound witness meet. For a computable
+certificate on the lower-bound side see `QECCertificates.GF2.LowerBound`. -/
 theorem le_minWeight_of_lower {m₁ m₂ : ℕ}
     (M₁ : Matrix (Fin m₁) (Fin n) (ZMod 2)) (M₂ : Matrix (Fin m₂) (Fin n) (ZMod 2)) {d₀ : ℕ}
     (hd : d₀ ≤ n)
@@ -160,10 +188,12 @@ theorem le_minWeight_of_lower {m₁ m₂ : ℕ}
     rw [← hEw]
     exact h E hE.1 hE.2
 
-/-- **精确距离（双侧合拢）**：下界与上界相等，即得"距离恰好等于 $d$"。
+/-- **The exact distance (the two sides together)**: equal lower and upper bounds give a
+distance exactly equal to $d$.
 
-这是"精确距离断言"的形式骨架：
-下界由内核证明（或经 SAT/LRAT 归约），上界交给一个具体的低重量逻辑算符。 -/
+This is the formal skeleton of an exact-distance assertion: the lower bound is proved in
+the kernel (or reduced through SAT and LRAT) and the upper bound is supplied by a concrete
+low-weight logical operator. -/
 theorem eq_minWeight_of_bounds {m₁ m₂ : ℕ}
     (M₁ : Matrix (Fin m₁) (Fin n) (ZMod 2)) (M₂ : Matrix (Fin m₂) (Fin n) (ZMod 2)) {d₀ : ℕ}
     (hd : d₀ ≤ n) {E : Vec n}

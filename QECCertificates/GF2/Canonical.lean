@@ -1,47 +1,52 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.RankCertificate
 
 /-!
-# 规范形唯一性：行空间的消元输出是规范不变量（ 收官）
+# Canonical form uniqueness: the elimination output of a row space is a canonical invariant
 
- 交付了可信行消元 `rowReduce`（行空间不变 + 输出互约化）， 证明其行数即秩。
-本模块补最后一条：**消元输出是行空间的规范形**——两个行列表张成同一行空间时，
-消元输出的**行集合相同**。于是"两个码是否相同"可以由内核直接比较消元输出，
-不必展开成 $2^n$ 个向量逐一比对。
+An earlier module supplies the trusted row reduction `rowReduce` (the row space is preserved and
+the output is mutually reduced) and proves that its length is the rank. This module adds the last
+piece: **the elimination output is the canonical form of the row space**, that is, two row lists
+spanning the same row space have the **same set of rows** after elimination. Whether two codes
+agree can then be decided by the kernel by comparing elimination outputs directly, instead of
+expanding to $2^n$ vectors and comparing them one by one.
 
-## 为什么需要 `IsEchelon`
+## Why `IsEchelon` is needed
 
-单靠 `IsReduced` **不足以**定规范形：`[(r, p)]` 对 `r` 的**任意**非零分量列 `p`
-都满足互约化不变量（(R2) 在单行时没有约束）。真正被行空间决定的是
-**枢轴列 = 该行首个非零列**（`leadIdx`），消元输出恰好满足这一点。
-我们把这一条作为结构不变量单列：
+`IsReduced` **alone** does not determine the canonical form: for `[(r, p)]`, every non-zero
+component column `p` of `r` satisfies the mutual-reduction invariant ((R2) imposes no constraint
+when there is a single row). What the row space really determines is
+**pivot column = the first non-zero column of the row** (`leadIdx`), and an elimination output
+satisfies exactly that. It is recorded as a separate structural invariant:
 
-`IsEchelon D := IsReduced D ∧ 每行在其枢轴列之前全为零`。
+`IsEchelon D := IsReduced D ∧ every row is zero before its pivot column`.
 
-## 证明的骨架
+## Skeleton of the proof
 
-1. **读回**（`readOff`）：`readOff D w = Σ_{ri ∈ D} (w ri.2) • ri.1`。
-   `D` 互约化时它是行空间上的**恒等映射**（`readOff_eq_of_mem_spanL`，
-   由 `Submodule.span_induction` 证明：它对生成元是恒等、对加法与数乘线性）。
-   这条引理把"行空间的元素"翻译成"枢轴列上的取值"，是全部结构断言的入口。
-2. **枢轴集合的行空间刻画**（`exists_piv_eq_leadIdx_of_mem_spanL`）：
-   行空间中**任一**非零元素的首个非零列必是 `D` 的枢轴列。
-   证明即上面的读回逐项计算：取系数非零的枢轴行中枢轴最小者，
-   比它大的枢轴行在该列只能取零（`IsEchelon`），比它小的系数为零。
-3. **合拢**：两个 echelon 行列表张成同一行空间时，
-   上述刻画把两侧的枢轴集合钉成同一个（`hPiv12`/`hPiv21`），
-   再用读回 + (R1)/(R2) 把每一行也钉成同一个。
+1. **Read-off** (`readOff`): `readOff D w = Σ_{ri ∈ D} (w ri.2) • ri.1`. When `D` is mutually
+   reduced this is the **identity map** on the row space (`readOff_eq_of_mem_spanL`, proved by
+   `Submodule.span_induction`: it is the identity on the generators and linear under addition and
+   scalar multiplication). This lemma translates "an element of the row space" into "its values on
+   the pivot columns", and it is the entry point for every structural assertion.
+2. **The row-space characterisation of the pivot set** (`exists_piv_eq_leadIdx_of_mem_spanL`): the
+   first non-zero column of **any** non-zero element of the row space is a pivot column of `D`.
+   The proof is the read-off computed term by term: take the pivot row whose coefficient is
+   non-zero and whose pivot is smallest; pivot rows above it vanish in that column (`IsEchelon`)
+   and the coefficients below it are zero.
+3. **Putting the two together**: when two echelon row lists span the same row space, the
+   characterisation above pins the two pivot sets to the same set (`hPiv12`/`hPiv21`), and
+   read-off together with (R1)/(R2) then pins each row as well.
 
-## 主结果
+## Main results
 
-* `readOff_eq_of_mem_spanL`：读回是行空间上的恒等。
-* `pivRow_mem_iff_of_spanL_eq`：**规范形唯一性**。
-* `isEchelon_rowReduce`、`rowReduce_mem_iff_of_spanL_eq`：
-  `rowReduce` 的输出集合只取决于行空间（规范不变量）。
+* `readOff_eq_of_mem_spanL`: the read-off is the identity on the row space.
+* `pivRow_mem_iff_of_spanL_eq`: **canonical form uniqueness**.
+* `isEchelon_rowReduce`, `rowReduce_mem_iff_of_spanL_eq`: the output set of `rowReduce` depends
+  only on the row space (it is a canonical invariant).
 -/
 
 namespace QECCertificates
@@ -50,17 +55,17 @@ open scoped BigOperators
 
 variable {n : ℕ}
 
-/-! ## 读回 -/
+/-! ## Read-off -/
 
-/-- **读回**：按 `D` 的枢轴行重新组合 `w` 在其枢轴列上的取值。
-`D` 互约化时它是行空间上的恒等映射。 -/
+/-- **Read-off**: recombines the values of `w` on its pivot columns, following the pivot rows of `D`.
+When `D` is mutually reduced it is the identity map on the row space. -/
 def readOff (D : List (PivRow n)) (w : Vec n) : Vec n :=
   ∑ ri ∈ D.toFinset, (w ri.2) • ri.1
 
 @[simp] lemma readOff_nil (w : Vec n) : readOff ([] : List (PivRow n)) w = 0 := by
   simp [readOff]
 
-/-- 逐分量形式：把 smul 展开成标量乘法。 -/
+/-- Componentwise form: the smul expanded into scalar multiplication. -/
 lemma readOff_apply (D : List (PivRow n)) (w : Vec n) (i : Fin n) :
     readOff D w i = ∑ ri ∈ D.toFinset, (w ri.2) * (ri.1 i) := by
   rw [readOff, Finset.sum_apply]
@@ -79,10 +84,12 @@ lemma readOff_smul (D : List (PivRow n)) (c : ZMod 2) (x : Vec n) :
   exact Finset.sum_congr rfl fun ri _ => by
     rw [Pi.smul_apply, smul_eq_mul, smul_smul]
 
-/-- **主引理（读回 = 恒等）**：`D` 互约化时，读回在 `D` 的行空间上是恒等映射。
+/-- **Main lemma (read-off = identity)**: when `D` is mutually reduced, the read-off is the identity
+map on the row space of `D`.
 
-证明按 `Submodule.span_induction`：生成元上，`ri` 的枢轴列把和式塌成单项
-（其余项被 (R2) 杀掉）；零、加法、数乘三情形由 `readOff_add`/`readOff_smul` 给出。 -/
+The proof follows `Submodule.span_induction`: on a generator, the pivot column of `ri` collapses the
+sum to a single term (the remaining terms are killed by (R2)); the zero, addition and scalar cases
+are given by `readOff_add`/`readOff_smul`. -/
 theorem readOff_eq_of_mem_spanL {D : List (PivRow n)} (hD : IsReduced D) {w : Vec n}
     (hw : w ∈ spanL (rowList D)) : readOff D w = w := by
   refine Submodule.span_induction ?_ ?_ ?_ ?_ hw
@@ -105,8 +112,10 @@ theorem readOff_eq_of_mem_spanL {D : List (PivRow n)} (hD : IsReduced D) {w : Ve
   · intro c x _ hx
     rw [readOff_smul, hx]
 
-/-- **零化引理**：行空间里的元素若在每个枢轴列上取零，则它是零向量。
-（读回的推论——这是"枢轴列上的取值决定一切"的直接形式。） -/
+/-- **The vanishing lemma**: an element of the row space that takes the value zero on every pivot
+column is the zero vector.
+(A corollary of the read-off, and the direct form of "the values on the pivot columns determine
+everything".) -/
 lemma eq_zero_of_mem_spanL_of_piv_zero {D : List (PivRow n)} (hD : IsReduced D) {w : Vec n}
     (hw : w ∈ spanL (rowList D)) (h0 : ∀ ri ∈ D, w ri.2 = 0) : w = 0 := by
   rw [← readOff_eq_of_mem_spanL hD hw]
@@ -114,16 +123,18 @@ lemma eq_zero_of_mem_spanL_of_piv_zero {D : List (PivRow n)} (hD : IsReduced D) 
   exact Finset.sum_eq_zero fun ri hri => by
     rw [h0 ri (List.mem_toFinset.mp hri), zero_smul]
 
-/-! ## echelon 结构：枢轴列是首个非零列 -/
+/-! ## The echelon structure: the pivot column is the first non-zero column -/
 
-/-- **echelon 互约化**：`IsReduced` + "枢轴列之前全为零"。
+/-- **Echelon and mutually reduced**: `IsReduced` together with "everything before the pivot column
+is zero".
 
-第二条把"枢轴列"钉成 `leadIdx`（该行首个非零列）。没有它，
-`[(r, p)]`（`p` 取 `r` 的任意非零分量列）都是互约化的，规范形不唯一。 -/
+The second condition pins the pivot column to `leadIdx` (the first non-zero column of the row).
+Without it, `[(r, p)]` (with `p` any non-zero component column of `r`) is mutually reduced, and the
+canonical form is not unique. -/
 def IsEchelon (D : List (PivRow n)) : Prop :=
   IsReduced D ∧ ∀ ri ∈ D, ∀ i : Fin n, i < ri.2 → ri.1 i = 0
 
-/-- 枢轴列上取 1 的行非零。 -/
+/-- A row that takes the value 1 on its pivot column is non-zero. -/
 lemma ne_zero_of_piv_eq_one {v : Vec n} {p : Fin n} (h : v p = 1) : v ≠ 0 :=
   fun hzero => by rw [hzero, Pi.zero_apply] at h; exact one_ne_zero h.symm
 
@@ -131,13 +142,13 @@ lemma leadIdx_le_of_ne_zero {v : Vec n} (h : v ≠ 0) {i : Fin n} (hi : v i ≠ 
     leadIdx v h ≤ i :=
   Finset.min'_le _ i (by simp [hi])
 
-/-- `leadIdx` 之前的分量全为零。 -/
+/-- Everything before `leadIdx` is zero. -/
 lemma eq_zero_of_lt_leadIdx {v : Vec n} (h : v ≠ 0) {i : Fin n} (hi : i < leadIdx v h) :
     v i = 0 := by
   by_contra hne
   exact absurd (leadIdx_le_of_ne_zero h hne) (not_le.mpr hi)
 
-/-- echelon 行列表的枢轴列就是该行的 `leadIdx`。 -/
+/-- The pivot column of an echelon row list is the `leadIdx` of its row. -/
 lemma leadIdx_eq_piv_of_isEchelon {D : List (PivRow n)} (h : IsEchelon D) {ri : PivRow n}
     (hri : ri ∈ D) {hne : ri.1 ≠ 0} : leadIdx ri.1 hne = ri.2 := by
   refine le_antisymm ?_ ?_
@@ -145,13 +156,13 @@ lemma leadIdx_eq_piv_of_isEchelon {D : List (PivRow n)} (h : IsEchelon D) {ri : 
   · by_contra hlt
     exact absurd (h.2 ri hri (leadIdx ri.1 hne) (not_le.mp hlt)) (leadIdx_spec ri.1 hne)
 
-/-! ## 枢轴集合的行空间刻画 -/
+/-! ## The row-space characterisation of the pivot set -/
 
-/-- **主引理（枢轴刻画）**：echelon 行列表张成的行空间里，任一非零元素的
-首个非零列必是该列表的某个枢轴列。
+/-- **Main lemma (pivot characterisation)**: in the row space spanned by an echelon row list, the
+first non-zero column of any non-zero element is one of the pivot columns of that list.
 
-这条刻画只用到了行空间本身，因此把"枢轴集合"变成**行空间的不变量**——
-规范形唯一性由此落地。 -/
+The characterisation uses only the row space itself, so it turns the "pivot set" into an
+**invariant of the row space**, and canonical form uniqueness follows. -/
 theorem exists_piv_eq_leadIdx_of_mem_spanL {D : List (PivRow n)} (hD : IsEchelon D)
     {w : Vec n} (hw : w ∈ spanL (rowList D)) (hw0 : w ≠ 0) :
     ∃ ri ∈ D, ri.2 = leadIdx w hw0 := by
@@ -191,12 +202,13 @@ theorem exists_piv_eq_leadIdx_of_mem_spanL {D : List (PivRow n)} (hD : IsEchelon
     le_antisymm (leadIdx_le_of_ne_zero hw0 hcoef) (hzero (leadIdx w hw0) (leadIdx_spec w hw0))
   exact hlead.symm
 
-/-! ## 规范形唯一性 -/
+/-! ## Canonical form uniqueness -/
 
-/-- **规范形唯一性**：两个 echelon 互约化行列表张成同一行空间 ⟹ 行集合相同。
+/-- **Canonical form uniqueness**: two echelon mutually reduced row lists that span the same row space
+have the same set of rows.
 
-于是 `rowReduce` 的输出是行空间的**规范不变量**：码相同当且仅当消元输出的
-行集合相同（`rowReduce_mem_iff_of_spanL_eq`）。 -/
+Hence the output of `rowReduce` is a **canonical invariant** of the row space: two codes agree
+exactly when the row sets of their elimination outputs agree (`rowReduce_mem_iff_of_spanL_eq`). -/
 theorem pivRow_mem_iff_of_spanL_eq {D₁ D₂ : List (PivRow n)} (h₁ : IsEchelon D₁)
     (h₂ : IsEchelon D₂) (hspan : spanL (rowList D₁) = spanL (rowList D₂)) :
     ∀ x : PivRow n, x ∈ D₁ ↔ x ∈ D₂ := by
@@ -288,9 +300,10 @@ theorem pivRow_mem_iff_of_spanL_eq {D₁ D₂ : List (PivRow n)} (h₁ : IsEchel
     rw [hxeq]
     exact hri
 
-/-! ## 消元输出的规范不变性 -/
+/-! ## Canonical invariance of the elimination output -/
 
-/-- **消元输出是 echelon 互约化行列表**：枢轴列恰是插入时的 `leadIdx`。 -/
+/-- **The elimination output is an echelon mutually reduced row list**: its pivot columns are exactly
+the `leadIdx` values at insertion time. -/
 theorem isEchelon_rowReduce (L : List (Vec n)) : IsEchelon (rowReduce L) := by
   have key : ∀ (D : List (PivRow n)) (rest : List (Vec n)), IsEchelon D →
       IsEchelon (rowReduceFrom D rest) := by
@@ -336,9 +349,11 @@ theorem isEchelon_rowReduce (L : List (Vec n)) : IsEchelon (rowReduce L) := by
               exact eq_zero_of_lt_leadIdx hw hi
   exact key [] L ⟨isReduced_nil, by simp⟩
 
-/-- **规范不变性（主定理）**：行空间相同的两个行列表，消元输出的行集合相同。
+/-- **Canonical invariance (main theorem)**: two row lists with the same row space have the same set
+of rows after elimination.
 
-这是"码是否为同一个"在内核里的**可判定判据**：比较消元输出的行集合即可。 -/
+This is the **decidable criterion**, inside the kernel, for whether two codes are the same: compare
+the row sets of their elimination outputs. -/
 theorem rowReduce_mem_iff_of_spanL_eq {L₁ L₂ : List (Vec n)} (h : spanL L₁ = spanL L₂)
     (x : PivRow n) : x ∈ rowReduce L₁ ↔ x ∈ rowReduce L₂ :=
   pivRow_mem_iff_of_spanL_eq (isEchelon_rowReduce L₁) (isEchelon_rowReduce L₂)

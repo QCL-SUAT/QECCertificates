@@ -1,62 +1,69 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.HGPCompression
 import QECCertificates.GF2.Canonical
 import QECCertificates.GF2.KernelBasis
 
 /-!
-# HGP 第三片：清洗论证与 X 距离下界（ 收官）
+# HGP, part three: the cleaning argument and the X distance lower bound
 
-第一片给了构造与 CSS 正交性，第二片给了压缩恒等式 $H_Xv=0 \iff H_1U=RH_2$、
-转置码关系与**单块**重量下界。本片补上混合块（两块同时非零）的"清洗/商"论证，
-于是 HGP 的 X 距离下界对**任意**非平凡逻辑算符成立：
+The first part gave the construction and CSS orthogonality, the second the compression identity
+$H_Xv=0 \iff H_1U=RH_2$, the transposed-code relation and the **single-block** weight lower bound.
+This part adds the cleaning/quotient argument for mixed blocks (both blocks nonzero at once), so
+that the X distance lower bound of the HGP holds for **every** nontrivial logical operator:
 
 $$d_X \ge \min(d_1,\; d_2^\top),\qquad
 d_1 = \min\ker H_1,\quad d_2^\top = \min\ker H_2^\top.$$
 
-## 一、清洗引理（本片的核心）
+## 1. The cleaning lemma (the core of this part)
 
-设 $v = (U,R) \in \ker H_X$（即 $H_1U = RH_2$），记 $|v|$ 为重量。
+Let $v = (U,R) \in \ker H_X$, that is $H_1U = RH_2$, and let $|v|$ denote the weight.
 
-* **行清洁**（`blockL_rows_mem_of_small`）：若 $|v| < d_1$，则 $U$ 的每一行都落在
-  $H_2$ 的行空间中。
-  证明：若某行 $U_{a\cdot}$ 与 $z\in\ker H_2$ 的点积非零，令 $x_a := U_{a\cdot}\cdot z$；
-  由压缩恒等式 $H_1 x = 0$，而 $x \ne 0$ 且 $|x| \le |v| < d_1$——与"核向量重量 $\ge d_1$"矛盾。
-* **列清洁**（`blockR_cols_mem_of_small`）：若 $|v| < d_2^\top$，则 $R$ 的每一列都在
-  $H_1$ 的列空间中（对称论证，用 $w\in\ker H_1^\top$）。
+* **Row cleaning** (`blockL_rows_mem_of_small`): if $|v| < d_1$, then every row of $U$ lies in the
+  row space of $H_2$.
+  Proof: if some row $U_{a\cdot}$ has nonzero dot product with $z\in\ker H_2$, let
+  $x_a := U_{a\cdot}\cdot z$; the compression identity gives $H_1 x = 0$, while $x \ne 0$ and
+  $|x| \le |v| < d_1$, contradicting "every kernel vector has weight at least $d_1$".
+* **Column cleaning** (`blockR_cols_mem_of_small`): if $|v| < d_2^\top$, then every column of $R$
+  lies in the column space of $H_1$ (the symmetric argument, with $w\in\ker H_1^\top$).
 
-两条都是**重量计数**论证：矛盾来自"核向量重量 $\ge$ 码距"与"该向量的支撑是 $v$ 支撑的
-子集"这两件事的直接冲突——不需要任何枚举。
+Both are **weight-counting** arguments: the contradiction comes from the direct clash between
+"every kernel vector has weight at least the distance" and "the support of that vector is a subset
+of the support of $v$". No enumeration is needed.
 
-## 二、consistency（清洗证书）
+## 2. Consistency (the cleaning certificate)
 
-行清洁给出 $C_0$ 使 $C_0H_2 = U$；列清洁给出 $\rho := R + H_1C_0$ 的每一列都在
-$H_1$ 的列空间中，且 $\rho H_2 = 0$。本片证明（`exists_cleaning_cert`）：
+Row cleaning gives $C_0$ with $C_0H_2 = U$; column cleaning makes every column of
+$\rho := R + H_1C_0$ lie in the column space of $H_1$, with $\rho H_2 = 0$. This part proves
+(`exists_cleaning_cert`) that
 
-$$\text{列都在 }\mathrm{col}(H_1)\text{ 中}\;\wedge\;\rho H_2 = 0
+$$\text{the columns all lie in }\mathrm{col}(H_1)\;\wedge\;\rho H_2 = 0
 \;\Longrightarrow\; \exists D,\; H_1D = \rho \;\wedge\; DH_2 = 0.$$
 
-**构造是显式的**：把 $\rho$ 的列用 `rowReduce`（`colList H₁`）读回（`col_decomp`），
-系数取枢轴行的条目，再乘预像 `preimage`。
+**The construction is explicit**: the columns of $\rho$ are read back through `rowReduce`
+(`colList H₁`) by `col_decomp`, the coefficients are the entries of the pivot rows, and then the
+preimage `preimage` is applied.
 
-## 三、组装
+## 3. Assembly
 
-$C := C_0 + D$ 同时满足 $CH_2 = U$ 与 $H_1C = R$，于是
+$C := C_0 + D$ satisfies both $CH_2 = U$ and $H_1C = R$, so
 $v = (CH_2,\, H_1C) = \sum_{a,d}C_{ad}\cdot(\text{row }(a,d)\text{ of }H_Z)$
-落在 $\mathrm{row}\,H_Z$ 中（`sum_smul_hgpHZ_apply` + `mem_spanL_hgpHZ_of_blocks`）。
+lies in $\mathrm{row}\,H_Z$ (`sum_smul_hgpHZ_apply` + `mem_spanL_hgpHZ_of_blocks`).
 
-## 主结果
+## Main results
 
-* `exists_ker_dot_ne_zero_of_not_mem` / `mem_spanL_of_forall_dot_eq_zero`：
-  **分离引理**——行空间恰是核的正交补（构造性地用消元残差 + 核向量实现）。
-* `blockL_rows_mem_of_small` / `blockR_cols_mem_of_small`：两条清洁引理。
-* `exists_cleaning_cert`：清洗证书的一致性构造。
-* **`hgp_X_distance_ge`**：$v\in\ker H_X$、$v\notin\mathrm{row}H_Z$、$v\ne0$
-  $\Longrightarrow \min(d_1, d_2^\top) \le |v|$——X 型逻辑算符的通用下界，
-  与第二片的单块下界（无需商即可用）互补。
+* `exists_ker_dot_ne_zero_of_not_mem` / `mem_spanL_of_forall_dot_eq_zero`: the **separation
+  lemma**, that the row space is exactly the orthogonal complement of the kernel (realised
+  constructively through the elimination residual and a kernel vector).
+* `blockL_rows_mem_of_small` / `blockR_cols_mem_of_small`: the two cleaning lemmas.
+* `exists_cleaning_cert`: the consistency construction of the cleaning certificate.
+* **`hgp_X_distance_ge`**: $v\in\ker H_X$, $v\notin\mathrm{row}H_Z$, $v\ne0$
+  $\Longrightarrow \min(d_1, d_2^\top) \le |v|$, the general lower bound for X-type logical
+  operators, complementary to the single-block lower bound of the second part (which needs no
+  quotient).
 -/
 
 namespace QECCertificates
@@ -67,13 +74,13 @@ open scoped BigOperators
 
 variable {r₁ n₁ r₂ n₂ : ℕ}
 
-/-! ## 一、行 / 列列表与预像 -/
+/-! ## 1. Row and column lists, and preimages -/
 
-/-- 矩阵的行（作为 `Vec` 列表）。 -/
+/-- The rows of a matrix, as a list of `Vec`. -/
 def matRowList {m k : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 2)) : List (Vec k) :=
   List.ofFn fun i => fun j => M i j
 
-/-- 矩阵的列（作为 `Vec` 列表，向量长度 = 行数）。 -/
+/-- The columns of a matrix, as a list of `Vec` (the vector length is the number of rows). -/
 def colList {m k : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 2)) : List (Vec m) :=
   matRowList M.transpose
 
@@ -81,7 +88,8 @@ lemma mem_matRowList {m k : ℕ} {M : Matrix (Fin m) (Fin k) (ZMod 2)} {y : Vec 
     y ∈ matRowList M ↔ ∃ i, (fun j => M i j) = y := by
   rw [matRowList, List.mem_ofFn]
 
-/-- 列张成空间中的向量必是右乘的像（列就是单位向量在此映射下的像）。 -/
+/-- A vector in the column span is the image of right multiplication (the columns are the images of the
+unit vectors under that map). -/
 lemma exists_mulVec_of_mem_spanL_colList {m k : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 2))
     {y : Vec m} (h : y ∈ spanL (colList M)) : ∃ x : Vec k, M *ᵥ x = y := by
   have h' : y ∈ Submodule.span (ZMod 2) {v : Vec m | v ∈ colList M} := h
@@ -111,7 +119,7 @@ lemma exists_mulVec_of_mem_spanL_colList {m k : ℕ} (M : Matrix (Fin m) (Fin k)
     obtain ⟨a, ha⟩ := hx
     exact ⟨c • a, by rw [Matrix.mulVec_smul, ha]⟩
 
-/-- 右乘的像落在列张成空间中。 -/
+/-- The image of right multiplication lies in the column span. -/
 lemma mulVec_mem_spanL_colList {m k : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 2)) (x : Vec k) :
     M *ᵥ x ∈ spanL (colList M) := by
   have hsum : M *ᵥ x = ∑ t : Fin k, x t • (fun i => M i t) := by
@@ -125,7 +133,8 @@ lemma mulVec_mem_spanL_colList {m k : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 2))
   rw [colList, matRowList, List.mem_ofFn]
   exact ⟨t, rfl⟩
 
-/-- 行张成空间中的向量必是某个系数向量与各行作线性组合：`∃ λ, ∀ j, Σ_t λ_t M_{tj} = y_j`。 -/
+/-- A vector in the row span is a linear combination of the rows with some coefficient vector:
+`∃ λ, ∀ j, Σ_t λ_t M_{tj} = y_j`. -/
 lemma exists_coeff_of_mem_spanL_matRowList {m k : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 2))
     {y : Vec k} (h : y ∈ spanL (matRowList M)) :
     ∃ co : Vec m, ∀ j, (∑ t, co t * M t j) = y j := by
@@ -163,7 +172,8 @@ lemma exists_coeff_of_mem_spanL_matRowList {m k : ℕ} (M : Matrix (Fin m) (Fin 
     rw [Pi.smul_apply, smul_eq_mul]
     ring
 
-/-- 右乘的预像：`M *ᵥ preimage M y = y`（当 `y` 在列张成空间中时，见 `preimage_spec`）。 -/
+/-- The preimage of right multiplication: `M *ᵥ preimage M y = y` whenever `y` lies in the column
+span (see `preimage_spec`). -/
 noncomputable def preimage {m k : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 2)) (y : Vec m) : Vec k :=
   if h : ∃ x : Vec k, M *ᵥ x = y then Classical.choose h else 0
 
@@ -172,7 +182,7 @@ lemma preimage_spec {m k : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 2)) {y : Vec m
   rw [preimage, dite_eq_left h]
   exact Classical.choose_spec h
 
-/-- **行分解**：`U` 的每一行都在 `M` 的行空间中 ⟹ `U = C * M`。 -/
+/-- **Row decomposition**: if every row of `U` lies in the row space of `M`, then `U = C * M`. -/
 lemma exists_mul_eq_of_rows_mem {m k p : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 2))
     (U : Matrix (Fin p) (Fin k) (ZMod 2))
     (h : ∀ a, (fun j => U a j) ∈ spanL (matRowList M)) :
@@ -184,9 +194,9 @@ lemma exists_mul_eq_of_rows_mem {m k p : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 
   rw [Matrix.mul_apply]
   simpa only [Matrix.of_apply] using hc a j
 
-/-! ## 二、分离引理：行空间 = 核的正交补 -/
+/-! ## 2. Separation lemma: the row space is the orthogonal complement of the kernel -/
 
-/-- 核向量与整个行空间正交。 -/
+/-- A kernel vector is orthogonal to the whole row space. -/
 lemma dot_eq_zero_of_mem_kerL_of_mem_spanL {n : ℕ} {L : List (Vec n)} {z u : Vec n}
     (hz : z ∈ kerL L) (hu : u ∈ spanL L) : u ⬝ᵥ z = 0 := by
   refine Submodule.span_induction (p := fun u _ => u ⬝ᵥ z = 0) ?_ ?_ ?_ ?_ hu
@@ -198,11 +208,14 @@ lemma dot_eq_zero_of_mem_kerL_of_mem_spanL {n : ℕ} {L : List (Vec n)} {z u : V
   · intro c x _ hx
     rw [smul_dotProduct, hx, smul_zero]
 
-/-- **分离引理**：不在行空间中的向量必与某个核向量点积非零。
+/-- **Separation lemma**: a vector outside the row space has nonzero dot product with some kernel
+vector.
 
-构造是显式的：把 `y` 对消元输出约化，残差 `y'` 非零（否则 `y` 在行空间中）、
-在枢轴列上为零；取 `y'` 非零的那个自由列 `j`，`kerVec D j` 就是所需的核向量
-（它在自由列 `j` 上取 1、其余自由列取 0，而 `y'` 只在自由列上非零）。 -/
+The construction is explicit: reduce `y` against the output of the elimination, so that the
+residual `y'` is nonzero (otherwise `y` would lie in the row space) and vanishes on the pivot
+columns; take the free column `j` at which `y'` is nonzero, and `kerVec D j` is the required kernel
+vector (it is 1 on the free column `j` and 0 on the other free columns, while `y'` is nonzero only
+on free columns). -/
 theorem exists_ker_dot_ne_zero_of_not_mem {m k : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 2))
     {y : Vec k} (h : y ∉ spanL (matRowList M)) :
     ∃ z : Vec k, M *ᵥ z = 0 ∧ y ⬝ᵥ z ≠ 0 := by
@@ -265,7 +278,8 @@ theorem exists_ker_dot_ne_zero_of_not_mem {m k : ℕ} (M : Matrix (Fin m) (Fin k
     rw [hdot, hfirst, hsecond, add_zero] at hzero
     exact hj hzero
 
-/-- **分离引理的判定形式**：与整个核正交的向量必在行空间中。 -/
+/-- **Decidable form of the separation lemma**: a vector orthogonal to the whole kernel lies in the
+row space. -/
 theorem mem_spanL_of_forall_dot_eq_zero {m k : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 2))
     {y : Vec k} (h : ∀ z : Vec k, M *ᵥ z = 0 → y ⬝ᵥ z = 0) :
     y ∈ spanL (matRowList M) := by
@@ -273,9 +287,10 @@ theorem mem_spanL_of_forall_dot_eq_zero {m k : ℕ} (M : Matrix (Fin m) (Fin k) 
   obtain ⟨z, hz, hdot⟩ := exists_ker_dot_ne_zero_of_not_mem M hmem
   exact hdot (h z hz)
 
-/-! ## 三、重量计数：逐行 / 逐列点积后重量不增 -/
+/-! ## 3. Weight counting: row-wise and column-wise dot products do not increase the weight -/
 
-/-- 逐行点积后的重量不超过全向量重量（每行非零就贡献一个支撑点）。 -/
+/-- The weight after row-wise dot products is at most the weight of the whole vector (every row that
+is nonzero contributes one support point). -/
 lemma rowDot_hammingNorm_le
     (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) (z : Vec n₂) :
     hammingNorm (fun a : Fin n₁ => ∑ b, v (Sum.inl (a, b)) * z b) ≤ hammingNorm v := by
@@ -309,7 +324,8 @@ lemma rowDot_hammingNorm_le
     · intro a _ a' _ h
       exact congrArg Prod.fst (Sum.inl_injective h)
 
-/-- 逐列点积后的重量不超过全向量重量（每列非零就贡献一个支撑点）。 -/
+/-- The weight after column-wise dot products is at most the weight of the whole vector (every column
+that is nonzero contributes one support point). -/
 lemma colDot_hammingNorm_le
     (v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2) (w : Vec r₁) :
     hammingNorm (fun t : Fin r₂ => ∑ i, v (Sum.inr (i, t)) * w i) ≤ hammingNorm v := by
@@ -343,13 +359,14 @@ lemma colDot_hammingNorm_le
     · intro t _ t' _ h
       exact congrArg Prod.snd (Sum.inr_injective h)
 
-/-! ## 四、清洗引理 -/
+/-! ## 4. The cleaning lemmas -/
 
-/-- **行清洁**：$|v| < d_1$ 时 `blockL v` 的每一行都落在 `H₂` 的行空间中。
+/-- **Row cleaning**: if $|v| < d_1$, every row of `blockL v` lies in the row space of `H₂`.
 
-证明用压缩恒等式的**矩阵级**形态：若某行与 `z ∈ ker H₂` 的点积非零，则
-`blockL v *ᵥ z ≠ 0`，而 `H₁ *ᵥ (blockL v *ᵥ z) = (H₁ * blockL v) *ᵥ z
-= (blockR v * H₂) *ᵥ z = blockR v *ᵥ (H₂ *ᵥ z) = 0`——它与 `d₁` 矛盾。 -/
+The proof uses the **matrix-level** form of the compression identity: if some row has nonzero dot
+product with `z ∈ ker H₂`, then `blockL v *ᵥ z ≠ 0`, whereas
+`H₁ *ᵥ (blockL v *ᵥ z) = (H₁ * blockL v) *ᵥ z = (blockR v * H₂) *ᵥ z = blockR v *ᵥ (H₂ *ᵥ z) = 0`,
+which contradicts `d₁`. -/
 theorem blockL_rows_mem_of_small
     {H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)} {H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)}
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -374,10 +391,11 @@ theorem blockL_rows_mem_of_small
   have hle : hammingNorm u ≤ hammingNorm v := rowDot_hammingNorm_le v z
   omega
 
-/-- **列清洁**：$|v| < d_2^\top$ 时 `blockR v` 的每一列都落在 `H₁` 的列空间中。
+/-- **Column cleaning**: if $|v| < d_2^\top$, every column of `blockR v` lies in the column space of
+`H₁`.
 
-对偶的矩阵级论证：`(blockR v)ᵀ *ᵥ w` 的转置码恒等式给出
-`H₂ᵀ *ᵥ ((blockR v)ᵀ *ᵥ w) = (blockL v)ᵀ *ᵥ (H₁ᵀ *ᵥ w) = 0`。 -/
+The dual matrix-level argument: the transposed-code identity for `(blockR v)ᵀ *ᵥ w` gives
+`H₂ᵀ *ᵥ ((blockR v)ᵀ *ᵥ w) = (blockL v)ᵀ *ᵥ (H₁ᵀ *ᵥ w) = 0`. -/
 theorem blockR_cols_mem_of_small
     {H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)} {H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)}
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -404,10 +422,11 @@ theorem blockR_cols_mem_of_small
   have hle : hammingNorm y ≤ hammingNorm v := colDot_hammingNorm_le v w
   omega
 
-/-! ## 五、consistency：列分解与清洗证书 -/
+/-! ## 5. Consistency: column decomposition and the cleaning certificate -/
 
-/-- **列分解**（消元读回）：若 `M` 的每一列都在行列表 `c` 的生成空间中，
-则消元输出的枢轴行给出一组显式系数：`M i j = Σ_{ri} M ri.2 j * ri.1 i`。 -/
+/-- **Column decomposition** (read back from the elimination): if every column of `M` lies in the span
+of the row list `c`, the pivot rows of the elimination output give an explicit set of coefficients:
+`M i j = Σ_{ri} M ri.2 j * ri.1 i`. -/
 lemma col_decomp {m k : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 2)) (c : List (Vec m))
     (hc : ∀ j : Fin k, (fun i => M i j) ∈ spanL c) (i : Fin m) (j : Fin k) :
     M i j = ∑ ri ∈ (rowReduce c).toFinset, (M ri.2 j) * (ri.1 i) := by
@@ -418,11 +437,12 @@ lemma col_decomp {m k : ℕ} (M : Matrix (Fin m) (Fin k) (ZMod 2)) (c : List (Ve
   rw [readOff_apply] at h
   exact h.symm
 
-/-- **清洗证书（consistency）**：列都在 `H₁` 列空间中、且 `ρ H₂ = 0` 的矩阵 `ρ`
-可写成 `H₁ D`（且 `D H₂ = 0`）——即"可清洗"。
+/-- **Cleaning certificate (consistency)**: a matrix `ρ` whose columns all lie in the column space of
+`H₁` and which satisfies `ρ H₂ = 0` can be written as `H₁ D` with `D H₂ = 0`, that is, it can be
+cleaned.
 
-构造：`D = Σ_{ri} preimage(ri.1) ⊗ (ρ 的第 ri.2 行)`，
-其中 `ri` 取遍 `rowReduce (colList H₁)` 的枢轴行（`col_decomp` 给出系数）。 -/
+Construction: `D = Σ_{ri} preimage(ri.1) ⊗ (row ri.2 of ρ)`, where `ri` runs over the pivot rows of
+`rowReduce (colList H₁)` (`col_decomp` supplies the coefficients). -/
 theorem exists_cleaning_cert {H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)}
     {H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)} {ρ : Matrix (Fin r₁) (Fin r₂) (ZMod 2)}
     (hcol : ∀ j, (fun i => ρ i j) ∈ spanL (colList H₁))
@@ -465,9 +485,10 @@ theorem exists_cleaning_cert {H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)}
     rw [hstep, hrow]
     simp
 
-/-! ## 六、组装：`H_Z` 行的组合与主定理 -/
+/-! ## 6. Assembly: combinations of the rows of `H_Z`, and the main theorem -/
 
-/-- `(C H₂, H₁ C)` 形式的向量是 `H_Z` 各行的线性组合（逐条目计算）。 -/
+/-- A vector of the form `(C H₂, H₁ C)` is a linear combination of the rows of `H_Z` (computed
+entrywise). -/
 theorem sum_smul_hgpHZ_apply (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)) (C : Matrix (Fin n₁) (Fin r₂) (ZMod 2))
     (c : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂)) :
@@ -513,8 +534,8 @@ theorem sum_smul_hgpHZ_apply (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
         exact absurd (Finset.mem_univ t) h
     rw [Finset.sum_congr rfl fun a' _ => hstep a']
 
-/-- 两块分别是 `C H₂` 与 `H₁ C` 的向量落在 `H_Z` 的行空间中
-（与 LeanQEC 的 `Matrix.rowSpace` 同一对象）。 -/
+/-- A vector whose two blocks are `C H₂` and `H₁ C` lies in the row space of `H_Z` (the same object as
+`Matrix.rowSpace` in LeanQEC). -/
 theorem mem_rowSpace_hgpHZ_of_blocks {H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)}
     {H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)}
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -535,12 +556,13 @@ theorem mem_rowSpace_hgpHZ_of_blocks {H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 
   refine Submodule.sum_mem _ fun p _ => Submodule.smul_mem _ _ ?_
   exact Submodule.subset_span ⟨p, rfl⟩
 
-/-- **HGP 的 X 距离下界（清洗定理）**：不在 `H_Z` 行空间中的非零 X 型算符
-（即非平凡 X 型逻辑算符）的重量至少是 $\min(d_1, d_2^\top)$——
-左码距与转置码距的较小者。
+/-- **X distance lower bound for the HGP (the cleaning theorem)**: a nonzero X-type operator outside
+the row space of `H_Z`, that is a nontrivial X-type logical operator, has weight at least
+$\min(d_1, d_2^\top)$, the smaller of the left code distance and the transposed code distance.
 
-与第二片的单块下界互补：那两条不需要"不在行空间"这一假设，
-本定理对**混合块**（两块同时非零）也成立，代价是要在商里陈述。 -/
+This is complementary to the single-block lower bounds of the second part: those need no "outside
+the row space" hypothesis, whereas this theorem also covers **mixed blocks** (both blocks nonzero
+at once), at the cost of being stated in the quotient. -/
 theorem hgp_X_distance_ge (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -585,27 +607,35 @@ theorem hgp_X_distance_ge (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     simp only [Matrix.add_apply]
     exact (key _ _).symm
 
-/-! ## 六、清洗下界的两条前提**各自可以卸掉**：只有一条路线算数
+/-! ## 6. Each of the two premises of the cleaning lower bound **can be dropped**: only one route counts
 
-清洗下界 `hgp_X_distance_ge` 的两步各要一个**重量前提**：行清洁要 $|v|<d_1$、列清洁要
-$|v|<d_2^\top$。本节证明**每一步都能换成一条核条件**，于是下界只剩一个因子：
+The two steps of the cleaning lower bound `hgp_X_distance_ge` each need a **weight hypothesis**:
+row cleaning needs $|v|<d_1$, column cleaning needs $|v|<d_2^\top$. This section shows that **each
+step can be replaced by a kernel condition**, leaving the lower bound with a single factor:
 
-* **行清洁**（`blockL v` 的行落在 $H_2$ 的行空间中）在 $\ker H_1=0$ **或** $\ker H_2=0$ 时
-  **无条件**成立。前者是**单射**：该步的恒等式把 $u:=U z$ 映到 $H_1u=0$，于是 $u=0$；
-  后者使该步要证的正交性**空真**（$\ker H_2$ 里只有 $0$）。
-* **列清洁**（`blockR v` 的列落在 $H_1$ 的列空间中）对称地由 $\ker H_1^\top=0$（列空间已满）
-  **或** $\ker H_2^\top=0$（$y:=R^\top w$ 被 $H_2^\top y=0$ 与单射钉成 $0$）卸掉。
+* **Row cleaning** (the rows of `blockL v` lie in the row space of $H_2$) holds
+  **unconditionally** when $\ker H_1=0$ **or** $\ker H_2=0$. In the first case $H_1$ is
+  **injective**: the identity of that step maps $u:=U z$ to $H_1u=0$, so $u=0$. In the second case
+  the orthogonality to be proved is **vacuous**, since $\ker H_2$ contains only $0$.
+* **Column cleaning** (the columns of `blockR v` lie in the column space of $H_1$) is discharged
+  symmetrically by $\ker H_1^\top=0$ (the column space is already full) **or** by
+  $\ker H_2^\top=0$ (where $y:=R^\top w$ is pinned to $0$ by $H_2^\top y=0$ together with
+  injectivity).
 
-四条距离定理是本节的产出：前两条给 $d_2^\top\le|v|$（此时 $d_1$ 那个因子**不参与**），
-后两条给 $d_1\le|v|$（$d_2^\top$ 不参与）。**这正是"某条路线的证书核平凡"那一类**：
-§十七（`Codes/HGPGeneralWitness.lean`）用它把 C1 的"$\ge$"那一半在残余类上闭合。 -/
+The four distance theorems are the output of this section: the first two give $d_2^\top\le|v|$ (the
+factor $d_1$ **does not participate**), the last two give $d_1\le|v|$ ($d_2^\top$ does not
+participate). **This is exactly the case in which the certificate kernel of one route is
+trivial**: a downstream development uses it to close the "$\ge$" half of C1 on the residual
+classes. -/
 
-/-! ### 六之一：四条"清洁步可卸"的引理 -/
+/-! ### 6.1. Four lemmas on dropping a cleaning step -/
 
-/-- **行清洁（$\ker H_1=0$ 支）**：$H_1$ 单射时 `blockL v` 的每一行**无条件**落在 $H_2$ 的行空间中。
+/-- **Row cleaning (branch $\ker H_1=0$)**: when $H_1$ is injective, every row of `blockL v` lies in
+the row space of $H_2$ **unconditionally**.
 
-与 `blockL_rows_mem_of_small` 同构，但把"与 $d_1$ 矛盾"那一步换成**单射**：该步的恒等式
-已经把 $u:=U z$ 送到 $\ker H_1$ 里，于是 $u=0$——不需要 $u$ 非零、也不需要重量前提。 -/
+This is isomorphic to `blockL_rows_mem_of_small`, except that the "contradiction with $d_1$" step
+is replaced by **injectivity**: the identity of that step already sends $u:=U z$ into $\ker H_1$,
+so $u=0$; neither $u\ne 0$ nor a weight hypothesis is needed. -/
 theorem blockL_rows_mem_of_H1Ker_trivial
     {H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)} {H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)}
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -620,9 +650,10 @@ theorem blockL_rows_mem_of_H1Ker_trivial
   rw [dotProduct]
   exact this
 
-/-- **行清洁（$\ker H_2=0$ 支）**：$H_2$ 单射时正交性假设**空真**——要证的
-$\langle U_{a\cdot},z\rangle=0$ 只对 $z\in\ker H_2$ 提出，而那里只有 $z=0$。
-（因此这一支**不需要**压缩恒等式：结论只谈 `blockL v` 与 $H_2$。） -/
+/-- **Row cleaning (branch $\ker H_2=0$)**: when $H_2$ is injective the orthogonality hypothesis is
+**vacuous**: the required $\langle U_{a\cdot},z\rangle=0$ is asked only for $z\in\ker H_2$, where
+$z=0$ is the only element. (This branch therefore **does not need** the compression identity: the
+conclusion mentions only `blockL v` and $H_2$.) -/
 theorem blockL_rows_mem_of_H2Ker_trivial
     {H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)}
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -632,8 +663,9 @@ theorem blockL_rows_mem_of_H2Ker_trivial
     rw [hT z hz]
     simp [dotProduct]
 
-/-- **列清洁（$\ker H_1^\top=0$ 支）**：此时 $H_1$ 的列已张满整个 `Vec r₁`，结论**无条件**成立。
-（同样**不需要**压缩恒等式。） -/
+/-- **Column cleaning (branch $\ker H_1^\top=0$)**: here the columns of $H_1$ already span the whole
+of `Vec r₁`, so the conclusion holds **unconditionally**. (Again the compression identity is **not
+needed**.) -/
 theorem blockR_cols_mem_of_adjoint_ker_trivial
     {H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)}
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -643,8 +675,9 @@ theorem blockR_cols_mem_of_adjoint_ker_trivial
     rw [hT z hz]
     simp [dotProduct]
 
-/-- **列清洁（$\ker H_2^\top=0$ 支）**：与 `blockR_cols_mem_of_small` 同构，但把"与 $d_2^\top$
-矛盾"换成**单射**：恒等式已把 $y:=R^\top w$ 送进 $\ker H_2^\top$，于是 $y=0$。 -/
+/-- **Column cleaning (branch $\ker H_2^\top=0$)**: isomorphic to `blockR_cols_mem_of_small`, but the
+"contradiction with $d_2^\top$" step is replaced by **injectivity**: the identity already sends
+$y:=R^\top w$ into $\ker H_2^\top$, so $y=0$. -/
 theorem blockR_cols_mem_of_H2TKer_trivial
     {H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)} {H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)}
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -663,10 +696,11 @@ theorem blockR_cols_mem_of_H2TKer_trivial
   rw [dotProduct]
   exact hy' t
 
-/-! ### 六之二：两条装配定理（各卸掉一步） -/
+/-! ### 6.2. Two assembly theorems, each dropping one step -/
 
-/-- **行清洁已自由时的清洗下界**：只要 `blockL v` 的行**无条件**落在 $H_2$ 的行空间中，
-$d_2^\top$ 一个因子就够——余下与 `hgp_X_distance_ge` 逐字相同（列清洁仍用 $|v|<d_2^\top$）。 -/
+/-- **Cleaning lower bound with row cleaning free**: as soon as the rows of `blockL v` lie in the row
+space of $H_2$ **unconditionally**, the single factor $d_2^\top$ suffices; the rest is word for
+word `hgp_X_distance_ge` (column cleaning still uses $|v|<d_2^\top$). -/
 theorem hgp_X_distance_ge_of_rowClean_free
     (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -708,8 +742,9 @@ theorem hgp_X_distance_ge_of_rowClean_free
     simp only [Matrix.add_apply]
     exact (key _ _).symm
 
-/-- **列清洁已自由时的清洗下界**：只要 `blockR v` 的列**无条件**落在 $H_1$ 的列空间中，
-$d_1$ 一个因子就够（行清洁仍用 $|v|<d_1$）。 -/
+/-- **Cleaning lower bound with column cleaning free**: as soon as the columns of `blockR v` lie in
+the column space of $H_1$ **unconditionally**, the single factor $d_1$ suffices (row cleaning still
+uses $|v|<d_1$). -/
 theorem hgp_X_distance_ge_of_colClean_free
     (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -752,9 +787,10 @@ theorem hgp_X_distance_ge_of_colClean_free
     simp only [Matrix.add_apply]
     exact (key _ _).symm
 
-/-! ### 六之三：四条距离定理 -/
+/-! ### 6.3. Four distance theorems -/
 
-/-- **$d_X$ 的下界（$\ker H_1=0$ 支）**：$H_1$ 单射时 $d_2^\top$ 一个因子就够。 -/
+/-- **Lower bound for $d_X$ (branch $\ker H_1=0$)**: when $H_1$ is injective the single factor
+$d_2^\top$ suffices. -/
 theorem hgp_X_distance_ge_of_H1Ker_trivial
     (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -767,7 +803,8 @@ theorem hgp_X_distance_ge_of_H1Ker_trivial
     blockL_rows_mem_of_H1Ker_trivial (H₁ := H₁) (H₂ := H₂)
       ((hgpHX_mulVec_eq_zero_iff H₁ H₂ v).mp hv) hT a
 
-/-- **$d_X$ 的下界（$\ker H_2=0$ 支）**：$H_2$ 单射时 $d_2^\top$ 一个因子就够。 -/
+/-- **Lower bound for $d_X$ (branch $\ker H_2=0$)**: when $H_2$ is injective the single factor
+$d_2^\top$ suffices. -/
 theorem hgp_X_distance_ge_of_H2Ker_trivial
     (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -779,7 +816,8 @@ theorem hgp_X_distance_ge_of_H2Ker_trivial
   hgp_X_distance_ge_of_rowClean_free H₁ H₂ hv hlog hd₂ fun a =>
     blockL_rows_mem_of_H2Ker_trivial (H₂ := H₂) hT a
 
-/-- **$d_X$ 的下界（$\ker H_2^\top=0$ 支）**：$H_2^\top$ 单射时 $d_1$ 一个因子就够。 -/
+/-- **Lower bound for $d_X$ (branch $\ker H_2^\top=0$)**: when $H_2^\top$ is injective the single factor
+$d_1$ suffices. -/
 theorem hgp_X_distance_ge_of_H2TKer_trivial
     (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}
@@ -792,19 +830,22 @@ theorem hgp_X_distance_ge_of_H2TKer_trivial
     blockR_cols_mem_of_H2TKer_trivial (H₁ := H₁) (H₂ := H₂)
       ((hgpHX_mulVec_eq_zero_iff H₁ H₂ v).mp hv) hT t
 
-/-- **$d_X$ 的下界，证书核平凡的那一支**：若 $\ker H_1^\top = 0$，则任何 X 型逻辑算符的重量
-$\ge d_1$。
+/-- **Lower bound for $d_X$, the branch where the certificate kernel is trivial**: if
+$\ker H_1^\top = 0$, then every X-type logical operator has weight $\ge d_1$.
 
-**它补的是哪一格**：清洗下界 `hgp_X_distance_ge` 给的是 $\min(d_1,d_2^\top)$，而 $d_2^\top$ 可能
-**严格更小却取不到**——"右路线的证书核平凡"（$\ker H_1^\top=0$）正是那个情形。本定理说，此时
-那个更小的值**不参与**下界，$d_1$ 一个就够。
+**Which gap this fills**: the cleaning lower bound `hgp_X_distance_ge` gives $\min(d_1,d_2^\top)$,
+and $d_2^\top$ may be **strictly smaller yet unattainable**; "the certificate kernel of the right
+route is trivial" ($\ker H_1^\top=0$) is exactly that situation. The theorem says that the smaller
+value then **does not participate** in the lower bound and $d_1$ alone suffices.
 
-**证明**（与清洗下界同构，但只用**行清洁**加一条**满射性**）：设 $|v|<d_1$。
-行清洁给 $U = C\,H_2$（$U$ 是 `blockL v`），于是余项 $\rho := R + H_1C$ 满足 $\rho H_2 = 0$。
-而 $\ker H_1^\top = 0$ 经分离引理 `mem_spanL_of_forall_dot_eq_zero` 给 **$H_1$ 列满射**
-（每个 `Vec r₁` 向量都落在 $\mathrm{colList}\,H_1$ 的张成里），故 $\rho$ 的每一列也在那里——
-两条件齐备，`exists_cleaning_cert` 给出 $D$ 使 $H_1D = \rho$、$DH_2 = 0$，
-于是 $v$ 与 $(C+D)$ 配成稳定子、落在行空间里，与"$v$ 不是逻辑算符"矛盾。 -/
+**Proof** (isomorphic to the cleaning lower bound, but using only **row cleaning** plus a
+**surjectivity**): suppose $|v|<d_1$. Row cleaning gives $U = C\,H_2$ (where $U$ is `blockL v`), so
+the remainder $\rho := R + H_1C$ satisfies $\rho H_2 = 0$. Now $\ker H_1^\top = 0$ together with
+the separation lemma `mem_spanL_of_forall_dot_eq_zero` gives that **the columns of $H_1$ are
+surjective** (every vector of `Vec r₁` lies in the span of $\mathrm{colList}\,H_1$), so every
+column of $\rho$ lies there too. Both conditions are met, and `exists_cleaning_cert` gives $D$ with
+$H_1D = \rho$ and $DH_2 = 0$, so `v` and `(C+D)` form a stabilizer and $v$ lies in the row space,
+contradicting that $v$ is not a logical operator. -/
 theorem hgp_X_distance_ge_of_adjoint_ker_trivial
     (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     {v : (Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂) → ZMod 2}

@@ -1,36 +1,39 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.Basic
 
 /-!
-# 超图积（HGP）校验矩阵的张量分解（ 第一片）
+# Tensor decomposition of the hypergraph-product (HGP) parity-check matrices
 
-Tillich–Zémor 超图积把两个经典码 $C_1, C_2$（校验矩阵 $H_1 : r_1 \times n_1$、
-$H_2 : r_2 \times n_2$）粘成一个量子码，量子比特数为 $n_1 n_2 + r_1 r_2$，
-两类校验为分块张量形式：
+The Tillich–Zémor hypergraph product glues two classical codes $C_1, C_2$ (parity-check
+matrices $H_1 : r_1 \times n_1$ and $H_2 : r_2 \times n_2$) into a quantum code on
+$n_1 n_2 + r_1 r_2$ qubits, whose two families of checks take block tensor form:
 
 $$H_X = [\,H_1 \otimes I_{n_2} \;\middle|\; I_{r_1} \otimes H_2^\top\,],\qquad
 H_Z = [\,I_{n_1} \otimes H_2 \;\middle|\; H_1^\top \otimes I_{r_2}\,].$$
 
-本模块给出这一构造的**逐条目定义**（`hgpHX` / `hgpHZ`）与第一条结构定理：
+This module gives the **entrywise definition** of the construction (`hgpHX` / `hgpHZ`) and
+the first structural theorem:
 
-* `hgp_orthogonal`：$H_X H_Z^\top = 0$——CSS 相容条件对**任意**输入 $H_1, H_2$
-  成立，证明是纯代数的（两个分块各贡献一个 $H_1 \otimes H_2^\top$，
-  在 GF(2) 上相加为零），**不含任何枚举**。
+* `hgp_orthogonal`: $H_X H_Z^\top = 0$. The CSS compatibility condition holds for
+  **arbitrary** inputs $H_1, H_2$, and the proof is purely algebraic (the two blocks each
+  contribute $H_1 \otimes H_2^\top$, which cancel over GF(2)); it enumerates nothing.
 
-这是 （张量分解归约）的第一片；"转置码下界"（$d \ge \min(d_1, d_2)$ 的
-张量论证）与秩/维数的张量公式仍 ⬜。实例锚点（3-圈 → $3\times3$ 环面码
-$[[18,2,3]]$）见 `Codes/HGPAnchor.lean`。
+The tensor argument for the transposed-code bound ($d \ge \min(d_1, d_2)$) and the tensor
+formula for the rank and the dimension are not covered here. An instance anchor (the
+3-cycle, giving the $3\times3$ toric code $[[18,2,3]]$) is the `toric3` case matrix of
+`Codes/CaseMatrix.lean`.
 
-## 索引约定
+## Index conventions
 
-* 行、列都是**乘积 / 直和类型**（不拍平成 `Fin`），让结构定理零换标：
-  `hgpHX` 的行是 `Fin r₁ × Fin n₂`，`hgpHZ` 的行是 `Fin n₁ × Fin r₂`，
-  两者共享列空间 `(Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂)`。
-* 拍平到 `Fin`（锚点实例化）交给 `Matrix.reindex` 做。
+* Rows and columns are **product and sum types** (not flattened to `Fin`), so no relabelling
+  is needed: the rows of `hgpHX` are `Fin r₁ × Fin n₂` and the rows of `hgpHZ` are
+  `Fin n₁ × Fin r₂`, and both share the column space
+  `(Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂)`.
+* Flattening to `Fin` (for the instance anchor) is left to `Matrix.reindex`.
 -/
 
 namespace QECCertificates
@@ -39,29 +42,34 @@ open scoped BigOperators
 
 variable {r₁ n₁ r₂ n₂ : ℕ}
 
-/-! ## 构造 -/
+/-! ## Construction -/
 
-/-- **HGP 的 X 型校验** $H_X = [H_1 \otimes I_{n_2} \mid I_{r_1} \otimes H_2^\top]$。
+/--
+**The X-type checks of the HGP** $H_X = [H_1 \otimes I_{n_2} \mid I_{r_1} \otimes H_2^\top]$.
 
-行 `(i, j) : r₁ × n₂`；列左半 `(a, b) : n₁ × n₂` 上取 $H_1\, i\,a \cdot [j = b]$，
-右半 `(s, t) : r₁ × r₂` 上取 $[i = s] \cdot H_2\, t\, j$（即 $H_2^\top$ 的 $(j, t)$ 元）。 -/
+A row is `(i, j) : r₁ × n₂`. On the left half of the columns, `(a, b) : n₁ × n₂`, the entry
+is $H_1\, i\,a \cdot [j = b]$; on the right half, `(s, t) : r₁ × r₂`, it is
+$[i = s] \cdot H_2\, t\, j$ (the $(j, t)$ entry of $H_2^\top$).
+-/
 def hgpHX (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)) :
     Matrix (Fin r₁ × Fin n₂) ((Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂)) (ZMod 2) :=
   fun x c => Sum.elim
     (fun ab => H₁ x.1 ab.1 * (if x.2 = ab.2 then 1 else 0))
     (fun st => (if x.1 = st.1 then 1 else 0) * H₂ st.2 x.2) c
 
-/-- **HGP 的 Z 型校验** $H_Z = [I_{n_1} \otimes H_2 \mid H_1^\top \otimes I_{r_2}]$。
+/--
+**The Z-type checks of the HGP** $H_Z = [I_{n_1} \otimes H_2 \mid H_1^\top \otimes I_{r_2}]$.
 
-行 `(a, d) : n₁ × r₂`；列左半上取 $[a = a'] \cdot H_2\, d\, b$，
-右半上取 $H_1\, s\, a \cdot [d = t]$。 -/
+A row is `(a, d) : n₁ × r₂`. On the left half of the columns the entry is
+$[a = a'] \cdot H_2\, d\, b$; on the right half it is $H_1\, s\, a \cdot [d = t]$.
+-/
 def hgpHZ (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)) :
     Matrix (Fin n₁ × Fin r₂) ((Fin n₁ × Fin n₂) ⊕ (Fin r₁ × Fin r₂)) (ZMod 2) :=
   fun x c => Sum.elim
     (fun ab => (if x.1 = ab.1 then 1 else 0) * H₂ x.2 ab.2)
     (fun st => H₁ st.1 x.1 * (if x.2 = st.2 then 1 else 0)) c
 
-/-- 四个分块的逐条目刻画（`rfl` 级）。 -/
+/-- The four blocks, described entrywise (`rfl` level). -/
 theorem hgpHX_inl (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2))
     (x : Fin r₁ × Fin n₂) (ab : Fin n₁ × Fin n₂) :
     hgpHX H₁ H₂ x (Sum.inl ab) = H₁ x.1 ab.1 * (if x.2 = ab.2 then 1 else 0) := rfl
@@ -78,15 +86,19 @@ theorem hgpHZ_inr (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2)) (H₂ : Matrix 
     (x : Fin n₁ × Fin r₂) (st : Fin r₁ × Fin r₂) :
     hgpHZ H₁ H₂ x (Sum.inr st) = H₁ st.1 x.1 * (if x.2 = st.2 then 1 else 0) := rfl
 
-/-! ## 结构定理：CSS 相容 -/
+/-! ## The structural theorem: CSS compatibility -/
 
-/-- **HGP 的 CSS 相容性（结构定理）**：$H_X H_Z^\top = 0$，对任意 $H_1, H_2$ 成立。
+/--
+**CSS compatibility of the HGP (structural theorem)**: $H_X H_Z^\top = 0$ for arbitrary
+$H_1, H_2$.
 
-两个分块的贡献分别是 $(H_1 \otimes I)(I \otimes H_2)^\top = H_1 \otimes H_2^\top$
-与 $(I \otimes H_2^\top)(H_1^\top \otimes I)^\top = H_1 \otimes H_2^\top$——
-同一矩阵加自身，在 GF(2) 上为零。证明里的两个 `Finset.sum_eq_single`
-就是这条张量等式在逐条目层面的形态：每个乘积 $H_1\, i\, a \cdot H_2\, d\, j$
-恰在左半由 $(a, j)$、右半由 $(i, d)$ 各贡献一次。 -/
+The two blocks contribute $(H_1 \otimes I)(I \otimes H_2)^\top = H_1 \otimes H_2^\top$ and
+$(I \otimes H_2^\top)(H_1^\top \otimes I)^\top = H_1 \otimes H_2^\top$ respectively, that is,
+the same matrix added to itself, which is zero over GF(2). The two `Finset.sum_eq_single`
+applications in the proof are this tensor identity at the entrywise level: each product
+$H_1\, i\, a \cdot H_2\, d\, j$ is contributed exactly once, by $(a, j)$ on the left half and
+by $(i, d)$ on the right half.
+-/
 theorem hgp_orthogonal (H₁ : Matrix (Fin r₁) (Fin n₁) (ZMod 2))
     (H₂ : Matrix (Fin r₂) (Fin n₂) (ZMod 2)) :
     hgpHX H₁ H₂ * (hgpHZ H₁ H₂).transpose = 0 := by

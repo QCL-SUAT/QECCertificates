@@ -1,50 +1,57 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Codes.BB144Symmetry
 
 /-!
-# 对称性破缺的忠实性：破缺后不可满足 ⟹ 原命题不可满足
+# Faithfulness of symmetry breaking: the broken formula is unsatisfiable only if the original is
 
-`tools/bb144_server/bb144_sb.py` 把一条 CNF 加上"字典序轨道代表"约束后再交给求解器。
-那条路线要的方向是
+The external encoder adds "lexicographic orbit representative" constraints to a CNF and then hands
+it to the solver. The direction that route needs is
 
-    破缺后的 CNF 不可满足  ⟹  原 CNF 不可满足
+    the CNF after breaking is unsatisfiable  ⟹  the original CNF is unsatisfiable
 
-本模块证它的**语义核心**，并把核心实例化到 BB $[[144,12,12]]$ 的平移群上。
+This module proves its **semantic core** and instantiates that core at the translation group of BB
+$[[144,12,12]]$.
 
-## 核心：轨道提升引理
+## Core: the orbit lifting lemma
 
-设 `G` 是 `α` 上的一族置换（**只要求有限、且含恒等**，不需要是子群），`≤` 是 `α` 上的
-全序，`P` 是在 `G` 下**不变**的谓词。定义破缺谓词
+Let `G` be a family of permutations of `α` (**only required to be finite and to contain the
+identity**; it need not be a subgroup), let `≤` be a total order on `α` and let `P` be a predicate
+**invariant** under `G`. Define the broken predicate
 
     OrbitMin G P a  :=  P a ∧ ∀ g ∈ G, a ≤ g a
 
-则 **`∃ a, OrbitMin G P a` ⟺ `∃ a, P a`**（`orbitMin_iff_exists`）。两个方向：
+Then **`∃ a, OrbitMin G P a` ⟺ `∃ a, P a`** (`orbitMin_iff_exists`). The two directions are:
 
-* `⟸`：取 `a` 满足 `P`，在**它的轨道**里取 `≤`-最小元 `m`。`m` 是某个 `g a`，故由不变性
-  `P m` 成立；又对任何 `h ∈ G`，`h m` 仍在同一轨道里，故 `m ≤ h m`。于是 `m` 满足破缺谓词。
-* `⟹`：破缺谓词本来就蕴含 `P`。
+* `⟸`: take `a` with `P`, and take the `≤`-least element `m` of **its orbit**. Then `m` is some
+  `g a`, so `P m` holds by invariance; and for any `h ∈ G`, `h m` again lies in the same orbit, so
+  `m ≤ h m`. Hence `m` satisfies the broken predicate.
+* `⟹`: the broken predicate already implies `P`.
 
-**方向就是路线要的那一条**：把 `⟹` 取逆否，得"不存在破缺解 ⟹ 不存在原解"。而 `⟸` 半边
-（每轨道留得住一个代表元）正是**过紧**的失效模式所在——破缺编码若多切掉东西，缺的就是这一
-半边。故两条都证，不省。
+**This is the direction the route needs**: taking the contrapositive of `⟹` gives "no broken
+solution implies no original solution". The `⟸` half (every orbit retains a representative) is
+exactly where the **too tight** failure mode lives: if the broken encoding cuts away too much, it
+is this half that fails. Both directions are therefore proved.
 
-**为什么"含恒等"是必需的**：`⟸` 要用"`P a` 的 `a` 确实在它自己的轨道里"。
+**Why "contains the identity" is needed**: `⟸` uses that the `a` with `P a` really does lie in its
+own orbit.
 
-## 与 CNF 层的关系（本模块**不做**的那一步，如实标注）
+## Relation to the CNF layer (the step this module does **not** take, marked as such)
 
-本模块说的是**语义**：`P` 是一个 `Prop`，`OrbitMin` 是它的约束形态。要把
-`tools/bb144_server/bb144_sb.py` 生成的**那一份 CNF**接上，还需要
+What this module states is the **semantics**: `P` is a `Prop` and `OrbitMin` is its constrained
+form. Connecting the **CNF** produced by the external encoder still requires
 
-    SatFormula τ (破缺 CNF)  ⟹  ∃ a, OrbitMin G P a
+    SatFormula τ (CNF after breaking)  ⟹  ∃ a, OrbitMin G P a
 
-即"CNF 的可满足赋值经 `x`/`w` 投影后给出破缺语义解"——它由 `Reflect/Encode.lean` 的
-`buildPair_sat` 那一套（Tseitin 链、乘积块、顺序计数器的可靠性）加上词典序比较器子句的
-可靠性拼成。**那一步不在本模块**：本模块交付的是它的语义前提与轨道引理，`Reflect/` 里
-faithfulness 那一族的下一个模块接它。
+that is, "a satisfying assignment of the CNF, projected through `x`/`w`, gives a broken semantic
+solution". This is assembled from the `buildPair_sat` family of `Reflect/Encode.lean` (the
+soundness of the Tseitin chains, product blocks and sequential counters) together with the
+soundness of the lexicographic-comparator clauses. **That step is not in this module**: what is
+delivered here is its semantic premise and the orbit lemma, which the next module of the
+faithfulness family in `Reflect/` takes up.
 -/
 
 namespace QECCertificates
@@ -56,10 +63,10 @@ open Quantum.Stabilizer.Homological.BB
 
 variable {α : Type*} [Fintype α] [DecidableEq α]
 
-/-- `a` 在 `G` 下的**轨道**：所有 `g a`（`g ∈ G`）组成的有限集。
+/-- The **orbit** of `a` under `G`: the finite set of all `g a` with `g ∈ G`.
 
-用 `Finset.univ.filter` 而不是 `G.image`：前者的描述与"轨道是 `α` 的有限子集"这一
-事实逐字对应，且不需要 `Equiv.Perm α` 上的 `DecidableEq`。 -/
+`Finset.univ.filter` is used rather than `G.image` because the former describes exactly the fact
+that an orbit is a finite subset of `α`, and it needs no `DecidableEq` on `Equiv.Perm α`. -/
 def orbitOf (G : Finset (Equiv.Perm α)) (a : α) : Finset α :=
   Finset.univ.filter (fun b => ∃ g ∈ G, g a = b)
 
@@ -67,37 +74,41 @@ theorem mem_orbitOf {G : Finset (Equiv.Perm α)} {a b : α} :
     b ∈ orbitOf G a ↔ ∃ g ∈ G, g a = b := by
   simp [orbitOf]
 
-/-- 含恒等时 `a` 在自己的轨道里——`⟸` 半边靠的就是这一条。 -/
+/-- When the identity is in `G`, `a` lies in its own orbit; this is what the `⟸` half rests on. -/
 theorem self_mem_orbitOf (G : Finset (Equiv.Perm α)) (h1 : 1 ∈ G) (a : α) :
     a ∈ orbitOf G a :=
   mem_orbitOf.mpr ⟨1, h1, rfl⟩
 
-/-- **轨道提升引理**：有限轨道里有最小元。
+/-- **Orbit lifting lemma**: a finite orbit has a least element.
 
-证明只用"轨道有限且非空"——不需要 `G` 是子群，也不需要 `G` 含恒等（非空性由调用方给）。
-这是本模块唯一用到 `LinearOrder` 的地方。 -/
+The proof uses only that the orbit is finite and nonempty. It does not need `G` to be a subgroup,
+nor to contain the identity (nonemptiness is supplied by the caller). This is the only place in the
+module where `LinearOrder` is used. -/
 theorem exists_min_orbitOf [LinearOrder α] (G : Finset (Equiv.Perm α)) {a : α}
     (hne : (orbitOf G a).Nonempty) :
     ∃ m ∈ orbitOf G a, ∀ b ∈ orbitOf G a, m ≤ b :=
   let ⟨m, hm, hmin⟩ := Finset.exists_min_image (orbitOf G a) id hne
   ⟨m, hm, fun b hb => hmin b hb⟩
 
-/-- `P` 在 `G` 下不变。 -/
+/-- `P` is invariant under `G`. -/
 def IsInvariant (G : Finset (Equiv.Perm α)) (P : α → Prop) : Prop :=
   ∀ g ∈ G, ∀ a, P (g a) ↔ P a
 
-/-- **破缺谓词**：`P` 成立，且 `a` 在自己的轨道里 `≤`-最小。
+/-- **The broken predicate**: `P` holds and `a` is `≤`-least within its own orbit.
 
-这正是 `bb144_sb.py` 每加一条字典序约束所断言的语义形态；工具对**每个** `g ≠ e` 各加一条，
-故这里对 `∀ g ∈ G` 全取。 -/
+This is exactly the semantic shape asserted by every lexicographic constraint the external encoder
+adds; the tool adds one for **each** `g ≠ e`, so the quantifier here is `∀ g ∈ G`. -/
 def OrbitMin [LE α] (G : Finset (Equiv.Perm α)) (P : α → Prop) (a : α) : Prop :=
   P a ∧ ∀ g ∈ G, a ≤ g a
 
-/-- **忠实性（本模块的主定理）**：破缺谓词可满足 ⟺ 原谓词可满足。
+/-- **Faithfulness (the main theorem of this module)**: the broken predicate is satisfiable if and
+only if the original predicate is.
 
-`⟸` 是本模块的内容（取轨道最小元）；`⟹` 平凡。**两边都证**：`⟹` 是路线要的方向
-（逆否即"破缺不可满足 ⟹ 原不可满足"），而 `⟸` 排除**过紧**——它断言每轨道至少留得住
-一个代表元，破缺不会把解切光。 -/
+`⟸` is the content of this module (take the orbit minimum); `⟹` is trivial. **Both directions are
+proved**: `⟹` is the direction the route needs (its contrapositive is "a broken predicate that is
+unsatisfiable implies an original predicate that is unsatisfiable"), while `⟸` rules out being
+**too tight**: it asserts that every orbit keeps at least one representative, so that breaking does
+not cut away all solutions. -/
 theorem orbitMin_iff_exists [LinearOrder α] (G : Finset (Equiv.Perm α)) (h1 : 1 ∈ G)
     (hmul : ∀ g ∈ G, ∀ h ∈ G, h * g ∈ G) (P : α → Prop) (hP : IsInvariant G P) :
     (∃ a, OrbitMin G P a) ↔ (∃ a, P a) := by
@@ -114,38 +125,44 @@ theorem orbitMin_iff_exists [LinearOrder α] (G : Finset (Equiv.Perm α)) (h1 : 
     refine ⟨m, hPm, fun h hh => ?_⟩
     exact hmin (h m) (mem_orbitOf.mpr ⟨h * g, hmul g hg h hh, by rw [← hga]; rfl⟩)
 
-/-- **路线要的方向，取逆否**：破缺谓词不可满足 ⟹ 原谓词不可满足。
+/-- **The direction the route needs, in contrapositive form**: if the broken predicate is
+unsatisfiable then so is the original predicate.
 
-写成这一形态是为了与工具侧的用法逐字对应（求解器报 UNSAT，结论落到原命题上）。 -/
+This shape is chosen so as to correspond word for word to the usage on the tool side, where the
+solver reports UNSAT and the conclusion lands on the original statement. -/
 theorem not_exists_of_not_exists_orbitMin [LinearOrder α] (G : Finset (Equiv.Perm α))
     (h1 : 1 ∈ G) (hmul : ∀ g ∈ G, ∀ h ∈ G, h * g ∈ G) (P : α → Prop)
     (hP : IsInvariant G P) :
     ¬ (∃ a, OrbitMin G P a) → ¬ (∃ a, P a) :=
   fun h => h ∘ (orbitMin_iff_exists G h1 hmul P hP).mpr
 
-/-! ## 实例化：BB $[[144,12,12]]$ 的平移群与"轻逻辑算符"谓词
+/-! ## Instantiation: the BB $[[144,12,12]]$ translation group and the light logical operators
 
-`Codes/BB144Symmetry.lean` 给的三条（保重量、保两侧行空间、保配对）合起来就是
-"这套作用把逻辑算符映成逻辑算符"——即本模块要求的 `IsInvariant`。下面的 `bb144Group`
-取 72 个平移（工具 `--perms all` 那一档），`1 ∈ G` 由 `(0,0)` 那一项给出。 -/
+The three facts supplied by `Codes/BB144Symmetry.lean` (weight preservation, preservation of the
+row spaces on both sides, and preservation of the pairing) combine into "this action maps logical
+operators to logical operators", which is the `IsInvariant` required by this module. The group
+`bb144Group` below takes the 72 translations (the `--perms all` setting of the tool), and `1 ∈ G`
+comes from the `(0,0)` entry. -/
 
 open QECCertificates.BB144Distance
 
-/-- BB144 的平移群，写成置换的有限集（工具 `--perms all` 的 72 个）。 -/
+/-- The translation group of BB144, as a finite set of permutations (the 72 of the tool's
+`--perms all` setting). -/
 noncomputable def bb144Group : Finset (Equiv.Perm (Fin 144)) :=
   Finset.univ.image fun t : GrossGroup => bb144Trans t
 
-/-- 群里有恒等——`⟸` 半边的前提。 -/
+/-- The identity is in the group, which is the premise of the `⟸` half. -/
 theorem bb144Group_one_mem : (1 : Equiv.Perm (Fin 144)) ∈ bb144Group := by
   refine Finset.mem_image.mpr ⟨(0 : GrossGroup), Finset.mem_univ 0, ?_⟩
   ext c
   simp [bb144Trans]
 
-/-- **不变性**：平移把逻辑算符映成逻辑算符。
+/-- **Invariance**: a translation maps logical operators to logical operators.
 
-四条假设逐条对应 `(x, w)` 对上的逻辑算符定义——`x` 在 `H_X` 的核里、`w` 在 `H_Z` 的核里、
-配对为 1、以及重量上界。前三条由 `Codes/BB144Symmetry.lean` 的三条给出；重量那一条由
-`bb144Trans_hammingNorm` 给出。 -/
+The four hypotheses correspond one by one to the definition of a logical operator on a pair
+`(x, w)`: `x` lies in the kernel of `H_X`, `w` lies in the kernel of `H_Z`, the pairing is 1, and
+the weight is bounded. The first three come from the three facts of `Codes/BB144Symmetry.lean`, and
+the weight bound from `bb144Trans_hammingNorm`. -/
 theorem bb144_isLogical_invariant (t : GrossGroup) (v w : Vec 144)
     (hv : inKerB bb144Hx v = true) (hw : inKerB bb144Hz w = true)
     (hpair : v ⬝ᵥ w = 1) (hwt : hammingNorm v ≤ 11) :

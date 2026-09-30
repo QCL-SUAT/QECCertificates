@@ -1,52 +1,64 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Codes.MeasurementProtocol
 
 /-!
-# 分离条件的闭式（C1 免判定：完全图族的膨胀定理）
+# The closed form of the separation condition (C1 needs no decision procedure: expansion of the
+complete-graph family)
 
-本包的卖点定在**闭式**：判定定理 `separation_judgment` 目前是
-"**假设** C1–C2 成立 ⟹ 两分量都 $\ge d$"，要成为科学结论必须在具体码族上把假设
-**验证掉**。该节同时点明了成本落在哪一句：
+The value of this package lies in its **closed form**. The decision theorem `separation_judgment`
+currently reads "**assume** C1–C2, then both components are $\ge d$"; for that to become a
+scientific conclusion, the hypotheses have to be **discharged** on a concrete code family. The
+companion paper also names the sentence on which the cost falls:
 
-> 估计 3–6 周，取决于是否能在环面族上把 C1 的辅助图取成标准图从而**免判定**。
+> An estimate of 3–6 weeks, depending on whether the auxiliary graph of C1 can be taken to be the
+> standard graph on the toric family, so that the step is **discharged without a decision
+> procedure**.
 
-本模块把这一句做掉。**取辅助图为完全图 $K_m$，则 C1 对一切 $m$ 成立且零枚举**——
-于是 C1 从假设清单里消失，闭式只剩下空间界（W–Y Lemma 2，本侧不重证；本库对"引用的外部引理"口径一致：只搬运、不重证）与 C2（轮数 $\ge d$，取 $T=d$ 即满足）。
+This module does exactly that. **Take the auxiliary graph to be the complete graph $K_m$; then C1
+holds for every $m$ with no enumeration at all.** C1 therefore disappears from the list of
+hypotheses, and the closed form keeps only the space bound (W–Y Lemma 2, not reproved here; this
+library treats cited external lemmas uniformly, carrying them over rather than reproving them) and
+C2 (number of rounds $\ge d$, satisfied by $T=d$).
 
-## 一、为什么是完全图
+## 1. Why the complete graph
 
-$K_m$ 的割大小有闭式：割过 $S$ 的边恰是"两端一个在 $S$、一个在 $S^{\mathsf c}$"的
-无序对，故 $\mathrm{cut}(S)=|S|\cdot|S^{\mathsf c}|$。于是
+The cut size of $K_m$ has a closed form: the edges crossing $S$ are exactly the unordered pairs
+with one end in $S$ and the other in $S^{\mathsf c}$, hence
+$\mathrm{cut}(S)=|S|\cdot|S^{\mathsf c}|$. Therefore
 
 $$\min\bigl(|S|,\ m-|S|\bigr)\ \le\ m-|S|\ =\ |S^{\mathsf c}|\ \le\ \mathrm{cut}(S),$$
 
-中间那一步是本模块的计数引理 `cutSize_completeEdges_ge_compl`：
-**任取 $a\in S$，从 $a$ 连向 $S^{\mathsf c}$ 的 $|S^{\mathsf c}|$ 条边两两不同、
-且全都割过去**——不需要把割大小算精确，一条单点估计就够。
-这一步是这一整个模块的实质：它把"对每个 $m$ 逐个判定膨胀"换成了"对一切 $m$ 一次证明"。
+The middle step is the counting lemma `cutSize_completeEdges_ge_compl` of this module: **for any
+$a\in S$, the $|S^{\mathsf c}|$ edges from $a$ into $S^{\mathsf c}$ are pairwise distinct and all
+cross the cut.** There is no need to compute the cut size exactly; a single-vertex estimate
+suffices. This step is the substance of the whole module: it replaces "decide expansion separately
+for each $m$" by "prove it once for all $m$".
 
-## 二、C1 的数值形态
+## 2. The numeric form of C1
 
-判定定理里的 C1 是数值形态 $\eta\ge1$（`separation_judgment` 的 `hC1`），
-而图上的 C1 是可计算谓词 `HasExpansionOne`。两者的桥是 `c1Witness`：
-图有膨胀时取 $1$、否则取 $0$——于是 `one_le_c1Witness` 把
-"图有膨胀"这一**可计算判定**接到判定定理的数值假设上，中间不留散文。
+C1 in the decision theorem is the numeric form $\eta\ge1$ (the hypothesis `hC1` of
+`separation_judgment`), while C1 on graphs is the computable predicate `HasExpansionOne`. The
+bridge between the two is `c1Witness`: it takes the value $1$ when the graph has expansion and $0$
+otherwise, so `one_le_c1Witness` connects the **computable decision** "the graph has expansion" to
+the numeric hypothesis of the decision theorem, with no prose in between.
 
-## 三、闭式
+## 3. The closed form
 
-`separation_closed`：有膨胀的辅助图 $+$ 轮数 $\ge d$ $\Longrightarrow$ 两分量都 $\ge d$——
-**C1 与 C2 都已是定理而不是假设**。`toric_family_separation_closed` 把它实例化到
-环面族：$d=m$（`Codes/HGPToricFamily.lean` 的族级 $[[2m^2,2,m]]$）、
-$T=m$（C2 由 `le_refl` 满足）、辅助图 $K_m$（C1 由 `expansionOne_complete_gen` 满足）。
+`separation_closed`: an auxiliary graph with expansion $+$ number of rounds $\ge d$
+$\Longrightarrow$ both components are $\ge d$, so **C1 and C2 are both theorems rather than
+hypotheses**. `toric_family_separation_closed` instantiates this at the toric family: $d=m$ (the
+family-level $[[2m^2,2,m]]$ of `Codes/HGPToricFamily.lean`), $T=m$ (C2 holds by `le_refl`), and
+the auxiliary graph $K_m$ (C1 holds by `expansionOne_complete_gen`).
 
-## 四、还剩什么
+## 4. What remains
 
-空间分量的**精确值**与 W–Y Lemma 2 本身的机器检验仍缺——本模块只把它们从
-"假设"里孤立出来，没有消掉。这是 §2.2 那条估计里剩余的部分。
+The **exact value** of the space component and a machine-checked proof of W–Y Lemma 2 itself are
+still missing; this module only isolates them from the hypotheses rather than removing them. They
+are the part still outstanding in the estimate quoted at the top of the module.
 -/
 
 namespace QECCertificates
@@ -55,16 +67,19 @@ open scoped BigOperators
 
 variable {n : ℕ}
 
-/-! ## 一、完全图的边表与割大小 -/
+/-! ## 1. Edge list and cut size of the complete graph -/
 
-/-- **完全图 $K_m$ 的边表**：全体无序对 $\{a,b\}$，取 $a<b$ 的代表。
+/-- **Edge list of the complete graph $K_m$**: all unordered pairs $\{a,b\}$, represented by the one
+with $a<b$.
 
-用 `List` 而非 `Finset` 是为了直接喂给 `HasExpansionOne`（它按边表定义割大小）。 -/
+`List` is used rather than `Finset` so that the result can be fed directly to `HasExpansionOne`,
+which defines the cut size in terms of an edge list. -/
 def completeEdges (m : ℕ) : List (Fin m × Fin m) :=
   (List.finRange m).flatMap (fun a =>
     ((List.finRange m).filter (fun b => decide (a < b))).map (fun b => (a, b)))
 
-/-- **边表的成员刻画**：`(a,b)` 在完全图里 $\iff a<b$。 -/
+/-- **Membership characterization of the edge list**: `(a,b)` is in the complete graph
+$\iff a<b$. -/
 theorem mem_completeEdges {m : ℕ} {p : Fin m × Fin m} :
     p ∈ completeEdges m ↔ p.1 < p.2 := by
   rw [completeEdges, List.mem_flatMap]
@@ -78,10 +93,12 @@ theorem mem_completeEdges {m : ℕ} {p : Fin m × Fin m} :
     rw [List.mem_map]
     exact ⟨p.2, List.mem_filter.mpr ⟨List.mem_finRange p.2, decide_eq_true h⟩, rfl⟩
 
-/-- **计数引理（本模块的实质）**：$S$ 非空时，从任一 $a\in S$ 连向 $S^{\mathsf c}$ 的
-$|S^{\mathsf c}|$ 条边两两不同、且全都割过 $S$——故割大小 $\ge|S^{\mathsf c}|$。
+/-- **Counting lemma (the substance of this module)**: when $S$ is nonempty, the $|S^{\mathsf c}|$
+edges from any $a\in S$ into $S^{\mathsf c}$ are pairwise distinct and all cross $S$, so the cut
+size is $\ge|S^{\mathsf c}|$.
 
-只证**下界**而不算精确值：单点估计足够推出膨胀，且省掉一次双射计数。 -/
+Only the **lower bound** is proved, not the exact value: the single-vertex estimate already yields
+expansion, and it saves a bijective count. -/
 theorem cutSize_completeEdges_ge_compl {m : ℕ} {S : Finset (Fin m)} (hne : S.Nonempty) :
     Sᶜ.card ≤ cutSize (completeEdges m) S := by
   obtain ⟨a, ha⟩ := hne
@@ -121,13 +138,16 @@ theorem cutSize_completeEdges_ge_compl {m : ℕ} {S : Finset (Fin m)} (hne : S.N
           (completeEdges m)).length := List.toFinset_card_le _
     _ = cutSize (completeEdges m) S := rfl
 
-/-- **C1 免判定（完全图族）**：对**一切** $m$，$K_m$ 的膨胀 $\ge1$。
+/-- **C1 discharged without a decision procedure (complete-graph family)**: for **every** $m$, the
+expansion of $K_m$ is $\ge1$.
 
-证明只有两步：$S$ 空时平凡；$S$ 非空时取 $a\in S$，由 `cutSize_completeEdges_ge_compl`
-得 $\mathrm{cut}\ge|S^{\mathsf c}|=m-|S|\ge\min(|S|,m-|S|)$。
+The proof has two steps: $S$ empty is trivial, and for $S$ nonempty one takes $a\in S$ and obtains
+$\mathrm{cut}\ge|S^{\mathsf c}|=m-|S|\ge\min(|S|,m-|S|)$ from `cutSize_completeEdges_ge_compl`.
 
-这正是要落实的那一句——**把辅助图取成标准图，从而免判定**：
-判定定理的假设清单里 C1 从此可以在整个族上一次性消掉，而不是逐 $m$ 判定。 -/
+This is the sentence to be delivered: **take the auxiliary graph to be the standard graph, so that
+the step is discharged without a decision procedure**. C1 can then be removed from the hypothesis
+list of the decision theorem once for all, for the whole family, instead of being decided for each
+$m$. -/
 theorem expansionOne_complete_gen (m : ℕ) : HasExpansionOne (completeEdges m) := by
   intro S
   rcases S.eq_empty_or_nonempty with rfl | hne
@@ -137,72 +157,82 @@ theorem expansionOne_complete_gen (m : ℕ) : HasExpansionOne (completeEdges m) 
       rwa [Finset.card_compl, Fintype.card_fin] at h
     exact le_trans (min_le_right _ _) hle
 
-/-! ## 二、C1 的数值形态与判定定理的接线 -/
+/-! ## 2. The numeric form of C1 and its wiring to the decision theorem -/
 
-/-- **C1 的数值形态**：图有膨胀时取 $\eta=1$、否则取 $0$。
+/-- **The numeric form of C1**: it takes the value $\eta=1$ when the graph has expansion and $0$
+otherwise.
 
-判定定理 `separation_judgment` 的 C1 是数值假设 $1\le\eta$，而图上的 C1 是
-可计算谓词 `HasExpansionOne`——本定义是两者之间**唯一的**桥，于是没有散文缺口。 -/
+C1 in the decision theorem `separation_judgment` is the numeric hypothesis $1\le\eta$, whereas C1
+on graphs is the computable predicate `HasExpansionOne`. This definition is the **only** bridge
+between the two, so no gap is left to prose. -/
 def c1Witness {k : ℕ} (edges : List (Fin k × Fin k)) : ℕ :=
   if HasExpansionOne edges then 1 else 0
 
-/-- **桥**：图有膨胀 $\Longrightarrow$ 数值形态满足 $1\le\eta$（故 $\min(\eta,1)=1$）。 -/
+/-- **The bridge**: a graph with expansion $\Longrightarrow$ the numeric form satisfies $1\le\eta$
+(hence $\min(\eta,1)=1$). -/
 theorem one_le_c1Witness {k : ℕ} {edges : List (Fin k × Fin k)}
     (h : HasExpansionOne edges) : 1 ≤ c1Witness edges := by
   unfold c1Witness
   rw [ite_eq_left h]
 
-/-- **分离闭式**：辅助图有膨胀（C1）且轮数 $\ge d$（C2）$\Longrightarrow$ 两分量都 $\ge d$。
+/-- **Separation in closed form**: an auxiliary graph with expansion (C1) and at least $d$ rounds
+(C2) $\Longrightarrow$ both components are $\ge d$.
 
-与 `separation_judgment` 的差别是：那一条的 C1 与 C2 是**假设**，本条的 C1 由
-辅助图的膨胀**判定**给出、C2 由轮数给出——故本条的假设清单里只剩空间界的数值形态
-$hSpace$（W–Y Lemma 2，本侧不重证）与时间分量的上界 $hTime$（本库 `timeLike_weight_eq`）。 -/
+The difference from `separation_judgment` is that there C1 and C2 are **hypotheses**, whereas here
+C1 comes from the **decision procedure** for expansion of the auxiliary graph and C2 from the
+number of rounds. The hypothesis list therefore keeps only the numeric form of the space bound
+$hSpace$ (W–Y Lemma 2, not reproved here) and the upper bound on the time component $hTime$
+(`timeLike_weight_eq` in this library). -/
 theorem separation_closed {k : ℕ} {edges : List (Fin k × Fin k)} {d T spaceDist timeDist : ℕ}
     (hexp : HasExpansionOne edges) (hC2 : d ≤ T)
     (hSpace : min (c1Witness edges) 1 * d ≤ spaceDist) (hTime : T ≤ timeDist) :
     d ≤ min spaceDist timeDist :=
   separation_judgment (one_le_c1Witness hexp) hC2 hSpace hTime
 
-/-! ## 三、环面族上的闭式 -/
+/-! ## 3. The closed form on the toric family -/
 
-/-- **环面族的分离闭式**：对任意 $m$，HGP($m$-圈,$m$-圈) 的 $d=m$
-（`Codes/HGPToricFamily.lean` 的族级 $[[2m^2,2,m]]$，零枚举），
-辅助图取 $K_m$、轮数取 $T=m$，则两分量都 $\ge m$：
+/-- **Separation in closed form on the toric family**: for any $m$, the HGP of an $m$-cycle with an
+$m$-cycle has $d=m$ (the family-level $[[2m^2,2,m]]$ of `Codes/HGPToricFamily.lean`, no
+enumeration), and taking the auxiliary graph $K_m$ with $T=m$ rounds gives both components
+$\ge m$:
 
-* C1：`expansionOne_complete_gen m`——**对一切 $m$ 已证**；
-* C2：`le_refl m`——轮数取到距离本身就满足。
+* C1: `expansionOne_complete_gen m`, **proved for every $m$**;
+* C2: `le_refl m`, since taking the number of rounds to be the distance satisfies it.
 
-于是"假设 C1–C2"在这条族上消失了。 -/
+The hypotheses C1–C2 thus disappear on this family. -/
 theorem toric_family_separation_closed {m : ℕ} {spaceDist timeDist : ℕ}
     (hSpace : min (c1Witness (completeEdges m)) 1 * m ≤ spaceDist) (hTime : m ≤ timeDist) :
     m ≤ min spaceDist timeDist :=
   separation_closed (expansionOne_complete_gen m) (le_refl m) hSpace hTime
 
-/-- **小实例对拍**：$m=4$ 时 `completeEdges 4` 的数值形态确为 $1$——
-与 `Codes/Separation.lean` 的字面量版本 `expansionOne_complete`（$K_4$）一致。 -/
+/-- **Small-instance cross-check**: for $m=4$ the numeric form of `completeEdges 4` is indeed $1$,
+agreeing with the literal version `expansionOne_complete` ($K_4$) of `Codes/Separation.lean`. -/
 theorem c1Witness_completeEdges_four : c1Witness (completeEdges 4) = 1 := by decide
 
-/-- **割大小闭式的对拍**：$m=4$ 上逐子集核出 $\mathrm{cut}(S)=|S|\,(m-|S|)$——
-本模块正文只证了 $\ge|S^{\mathsf c}|$ 的一侧，这条说明那条下界在 $m=4$ 上是**紧的**
-（不是把割大小估小后换来的弱结论）。 -/
+/-- **Cross-check of the cut-size closed form**: for $m=4$ the kernel decides
+$\mathrm{cut}(S)=|S|\,(m-|S|)$ for every subset. The main text of this module proves only the
+$\ge|S^{\mathsf c}|$ side; this shows that the bound is **tight** at $m=4$, and is not a weak
+conclusion bought by underestimating the cut size. -/
 theorem cutSize_completeEdges_exact_four :
     ∀ S : Finset (Fin 4), cutSize (completeEdges 4) S = S.card * (4 - S.card) := by
   decide
 
-/-- **两条路的对拍**：字面量边表与 `completeEdges` 在 $m=4$ 上给出同一个膨胀判定
-（前者是 `Codes/Separation.lean` 的既有实例，后者是本模块的族形态）。 -/
+/-- **Cross-check of the two routes**: the literal edge list and `completeEdges` give the same
+expansion decision at $m=4$ (the former is the existing instance of `Codes/Separation.lean`, the
+latter the family form of this module). -/
 theorem completeEdges_four_agrees :
     HasExpansionOne ([(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)] : List (Fin 4 × Fin 4))
       ∧ HasExpansionOne (completeEdges 4) :=
   ⟨expansionOne_complete, expansionOne_complete_gen 4⟩
 
-/-! ## 四、与测量协议层的接线 -/
+/-! ## 4. Wiring to the measurement-protocol layer -/
 
-/-- **时间轴分量在族上取到 $d$**：测一个逻辑算符 `v`、逐比特横向测量时，
-单轮没有轮内校验（`bare_noLightFault`：单轮距离 $=1$），故 $T$ 轮协议的时空故障
-距离恰为 $T$（`le_spacetimeWeight` $+$ `spacetimeWeight_witness`）。
-环面族取重量 $m$ 的逻辑与 $T=m$，即时间轴分量 $=m=d$——**对任意 $v$ 成立**，
-不依赖逻辑的支撑结构。 -/
+/-- **The timelike component reaches $d$ on the family**: measuring a logical operator `v` with
+bitwise transversal measurement, a single round has no in-round checks (`bare_noLightFault`:
+single-round distance $=1$), so the spacetime fault distance of the $T$-round protocol is exactly
+$T$ (`le_spacetimeWeight` $+$ `spacetimeWeight_witness`). The toric family takes a logical operator
+of weight $m$ and $T=m$, giving timelike component $=m=d$, and this holds **for every $v$**,
+without depending on the support structure of the logical operator. -/
 theorem family_time_component {v : Vec n} {T : ℕ} {f : SpacetimeFault T n}
     (hker : ∀ t, inKerB (0 : Matrix (Fin 0) (Fin n) (ZMod 2)) (f t) = true)
     (hlog : ∀ t, v ⬝ᵥ f t = 1) : T ≤ spacetimeWeight f := by

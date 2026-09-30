@@ -1,36 +1,44 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.KernelBasis
 
 /-!
-# 秩证书：`finrank (rowSpace H) = #(行消元输出)`
+# Rank certificates: `finrank (rowSpace H) = #(rows in the row-reduction output)`
 
-申请表的表 1"码率 / 秩"一行的缺口是**行消元预处理未形式化**。 已给出可信行消元；
-本模块把它接成**秩证书**：把校验矩阵消元后**数行数**即得秩，且这一步在内核内可检。
+The rate/rank accounting had one gap: the row-reduction preprocessing was not formalized.
+A trusted row reduction is available, and this module plugs it in as a **rank certificate**:
+reduce the parity-check matrix and **count the rows** to obtain its rank, a step that is
+checkable inside the kernel.
 
-## 机制
+## Mechanism
 
-`rowReduce` 的输出是互约化的枢轴行集（`IsReduced`）。要把它变成"秩"，需要两件事：
+The output of `rowReduce` is a set of mutually reduced pivot rows (`IsReduced`). Turning it
+into a rank needs two things:
 
-1. **枢轴行线性无关**——在每一行自己的枢轴列上取值，行 (R1) 给出 1、(R2) 给出 0，
-   故任一线性组合 `∑ cᵢ rᵢ` 在 `rⱼ` 的枢轴列上的取值恰为 `cⱼ`；
-   由此 `∑ cᵢ rᵢ = 0 → cⱼ = 0`。
-2. **各行互不相同**（否则 `Fin D.length` 索引不单射，第 1 条不成立）。
-   本模块证明 `rowReduce` 的输出满足更强的 `NodupPiv`（**枢轴列互不相同**）：
-   新增行的枢轴列处既有行全为 0、而新行为 1，故新行必不与任何既有行重合。
+1. **The pivot rows are linearly independent**: evaluating at the pivot column of each row,
+   (R1) gives 1 and (R2) gives 0, so a linear combination `∑ cᵢ rᵢ` takes the value `cⱼ` at
+   the pivot column of `rⱼ`; hence `∑ cᵢ rᵢ = 0 → cⱼ = 0`.
+2. **The rows are pairwise distinct** (otherwise the `Fin D.length` indexing is not
+   injective and item 1 fails). This module proves that the output of `rowReduce` satisfies
+   the stronger `NodupPiv` (**the pivot columns are pairwise distinct**): at the pivot
+   column of a newly inserted row every existing row is 0 while the new row is 1, so the
+   new row cannot coincide with any existing row.
 
-两件事合起来给出 `finrank (spanL (rowList (rowReduce L))) = (rowReduce L).length`，
-再由  的 `spanL_rowReduce` 换成原行列表。
+Together the two give `finrank (spanL (rowList (rowReduce L))) = (rowReduce L).length`, and
+`spanL_rowReduce` then transfers the statement to the original list of rows.
 
-## 主结果
+## Main results
 
-* `NodupPiv`：枢轴列互不相同的结构不变量（`rowReduce` 全程保持）。
-* `linearIndependent_rowList_of_isReduced`：互约化行列表线性无关。
-* `finrank_spanL_eq_length_rowReduce`：**秩 = 消元输出的行数**。
-* `Matrix.rank_eq_length_rowReduce`：与 Mathlib `Matrix.rank` 的接口。
+* `NodupPiv`: the structural invariant that the pivot columns are pairwise distinct (kept
+  throughout `rowReduce`).
+* `linearIndependent_rowList_of_isReduced`: a mutually reduced list of rows is linearly
+  independent.
+* `finrank_spanL_eq_length_rowReduce`: **the rank equals the number of rows of the
+  reduction output**.
+* `Matrix.rank_eq_length_rowReduce`: the interface to `Matrix.rank` of Mathlib.
 -/
 
 namespace QECCertificates
@@ -43,15 +51,16 @@ open _root_.Matrix
 
 variable {n : ℕ}
 
-/-! ## 枢轴列互不相同的不变量 -/
+/-! ## The invariant that the pivot columns are pairwise distinct -/
 
-/-- `D` 的枢轴列两两不同。这是 `rowReduce` 输出的结构不变量，
-也是"行数 = 秩"成立的前提（否则 `Fin D.length` 索引不单射）。 -/
+/-- The pivot columns of `D` are pairwise distinct. This is a structural invariant of the
+output of `rowReduce`, and the premise for "the number of rows equals the rank" (otherwise
+the `Fin D.length` indexing is not injective). -/
 def NodupPiv (D : List (PivRow n)) : Prop := (D.map (·.2)).Nodup
 
 lemma nodupPiv_nil : NodupPiv ([] : List (PivRow n)) := by simp [NodupPiv]
 
-/-- 插入一行后枢轴列列表只是多了一个 `p`。 -/
+/-- Inserting one row only appends `p` to the list of pivot columns. -/
 lemma map_piv_insertPivot (D : List (PivRow n)) (w : Vec n) (p : Fin n) :
     (insertPivot D w p).map (·.2) = (D.map (·.2)) ++ [p] := by
   simp [insertPivot, List.map_map, Function.comp_def]
@@ -87,18 +96,18 @@ lemma nodupPiv_rowReduceFrom (D : List (PivRow n)) (rest : List (Vec n)) :
       rw [rowReduceFrom_cons]
       exact ih (step D v) (isReduced_step hred v) (nodupPiv_step hred hD v)
 
-/-- `rowReduce` 的输出枢轴列两两不同。 -/
+/-- The pivot columns of the output of `rowReduce` are pairwise distinct. -/
 theorem nodupPiv_rowReduce (L : List (Vec n)) : NodupPiv (rowReduce L) :=
   nodupPiv_rowReduceFrom [] L isReduced_nil nodupPiv_nil
 
-/-- 互约化不变量的尾部仍是互约化。 -/
+/-- The tail of a mutually reduced list is again mutually reduced. -/
 lemma IsReduced.tail {r : PivRow n} {D : List (PivRow n)} (h : IsReduced (r :: D)) :
     IsReduced D :=
   ⟨fun ri hri => h.1 ri (List.mem_cons_of_mem r hri),
    fun ri hri rj hrj hne =>
       h.2 ri (List.mem_cons_of_mem r hri) rj (List.mem_cons_of_mem r hrj) hne⟩
 
-/-- 枢轴列互不相同 ⟹ 各行互不相同。 -/
+/-- Pairwise distinct pivot columns imply pairwise distinct rows. -/
 lemma nodup_of_nodupPiv (D : List (PivRow n)) :
     IsReduced D → NodupPiv D → D.Nodup := by
   induction D with
@@ -116,9 +125,10 @@ lemma nodup_of_nodupPiv (D : List (PivRow n)) :
       rw [List.map_cons, List.nodup_cons] at hh
       exact hh.1 (List.mem_map_of_mem hmem)
 
-/-! ## 枢轴行线性无关 -/
+/-! ## Linear independence of the pivot rows -/
 
-/-- **互约化行列表线性无关**：在每一行自己的枢轴列上取值即可分离每个系数。 -/
+/-- **A mutually reduced list of rows is linearly independent**: evaluating at the pivot
+column of each row separates the coefficients. -/
 theorem linearIndependent_rowList_of_isReduced {D : List (PivRow n)} (hD : IsReduced D)
     (hnd : NodupPiv D) :
     LinearIndependent (ZMod 2) (fun i : Fin D.length => (D.get i).1) := by
@@ -147,7 +157,7 @@ theorem linearIndependent_rowList_of_isReduced {D : List (PivRow n)} (hD : IsRed
   rw [hcollapse] at h
   exact h
 
-/-- `D.get` 的值域就是 `D` 的行列表。 -/
+/-- The range of `D.get` is exactly the list of rows of `D`. -/
 lemma range_get_eq_rowList (D : List (PivRow n)) :
     Set.range (fun i : Fin D.length => (D.get i).1) = {x | x ∈ rowList D} := by
   ext x
@@ -163,14 +173,16 @@ lemma range_get_eq_rowList (D : List (PivRow n)) :
     obtain ⟨i, rfl⟩ := hri
     exact ⟨i, rfl⟩
 
-/-- 枢轴列互不相同 ⟹ 枢轴列数 = 行数。 -/
+/-- Pairwise distinct pivot columns imply that the number of pivot columns equals the
+number of rows. -/
 lemma card_pivCols_eq_length {D : List (PivRow n)} (h : NodupPiv D) :
     (pivCols D).card = D.length := by
   rw [pivCols, List.toFinset_card_of_nodup h, List.length_map]
 
-/-! ## 主定理 -/
+/-! ## Main theorems -/
 
-/-- **秩 = 消元输出的行数**（对已消元的状态陈述）。 -/
+/-- **The rank equals the number of rows of the reduction output** (stated for an already
+reduced state). -/
 theorem finrank_spanL_eq_length_of_isReduced {D : List (PivRow n)} (hD : IsReduced D)
     (hnd : NodupPiv D) :
     Module.finrank (ZMod 2) (spanL (rowList D)) = D.length := by
@@ -180,46 +192,54 @@ theorem finrank_spanL_eq_length_of_isReduced {D : List (PivRow n)} (hD : IsReduc
     hcard
   simpa [Fintype.card_fin] using hcard'
 
-/-- **秩证书（主定理）**：行列表张成的空间的维数等于行消元输出的行数。
+/-- **Rank certificate (main theorem)**: the dimension of the space spanned by the list of
+rows equals the number of rows of the row-reduction output.
 
-消元产出的那列枢轴行本身就是证书：内核只需数行数、核 `IsReduced`，
-即可独立核验秩——不需要信任任何外部脚本。 -/
+The list of pivot rows produced by the reduction is itself the certificate: the kernel only
+has to count the rows and check `IsReduced` to verify the rank independently, with no need
+to trust any external script. -/
 theorem finrank_spanL_eq_length_rowReduce (L : List (Vec n)) :
     Module.finrank (ZMod 2) (spanL L) = (rowReduce L).length := by
   rw [← spanL_rowReduce L]
   exact finrank_spanL_eq_length_of_isReduced (isReduced_rowReduce L) (nodupPiv_rowReduce L)
 
-/-- 秩不超过编码长度。 -/
+/-- The rank is at most the length of the encoding. -/
 theorem length_rowReduce_le (L : List (Vec n)) : (rowReduce L).length ≤ n := by
   rw [← card_pivCols_eq_length (nodupPiv_rowReduce L)]
   calc (pivCols (rowReduce L)).card ≤ Fintype.card (Fin n) := Finset.card_le_univ _
     _ = n := Fintype.card_fin n
 
-/-- Mathlib 的 `Matrix.rank` 就是行空间的维数。 -/
+/-- `Matrix.rank` of Mathlib is the dimension of the row space. -/
 theorem Matrix.rank_eq_finrank_rowSpace {m : ℕ} (M : Matrix (Fin m) (Fin n) (ZMod 2)) :
     M.rank = Module.finrank (ZMod 2) M.rowSpace := by
   rw [Matrix.rank_eq_finrank_span_row]
   rfl
 
-/-- **矩阵形式的秩证书**：把校验矩阵的行消元后数行数，即得其秩。
+/-- **Rank certificate in matrix form**: reduce the rows of the parity-check matrix and
+count them to obtain its rank.
 
-`Matrix.rank` 是 LeanQEC 侧距离归约读秩的入口；这条定理让本包验证过的
-行消元直接接管该读数。 -/
+`Matrix.rank` is the entry point through which the LeanQEC side of the distance reduction
+reads a rank; this theorem lets the row reduction verified in this package take over that
+reading directly. -/
 theorem Matrix.rank_eq_length_rowReduce {m : ℕ} (M : Matrix (Fin m) (Fin n) (ZMod 2)) :
     M.rank = (rowReduce (List.ofFn fun i => M i)).length := by
   rw [Matrix.rank_eq_finrank_rowSpace, Matrix.rowSpace_eq_spanL_ofFn]
   exact finrank_spanL_eq_length_rowReduce _
 
-/-! ## 秩不满时的非零核向量（准入阈值那一侧的桥） -/
+/-! ## A nonzero kernel vector when the rank is not full (the bridge on the threshold side) -/
 
-/-- **秩不满 $\Longrightarrow$ 非零核向量**：$M.\mathrm{rank}<n$ 时 $\ker M\ne0$。
+/-- **Full rank fails $\Longrightarrow$ a nonzero kernel vector**: when
+$M.\mathrm{rank}<n$ we have $\ker M\ne0$.
 
-构造是显式的：行消元后枢轴列不足 $n$ 个，于是有**自由列** $j$，`kerVec` 在那个列上取 1
-（`exists_light_mem_kerL`）——它与 $M$ 的每一行正交，故被 $M$ 右乘为零。
+The construction is explicit: after row reduction there are fewer than $n$ pivot columns,
+hence a **free column** $j$, and `kerVec` takes the value 1 on that column
+(`exists_light_mem_kerL`); it is orthogonal to every row of $M$, so multiplying by $M$ on
+the left gives zero.
 
-**它是准入阈值那一侧的桥**：$k=k_1k_2+k_1^\top k_2^\top$ 的每个因子都是 $\dim\ker$，
-而"核非平凡"（路线可用）要的是**存在非零核向量**，不是维数；这条换算在稿子里只用
-算术说过，本定理把它落进内核。 -/
+**This is the bridge on the threshold side**: every factor of
+$k=k_1k_2+k_1^\top k_2^\top$ is a $\dim\ker$, whereas what "the kernel is nontrivial"
+requires is the **existence of a nonzero kernel vector**, not a dimension. The companion
+paper argued this conversion only arithmetically; this theorem puts it into the kernel. -/
 theorem exists_ne_zero_mulVec_eq_zero_of_rank_lt {m n : ℕ} (M : Matrix (Fin m) (Fin n) (ZMod 2))
     (h : M.rank < n) : ∃ v : Vec n, M *ᵥ v = 0 ∧ v ≠ 0 := by
   classical

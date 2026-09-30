@@ -1,48 +1,57 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.RankCertificate
 import QECCertificates.GF2.Canonical
 import QECCertificates.GF2.HGPCompression
 
 /-!
-# gauging 两分量的形式化陈述（表示层）
+# The two components of gauging, as a formal statement (representation layer)
 
-本模块的交付物是 **"gauging 两分量（空间型 / 时间型）的形式化陈述"**。
-本模块把两个分量的**表示层内容**落成定理，口径与预研探针逐条对齐
-（`tools/probeA/probeB_gauging.py`、`probeB_gauging_e2e.py`、`probeB_time.py`
-及其沉积 JSON）：
+This module provides the **formal statement of the two components of gauging
+(spacelike and timelike)**. It turns the **representation-layer content** of both
+components into theorems, matched one by one against an independent Python probe
+of the same route:
 
-## 一、空间型分量：测一个逻辑 = 变形码（`probeB_gauging.py`）
+## 1. Spacelike component: measuring a logical operator deforms the code
 
-把 X 型逻辑算符 $\ell$ 提升为稳定子（"测 $\ell$"），变形码的校验是
+Lifting an X-type logical operator $\ell$ to a stabilizer ("measuring $\ell$")
+deforms the code so that its checks become
 
 $$H_X' = \begin{pmatrix}H_X\\ \hline \ell\end{pmatrix},\qquad H_Z' = H_Z .$$
 
-* `deformX_css`：**CSS 相容性保持**——$\ell \perp H_Z$ 各行 ⟹ $H_X'H_Z'^\top = 0$。
-* `finrank_deformX` / `deformX_k`：**维数定律**——$\ell \notin \mathrm{row}\,H_X$ 时
-  $k$ 恰减一（对应预研 $[[90,8,10]] \to [[90,7,10]]$ 的 $k:8\to7$）。
+* `deformX_css`: **CSS compatibility is preserved**: $\ell \perp H_Z$ row by row implies
+  $H_X'H_Z'^\top = 0$.
+* `finrank_deformX` / `deformX_k`: **dimension law**; when
+  $\ell \notin \mathrm{row}\,H_X$, $k$ drops by exactly one (matching
+  $k:8\to7$ in the $[[90,8,10]] \to [[90,7,10]]$ example of the independent probe).
 
-## 二、W–Y 提升：Gauss 律之积 = 顶点算子之积（`probeB_gauging_e2e.py`）
+## 2. W–Y lifting: the product of the Gauss laws equals the product of the vertex operators
 
-曲线 gauging 的恒等式 $L = \prod_v A_v$ 在表示层是**纯组合事实**：
-辅助图（无自环）上每个边量子比特恰有两个端点，故 Gauss 算符
-$A_v = X_v\prod_{e\ni v}X_e$ 之积中所有边算符成对相消：
+The curve-gauging identity $L = \prod_v A_v$ is a **purely combinatorial fact** at
+the representation layer: on an auxiliary graph without self-loops every edge qubit
+has exactly two endpoints, so in the product of the Gauss operators
+$A_v = X_v\prod_{e\ni v}X_e$ all edge operators cancel in pairs:
 
-`gauss_prod_eq_vertex_prod`：$\sum_v A_v = \sum_v X_v$（GF(2) 向量等式）。
+`gauss_prod_eq_vertex_prod`: $\sum_v A_v = \sum_v X_v$ (an equality of GF(2) vectors).
 
-这是 `probeB_gauging_e2e` 里 `L = Π_v A_v` 与"维度 4→3"的表示层内容。
+This is the representation-layer content of `L = Π_v A_v` and of the dimension drop
+$4\to3$ along the end-to-end route.
 
-## 三、时间型分量：最小不可探测重量 = 重复轮数（`probeB_time.py`）
+## 3. Timelike component: the minimal undetectable weight equals the number of rounds
 
-时间型 gauging 的链是"相邻轮校验" $e_i + e_{i+1}$（$i=0..T-2$）：
+The timelike gauging chain consists of the adjacent-round checks $e_i + e_{i+1}$
+($i=0..T-2$):
 
-* `timeLike_eq_of_repCheck`：与所有时间校验正交 ⟹ 逐轮取值相同；
-* `timeLike_weight_eq`：非零 ⟹ 取值全一 ⟹ 重量恰为轮数 $T = S+1$。
+* `timeLike_eq_of_repCheck`: orthogonality to every timelike check implies that the
+  values agree round by round;
+* `timeLike_weight_eq`: nonzero implies that every value is one, hence the weight is
+  exactly the number of rounds $T = S+1$.
 
-于是"最小不可探测重量 = 重复轮数"在表示层成为定理（下界与上界同一行给出）。
+Thus "the minimal undetectable weight equals the number of rounds" becomes a theorem
+at the representation layer, with the lower and the upper bound given by the same line.
 -/
 
 namespace QECCertificates
@@ -53,14 +62,16 @@ open scoped BigOperators
 
 variable {n : ℕ}
 
-/-! ## 一、空间型分量：变形码 -/
+/-! ## 1. Spacelike component: the deformed code -/
 
-/-- **空间型 gauging**：把 X 型算符 `ell` 提升为稳定子——X 校验追加一行 `ell`，
-Z 校验不变（表示层）。 -/
+/-- **Spacelike gauging**: lift the X-type operator `ell` to a stabilizer by appending
+the single row `ell` to the X checks, leaving the Z checks unchanged (representation
+layer). -/
 def deformXRows (L : List (Vec n)) (ell : Vec n) : List (Vec n) := L ++ [ell]
 
-/-- **CSS 相容性在变形下保持**：`ell` 与 Z 校验各行正交是关键前提
-（这正是"`ell` 是 X 型逻辑算符"的判据）。 -/
+/-- **CSS compatibility is preserved by the deformation**: orthogonality of `ell` with
+every Z check row is the essential hypothesis (this is exactly the criterion for `ell`
+being an X-type logical operator). -/
 theorem deformX_css {Hx Hz : List (Vec n)} {ell : Vec n}
     (hell : ∀ r ∈ Hz, ell ⬝ᵥ r = 0) (hcss : ∀ a ∈ Hx, ∀ b ∈ Hz, a ⬝ᵥ b = 0) :
     ∀ a ∈ deformXRows Hx ell, ∀ b ∈ Hz, a ⬝ᵥ b = 0 := by
@@ -71,7 +82,7 @@ theorem deformX_css {Hx Hz : List (Vec n)} {ell : Vec n}
     rw [heq]
     exact hell b hb
 
-/-- 追加一个不在行空间中的向量，维数恰增一。 -/
+/-- Appending one vector outside the row space increases the dimension by exactly one. -/
 theorem finrank_spanL_append_singleton_of_not_mem {L : List (Vec n)} {ell : Vec n}
     (h : ell ∉ spanL L) :
     Module.finrank (ZMod 2) (spanL (L ++ [ell])) = Module.finrank (ZMod 2) (spanL L) + 1 := by
@@ -108,7 +119,8 @@ theorem finrank_spanL_append_singleton_of_not_mem {L : List (Vec n)} {ell : Vec 
   congr 1
   exact finrank_span_singleton (K := ZMod 2) (by rintro rfl; exact h (Submodule.zero_mem _))
 
-/-- **变形码的秩定理**：`ell ∉ row H_X` 时 X 秩恰增一（`rowReduce` 读数下）。 -/
+/-- **Rank theorem for the deformed code**: when `ell ∉ row H_X` the X rank increases
+by exactly one (as read off by `rowReduce`). -/
 theorem deformX_rowReduce_length {L : List (Vec n)} {ell : Vec n} (h : ell ∉ spanL L) :
     (rowReduce (L ++ [ell])).length = (rowReduce L).length + 1 := by
   have h1 := finrank_spanL_eq_length_rowReduce (L ++ [ell])
@@ -116,8 +128,10 @@ theorem deformX_rowReduce_length {L : List (Vec n)} {ell : Vec n} (h : ell ∉ s
   have h3 := finrank_spanL_append_singleton_of_not_mem (n := n) h
   omega
 
-/-- **空间型 gauging 的维数定律**：把非平凡 X 型逻辑提升为稳定子，逻辑位数恰减一
-（$k = n - \mathrm{rank}\,H_X - \mathrm{rank}\,H_Z$，与预研 $k:8\to7$ 对齐）。 -/
+/-- **Dimension law for spacelike gauging**: lifting a nontrivial X-type logical
+operator to a stabilizer decreases the number of logical qubits by exactly one
+($k = n - \mathrm{rank}\,H_X - \mathrm{rank}\,H_Z$, matching $k:8\to7$ in the
+independent probe). -/
 theorem deformX_k {Lx Lz : List (Vec n)} {ell : Vec n} (h : ell ∉ spanL Lx) :
     n - (rowReduce (Lx ++ [ell])).length - (rowReduce Lz).length
       = (n - (rowReduce Lx).length - (rowReduce Lz).length) - 1 := by
@@ -126,21 +140,24 @@ theorem deformX_k {Lx Lz : List (Vec n)} {ell : Vec n} (h : ell ∉ spanL Lx) :
   rw [hlen]
   omega
 
-/-! ## 二、W–Y 提升：Gauss 律之积 = 顶点算子之积 -/
+/-! ## 2. W–Y lifting: the product of the Gauss laws equals the product of the vertex operators -/
 
-/-- **Gauss 算符**：顶点 `v` 的星——$X_v\prod_{e\ni v}X_e$（辅助图上的表示层向量）。
+/-- **Gauss operator**: the star of the vertex `v`, namely $X_v\prod_{e\ni v}X_e$ (a
+representation-layer vector on the auxiliary graph).
 
-量子比特编号：`Sum.inl v` = 顶点量子比特，`Sum.inr e` = 边量子比特。 -/
+Qubit numbering: `Sum.inl v` is a vertex qubit and `Sum.inr e` is an edge qubit. -/
 def gaussOp {k m : ℕ} (ends : Fin m → Fin k × Fin k) (v : Fin k) : (Fin k ⊕ Fin m) → ZMod 2 :=
   Sum.elim (fun w => if w = v then 1 else 0)
     (fun e => if (ends e).1 = v ∨ (ends e).2 = v then 1 else 0)
 
-/-- **顶点算子**：$X_v$（只作用在顶点量子比特上）。 -/
+/-- **Vertex operator**: $X_v$, acting on the vertex qubits only. -/
 def vertexOp {k m : ℕ} (v : Fin k) : (Fin k ⊕ Fin m) → ZMod 2 :=
   Sum.elim (fun w => if w = v then 1 else 0) (fun _ => 0)
 
-/-- **W–Y 提升恒等式**：无自环辅助图上，所有 Gauss 算符之积 = 所有顶点算子之积
-（边算符成对相消：每条边恰有两个端点）。对应预研的 $L = \prod_v A_v$。 -/
+/-- **W–Y lifting identity**: on an auxiliary graph without self-loops, the product of
+all the Gauss operators equals the product of all the vertex operators (the edge
+operators cancel in pairs, since every edge has exactly two endpoints). This corresponds
+to $L = \prod_v A_v$ in the independent probe. -/
 theorem gauss_prod_eq_vertex_prod {k m : ℕ} (ends : Fin m → Fin k × Fin k)
     (hloop : ∀ e, (ends e).1 ≠ (ends e).2) :
     (∑ v : Fin k, gaussOp ends v) = ∑ v : Fin k, vertexOp v := by
@@ -171,13 +188,14 @@ theorem gauss_prod_eq_vertex_prod {k m : ℕ} (ends : Fin m → Fin k × Fin k)
       hsingle (ends e).1, hsingle (ends e).2, Finset.sum_const_zero]
     exact CharTwo.add_self_eq_zero 1
 
-/-! ## 三、时间型分量：最小不可探测重量 = 重复轮数 -/
+/-! ## 3. Timelike component: the minimal undetectable weight equals the number of rounds -/
 
-/-- **时间型链的相邻对校验**：第 `i` 对是 `e_i + e_{i+1}`（数据比特 = `Fin (S+1)`）。 -/
+/-- **Adjacent-pair checks of the timelike chain**: the `i`-th check is
+`e_i + e_{i+1}` (the data qubits being `Fin (S+1)`). -/
 def repCheck (S : ℕ) (i : Fin S) : Vec (S + 1) :=
   unitVec (Fin.castSucc i) + unitVec i.succ
 
-/-- `unitVec i` 与 `x` 的点积就是 `x i`。 -/
+/-- The dot product of `unitVec i` with `x` is `x i`. -/
 lemma unitVec_dot {n : ℕ} (i : Fin n) (x : Vec n) : unitVec i ⬝ᵥ x = x i := by
   rw [dotProduct, Finset.sum_eq_single i]
   · rw [unitVec, ite_eq_left rfl, one_mul]
@@ -186,8 +204,9 @@ lemma unitVec_dot {n : ℕ} (i : Fin n) (x : Vec n) : unitVec i ⬝ᵥ x = x i :
   · intro h
     exact absurd (Finset.mem_univ i) h
 
-/-- **时间型分量（下界方向）**：与所有时间校验正交的向量，逐轮取值相同
-——时间型链上"跨全部轮次"的算符是唯一的不可探测方向。 -/
+/-- **Timelike component (lower-bound direction)**: a vector orthogonal to every
+timelike check takes the same value in every round, so on the timelike chain an
+operator spanning all rounds is the only undetectable direction. -/
 theorem timeLike_eq_of_repCheck {S : ℕ} {x : Vec (S + 1)}
     (h : ∀ i : Fin S, repCheck S i ⬝ᵥ x = 0) : ∀ i j : Fin (S + 1), x i = x j := by
   have hstep : ∀ i : Fin S, x (Fin.castSucc i) = x i.succ := by
@@ -203,8 +222,10 @@ theorem timeLike_eq_of_repCheck {S : ℕ} {x : Vec (S + 1)}
   intro i j
   rw [key i, key j]
 
-/-- **时间型分量（精确值）**：与所有时间校验正交的**非零**向量取值全一，
-重量恰为重复轮数 `T = S+1`——"最小不可探测重量 = 重复轮数"在表示层成立。 -/
+/-- **Timelike component (exact value)**: a **nonzero** vector orthogonal to every
+timelike check takes the value one everywhere, so its weight is exactly the number of
+rounds `T = S+1`. Thus "the minimal undetectable weight equals the number of rounds"
+holds at the representation layer. -/
 theorem timeLike_weight_eq {S : ℕ} {x : Vec (S + 1)}
     (h : ∀ i : Fin S, repCheck S i ⬝ᵥ x = 0) (hx : x ≠ 0) :
     hammingNorm x = S + 1 := by

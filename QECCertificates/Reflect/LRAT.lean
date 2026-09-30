@@ -1,59 +1,74 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import Mathlib
 
 /-!
-# LRAT 证书的内核检查器与可靠性定理
+# A kernel checker for LRAT certificates, with its soundness theorem
 
-外部 SAT 求解器只**出证据**，证据在**内核内**复核——这是本库对"外部求解器的输出
-不进可信基"那条红线的落地。本模块把这件事做成定理，而不是靠"检查器说 OK"：
+An external SAT solver only **produces evidence**, and the evidence is then re-checked
+**inside the kernel**. This is how this library implements the red line that the output
+of an external solver does not enter the trusted base. The module turns that
+into a theorem rather than relying on "the checker said OK":
 
-* `rupCheck db C hints`：子句 `C` 相对数据库 `db` 是否 RUP（把 `C` 取反，
-  沿 `hints` 的单元传播导出冲突）；
-* `checkSteps db steps`：LRAT 的逐条核对（子句号必须连续、每条必须 RUP、
-  导出空子句即成功）；
-* **`rupAux_sound` / `checkSteps_sound` / `unsat_of_checkSteps`**：核对通过 ⟹
-  该 CNF **不可满足**。三条的 `#print axioms` 恰为标准三公理，**不含求解器、
-  不含 `native_decide`、不含任何自定义公理**。
+* `rupCheck db C hints`: whether the clause `C` is RUP with respect to the database `db`,
+  by negating `C` and deriving a conflict by unit propagation along `hints`;
+* `checkSteps db steps`: the step-by-step LRAT check, where clause numbers must be
+  consecutive, each clause must be RUP, and deriving the empty clause means success;
+* **`rupAux_sound` / `checkSteps_sound` / `unsat_of_checkSteps`**: a successful check
+  implies that the CNF is **unsatisfiable**. The `#print axioms` of the three is exactly
+  the three standard axioms: **no solver, no `native_decide`, no custom axiom**.
 
-数据（真实的 CNF 与 LRAT 证书）落在 `Reflect/LRATData.lean`，由
-`tools/gen_lrat_lean.py` 从 `tools/bb144_server` 的编码器产物逐字节翻译而来。
+The data, real CNFs together with their LRAT certificates, lives in
+`Reflect/LRATData.lean` and is translated byte for byte by an external generator from the
+output of an external encoder and solver.
 
-## 为什么这条可靠性定理才是重点
+## Why the soundness theorem is the point
 
-"某证书通过了我写的检查器"是一句关于**程序**的话；"该 CNF 不可满足"是一句关于
-**数学**的话。把前者变成后者，靠的正是 `checkSteps_sound`——于是这份证书从
-**求解器产物**升格为**内核定理**，而检查器本身（约两百行）也一并进了可信基。
+"Some certificate passed the checker I wrote" is a statement about a **program**; "this
+CNF is unsatisfiable" is a statement about **mathematics**. Turning the former into the
+latter is exactly what `checkSteps_sound` does, and in doing so it promotes the
+certificate from **solver output** to a **kernel theorem**, while the checker itself,
+about two hundred lines, enters the trusted base along with it.
 
-## 表示
+## Representation
 
-字面量是 `Nat × Bool`（变量号 0-based、极性），部分赋值是**已赋真的字面量表**——
-这样"单元传播"就是列表追加，"传播出冲突"就是"某条 hint 子句的字面量全为假"，
-全部是内核可归约的计算。
+A literal is a `Nat × Bool`, a variable number that is 0-based together with a polarity,
+and a partial assignment is a **list of literals already set true**, so that unit
+propagation is list appending and "propagation reaches a conflict" is "the literals of
+some hint clause are all false". Everything is a computation the kernel can reduce.
 
-**子句库是接口，不是 `Array`。** `ClauseDB` 只要求四个操作（取、长度、追加、建库）
-与三条定律，且定律**只取可靠性真正消费的那一半**——`checkAux_sound` 要的是
-"追加后库里的每条要么是新的、要么原来就在"，反方向用不到，故不必立
-（少掉的那半边正是平衡树实例需要"键 < 下标"那条难证不变量的地方）。
-`ClauseDB.array` 是**与开接口之前逐字相同**的实例，下游不受影响。
+**The clause database is an interface, not an `Array`.** `ClauseDB` requires only four
+operations, namely lookup, length, append and build, and three laws, and the laws keep
+**only the half that soundness actually consumes**: `checkAux_sound` needs "after an
+append, every clause in the database is either the new one or was already there", and the
+converse direction is never used, so it is not stated. That missing half is exactly where
+a balanced-tree instance would need the hard invariant "key < index". `ClauseDB.array` is
+the **verbatim** instance from before the interface was opened, so downstream users are
+unaffected.
 
-**为什么开这条缝**（本库实测）：`Array` 在**内核里**的
-`push` 与 `get?` 都**线性于下标**，故 `rupCheck` 每步的库访问按步序增长、全证书是
-关于步数的**平方**；换成平衡树是对数。按归约次数实测 $N = 200 \to 400$：
-`Array` 40,803 → 161,603（3.96×），`Std.TreeMap` 4,757 → 11,066（2.33×，理论 2.26×）；
-外推到回放的 570,883 步，两者相差约 9,400 倍。
+**Why the interface is opened up** (measured in this library). Inside the **kernel**,
+`Array`'s `push` and `get?` are both **linear in the index**, so each step of `rupCheck`
+costs more than the last and the whole certificate is **quadratic** in the number of
+steps, whereas a balanced tree is logarithmic. Measured in reduction steps for
+$N = 200 \to 400$: `Array` 40,803 to 161,603 (3.96×) and `Std.TreeMap` 4,757 to 11,066
+(2.33×, against a theoretical 2.26×). Extrapolated to the 570,883 steps of the replay,
+the two differ by about a factor of 9,400.
 
-**第二个实例已落地**：`ClauseDB.tree` 用 `Std.TreeMap`（键 = 子句号减一，`push` 追加在
-`size` 处），内核里每次取/插是 $O(\log n)$。它在**同一份真证书**上与 `array` 给出同一个
-判定——`checkStepsWith ClauseDB.tree rep7CNF rep7Proof = true` 由 `decide` 关闭——
-而 36 步那一档上归约数已约为 `array` 的一半（13k 对 28.6k）；外推到 570,883 步，
-两者相差约 9,400 倍。
-**一处 Std 上的坑值得记**：空树上 `Const.get? ∅ i = none` 那条引理虽是 `@[simp]`，
-但 `∅.inner` 与引理里的 `∅` **不按语法匹配**，`rw` 不触发、`simp only [该引理]` 也不动它；
-**裸 `simp`（defeq 匹配）才行**。
+**A second instance is in place.** `ClauseDB.tree` uses `Std.TreeMap`, with key = clause
+number minus one and `push` appending at `size`, so each lookup and insertion is
+$O(\log n)$ in the kernel. It returns the same verdict as `array` on the same real
+certificate: `checkStepsWith ClauseDB.tree rep7CNF rep7Proof = true` is closed by
+`decide`. At the 36-step level its reduction count is already about half of `array`, 13k
+against 28.6k, and extrapolated to 570,883 steps the two differ by about a factor of
+9,400.
+
+**One standard-library trap is worth recording**: for the empty tree, the lemma
+`Const.get? ∅ i = none` is `@[simp]`, yet `∅.inner` and the `∅` in the lemma **do not
+match syntactically**, so neither `rw` nor `simp only` with that lemma fires. Only a bare
+`simp`, which matches up to definitional equality, works.
 -/
 
 namespace QECCertificates.LRAT
@@ -66,29 +81,31 @@ abbrev PAssign := List Lit
 
 def litNeg (l : Lit) : Lit := (l.1, !l.2)
 
-/-- 一条子句被赋值满足。 -/
+/-- A clause is satisfied by an assignment. -/
 def SatClause (σ : Assign) (C : Clause) : Prop := ∃ l ∈ C, σ l.1 = l.2
 
-/-- 一个 CNF 被赋值满足。 -/
+/-- A CNF is satisfied by an assignment. -/
 def SatFormula (σ : Assign) (F : CNF) : Prop := ∀ C ∈ F, SatClause σ C
 
-/-- 该 CNF 可满足。 -/
+/-- The CNF is satisfiable. -/
 def Satisfiable (F : CNF) : Prop := ∃ σ, SatFormula σ F
 
-/-- 部分赋值 `a` 与完全赋值 `σ` 一致。 -/
+/-- The partial assignment `a` agrees with the total assignment `σ`. -/
 def agrees (σ : Assign) (a : PAssign) : Prop := ∀ l ∈ a, σ l.1 = l.2
 
-/-- 该字面量在当前部分赋值下**未被赋值**（其否定也不在赋值里）。 -/
+/-- The literal is **unassigned** under the current partial assignment, its negation not
+being in the assignment either. -/
 def litFree (a : PAssign) (l : Lit) : Bool := !(decide (litNeg l ∈ a))
 
-/-! ## 一、扫描一条子句 -/
+/-! ## 1. Scanning a clause -/
 
 def scanAux (a : PAssign) (fr : List Lit) : Clause → List Lit
   | [] => fr
   | l :: rest => if litFree a l then scanAux a (l :: fr) rest else scanAux a fr rest
 
-/-- 扫描一条子句：返回它在当前赋值下的**自由字面量**表（未被赋值的）。
-为空即"全假"（冲突），单元即"恰好一个自由"（单元步）。 -/
+/-- Scan a clause: return the list of its **free literals**, the unassigned ones, under
+the current assignment. Emptiness means "all false", a conflict, and a singleton means
+"exactly one free literal", a unit step. -/
 def scan (a : PAssign) (D : Clause) : List Lit := scanAux a [] D
 
 theorem scanAux_spec (a : PAssign) (D : Clause) (fr : List Lit) :
@@ -122,7 +139,8 @@ theorem scanAux_spec (a : PAssign) (D : Clause) (fr : List Lit) :
             · exact absurd hx' hf
             · exact h3 x hx hx'⟩
 
-/-- `scan a D = []` ⟹ `D` 的每个字面量在当前赋值下都为假。 -/
+/-- `scan a D = []` implies that every literal of `D` is false under the current
+assignment. -/
 theorem scan_nil {a : PAssign} {D : Clause} (h : scan a D = []) :
     ∀ l ∈ D, litFree a l = false := by
   obtain ⟨tail, h1, _, h3⟩ := scanAux_spec a D []
@@ -132,7 +150,7 @@ theorem scan_nil {a : PAssign} {D : Clause} (h : scan a D = []) :
   · exact absurd (by rw [htail] at h3; exact h3 l hl hf) (by simp)
   · simpa using hf
 
-/-- `scan a D = [l]` ⟹ `l ∈ D`，且 `D` 的其他字面量都为假。 -/
+/-- `scan a D = [l]` implies that `l ∈ D` and that every other literal of `D` is false. -/
 theorem scan_singleton {a : PAssign} {D : Clause} {l : Lit} (h : scan a D = [l]) :
     l ∈ D ∧ ∀ l' ∈ D, l' ≠ l → litFree a l' = false := by
   obtain ⟨tail, h1, h2, h3⟩ := scanAux_spec a D []
@@ -145,7 +163,8 @@ theorem scan_singleton {a : PAssign} {D : Clause} {l : Lit} (h : scan a D = [l])
     exact absurd (List.mem_singleton.mp hmem) hne
   · simpa using hf
 
-/-- 若一个字面量在当前赋值下"非自由"，则它的否定已被赋值。 -/
+/-- If a literal is not free under the current assignment, then its negation has been
+assigned. -/
 theorem litFree_eq_false {a : PAssign} {l : Lit} (h : litFree a l = false)
     {σ : Assign} (hσ : agrees σ a) : σ l.1 = !l.2 := by
   have hmem : litNeg l ∈ a := by
@@ -157,38 +176,49 @@ theorem litFree_eq_false {a : PAssign} {l : Lit} (h : litFree a l = false)
 private theorem bool_not_self (b : Bool) : (!b : Bool) = b → False := by
   cases b <;> simp
 
-/-! ## 二、子句库的接口
+/-! ## 2. The clause database interface
 
-内核回放只用到库的**四个操作**（取、长度、追加、建库）与**三条定律**。把表示法换掉
-（`Array` → 平衡树）因此是一次**实例化**，而不是一次承重模块重证。
+Kernel replay uses only **four operations** of the database, namely lookup, length,
+append and build, and **three laws**. Changing the representation, from `Array` to a
+balanced tree, is therefore an **instantiation**, not a re-proof of a load-bearing
+module.
 
-**为什么开这条缝**（本库实测）：`Array` 在**内核里**的
-`push` 与 `get?` 都**线性于下标**，故 `rupCheck` 每步的库访问按步序增长、全证书是
-关于步数的平方；换成平衡树是对数。按**归约次数**（确定性、无启动噪声）实测
-$N = 200 \to 400$：`Array` 40,803 → 161,603（3.96×），`Std.TreeMap` 4,757 → 11,066
-（2.33×，理论 2.26×）；外推到回放的 570,883 步，两者相差约 9,400 倍。 -/
+**Why the interface is opened up** (measured in this library). Inside the **kernel**,
+`Array`'s `push` and `get?` are both **linear in the index**, so each step of `rupCheck`
+costs more than the last and the whole certificate is quadratic in the number of steps,
+whereas a balanced tree is logarithmic. Measured in **reduction steps**, which are
+deterministic and free of start-up noise, for $N = 200 \to 400$: `Array` 40,803 to
+161,603 (3.96×) and `Std.TreeMap` 4,757 to 11,066 (2.33×, against a theoretical 2.26×).
+Extrapolated to the 570,883 steps of the replay, the two differ by about a factor of
+9,400.
+-/
 
-/-- **子句库的接口**：`rupCheck`/`checkAux` 只用到这四个操作与三条定律。 -/
+/-- **The clause database interface**: `rupCheck` and `checkAux` use only these four
+operations and three laws. -/
 structure ClauseDB (Carrier : Type) where
   get? : Carrier → Nat → Option Clause
   size : Carrier → Nat
   push : Carrier → Clause → Carrier
   Mem : Carrier → Clause → Prop
-  /-- 取到的子句一定在库里。 -/
+  /-- A clause that is looked up is certainly in the database. -/
   get?_mem : ∀ {d i C}, get? d i = some C → Mem d C
-  /-- 追加一条后，库里的每条**要么是新的这条、要么原来就在**。
-  **只要可靠性的那一半**——`checkAux_sound` 只消费这个方向，而少掉的那一半
-  （`C' = C ∨ Mem d C' → Mem (push d C) C'`）正是平衡树实例需要"键 < size"那条
-  不变量的地方。按**用得到的强度**立法，两个实例都干净。 -/
+  /-- After one append, every clause in the database is **either the new one or was already
+  there**. **Only the half that soundness needs** is required: `checkAux_sound` consumes
+  this direction only, while the missing converse,
+  `C' = C ∨ Mem d C' → Mem (push d C) C'`, is exactly where a balanced-tree instance needs
+  the invariant "key < size". Stating the laws at the **strength that is used** keeps both
+  instances clean. -/
   push_mem : ∀ {d C C'}, Mem (push d C) C' → C' = C ∨ Mem d C'
-  /-- 由 CNF 建库。 -/
+  /-- Build a database from a CNF. -/
   ofCNF : CNF → Carrier
-  /-- 初始库里的每条**都来自**那个 CNF（同样只要用得到的那一半）。 -/
+  /-- Every clause of the initial database **comes from** that CNF, again only the half
+  that is used. -/
   ofCNF_mem : ∀ {F C}, Mem (ofCNF F) C → C ∈ F
 
 namespace ClauseDB
 
-/-- `Array` 版：**与开接口之前逐字相同的表示法**，下游 `LRATData` 用的就是它。 -/
+/-- The `Array` version: the **verbatim** representation from before the interface was
+opened, and the one the downstream `LRATData` uses. -/
 def array : ClauseDB (Array Clause) where
   get? := fun d i => d[i]?
   size := Array.size
@@ -209,13 +239,17 @@ def array : ClauseDB (Array Clause) where
     intro F C h
     exact (List.mem_toArray).mp h
 
-/-- 树版库的成员关系：`C` 是某个键下的值。
-**提成独立的 `def`**：在字面量内部写 `Mem` 会解析成结构的投影 `ClauseDB.Mem`
-（它以结构本身作第一参数），于是 `Mem d C` 期望的第一个参数是 `ClauseDB`。 -/
+/-- Membership for the tree database: `C` is the value at some key.
+
+**Factored out into a separate `def`**: writing `Mem` inside the structure literal would
+resolve to the structure projection `ClauseDB.Mem`, which takes the structure itself as
+its first argument, so `Mem d C` would expect a `ClauseDB` as its first argument. -/
 def treeMem (d : Std.TreeMap Nat Clause compare) (C : Clause) : Prop := ∃ i, d.get? i = some C
 
-/-- **平衡树版**：内核里每次取/插是 $O(\log n)$，故全证书是对数级累加而不是 `Array`
-的平方级累加。键是**子句号减一**（0-based），`push` 追加在 `size` 处。 -/
+/-- **The balanced-tree version**: each lookup and insertion is $O(\log n)$ in the
+kernel, so the whole certificate accumulates logarithmically rather than quadratically as
+with `Array`. The key is the **clause number minus one**, 0-based, and `push` appends at
+`size`. -/
 def tree : ClauseDB (Std.TreeMap Nat Clause compare) where
   get? := fun d i => d.get? i
   size := fun d => Std.TreeMap.size d
@@ -265,7 +299,7 @@ def tree : ClauseDB (Std.TreeMap Nat Clause compare) where
 
 end ClauseDB
 
-/-- 沿 hint 序列做单元传播。`h` 是 1-based 的子句号。 -/
+/-- Unit propagation along the hint sequence. `h` is a 1-based clause number. -/
 def rupAux {K : Type} (D : ClauseDB K) (d : K) (a : PAssign) : List Nat → Bool
   | [] => false
   | h :: rest =>
@@ -277,11 +311,13 @@ def rupAux {K : Type} (D : ClauseDB K) (d : K) (a : PAssign) : List Nat → Bool
           | [l] => rupAux D d (l :: a) rest
           | _ => false
 
-/-- 子句 `C` 相对数据库 `d` 是 RUP 的：把 `C` 取反后沿 `hints` 传播出冲突。 -/
+/-- The clause `C` is RUP with respect to the database `d`: negating `C` and propagating
+along `hints` reaches a conflict. -/
 def rupCheck {K : Type} (D : ClauseDB K) (d : K) (C : Clause) (hints : List Nat) : Bool :=
   rupAux D d (C.map litNeg) hints
 
-/-- **RUP 的可靠性**：若沿 hints 传播出冲突，则任何满足 hints 所指子句的赋值必满足 `C`。 -/
+/-- **Soundness of RUP**: if propagation along the hints reaches a conflict, then any
+assignment satisfying the clauses the hints point to satisfies `C`. -/
 theorem rupAux_sound {K : Type} (D : ClauseDB K) {σ : Assign} {d : K} :
     ∀ (hints : List Nat) (a : PAssign), agrees σ a →
       (∀ h ∈ hints, ∀ E, D.get? d (h - 1) = some E → SatClause σ E) →
@@ -330,15 +366,17 @@ theorem rupAux_sound {K : Type} (D : ClauseDB K) {σ : Assign} {d : K} :
                   rw [hs] at hr
                   simp at hr
 
-/-! ## 三、证书的核对层 -/
+/-! ## 3. The certificate checking layer -/
 
-/-- LRAT 的一步：`id` 是 LRAT 给出的子句号（原始子句为 `1..m`，引理从 `m+1` 起连续）。 -/
+/-- One LRAT step: `id` is the clause number given by LRAT, the original clauses being
+`1..m` and the lemmas running consecutively from `m+1`. -/
 structure LStep where
   id : Nat
   clause : Clause
   hints : List Nat
 
-/-- 逐条核对：子句号必须连续（`D.size d + 1`），每条子句必须 RUP；导出空子句即成功。 -/
+/-- Step-by-step checking: the clause numbers must be consecutive, namely `D.size d + 1`,
+and each clause must be RUP; deriving the empty clause means success. -/
 def checkAux {K : Type} (D : ClauseDB K) (d : K) : List LStep → Bool
   | [] => false
   | s :: rest =>
@@ -346,14 +384,18 @@ def checkAux {K : Type} (D : ClauseDB K) (d : K) : List LStep → Bool
         s.clause.isEmpty || checkAux D (D.push d s.clause) rest
       else false
 
-/-- **按给定表示法核对**：CNF 先经 `D.ofCNF` 建库，再逐条核。 -/
+/-- **Checking with a given representation**: build the database from the CNF via
+`D.ofCNF`, then check the steps one by one. -/
 def checkStepsWith {K : Type} (D : ClauseDB K) (F : CNF) (steps : List LStep) : Bool :=
   checkAux D (D.ofCNF F) steps
 
-/-- 入口（**与开接口之前逐字相同的签名**）：用 `Array` 库，故下游两个数据模块不受影响。 -/
+/-- The entry point, with the **verbatim signature** from before the interface was
+opened: it uses the `Array` database, so the two downstream data modules are
+unaffected. -/
 abbrev checkSteps (F : CNF) (steps : List LStep) : Bool := checkStepsWith ClauseDB.array F steps
 
-/-- **核对器的可靠性（核心）**：`checkAux` 返回真 ⟹ `σ` 不满足数据库。 -/
+/-- **Soundness of the checker (the core)**: if `checkAux` returns true, then `σ` does
+not satisfy the database. -/
 theorem checkAux_sound {K : Type} (D : ClauseDB K) {σ : Assign} :
     ∀ (d : K) (steps : List LStep), (∀ C, D.Mem d C → SatClause σ C) →
       checkAux D d steps = true → False := by
@@ -389,14 +431,16 @@ theorem checkAux_sound {K : Type} (D : ClauseDB K) {σ : Assign} :
       · rw [ite_eq_right hcond] at h
         simp at h
 
-/-- **主定理（入口）**：内核核对通过 ⟹ 该 CNF 不可满足。 -/
+/-- **The main theorem, entry point**: a successful kernel check implies that the CNF is
+unsatisfiable. -/
 theorem checkSteps_sound {F : CNF} {steps : List LStep}
     (h : checkSteps F steps = true) : ¬ Satisfiable F := by
   rintro ⟨σ, hσ⟩
   exact checkAux_sound ClauseDB.array (ClauseDB.array.ofCNF F) steps
     (fun C hC => hσ C (ClauseDB.array.ofCNF_mem hC)) h
 
-/-- 生成器使用的入口（与 `checkSteps_sound` 同一内容，证明项形态）。 -/
+/-- The entry point used by the generator: the same content as `checkSteps_sound`, as a
+proof term. -/
 theorem unsat_of_checkSteps {F : CNF} {steps : List LStep}
     (h : checkSteps F steps = true) : ¬ Satisfiable F := checkSteps_sound h
 

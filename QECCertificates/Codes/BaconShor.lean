@@ -1,52 +1,69 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Codes.CaseMatrix
 
 /-!
-# Bacon–Shor $[[9,1,3]]$：**子系统码**的结构与距离（内核内）
+# Bacon–Shor $[[9,1,3]]$: the structure and distance of a **subsystem code**, checked by the kernel
 
-这是本包那条时间轴工作的**表示层地基**：横向测量 Bacon–Shor 的逻辑算符之前，
-先要把这个码作为**子系统码**在内核内落地——规范生成元、中心（稳定子）、
-裸逻辑、逻辑位数与距离。
+This is the **representation-layer foundation** of this package's work on the time
+axis: before the logical operators of a transversal Bacon–Shor measurement can be
+discussed, the code has to be set up inside the kernel as a **subsystem code**, with its
+gauge generators, its center (the stabilizer), its bare logicals, and its number of
+logical qubits and distance.
 
-## 与稳定子码的两点不同
+## Two differences from a stabilizer code
 
-1. **规范生成元不必两两对易**。这里 X 型取水平边（$X_iX_j$，同一行相邻两比特，
-   共 6 条）、Z 型取垂直边（$Z_iZ_j$，同一列相邻两行，共 6 条）；一条水平边与一条
-   垂直边若共用一个比特就反对易——实测这样的对恰有 16 对。**这正是"子系统"的含义**：
-   规范自由度不是稳定子。所以本模块**不**要求 $H_XH_Z^\top=0$（那是稳定子码的条件）。
-2. **计数用 Pauli 群的维数**，不是向量空间的秩。$X$ 型与 $Z$ 型生成元是两个独立的
-   辛方向，故 $\operatorname{rank}(\text{gauge}) = r_X + r_Z$（这里 $6+6$），
-   而不是把它们当同一批 $F_2^9$ 向量去求秩（那样得 8，会算错 $k$）。
-   计数公式：$c = c_X + c_Z$ 为中心秩、$g = (r_X + r_Z - c)/2$ 为规范位数、
-   $k = n - c - g$。本模块把 $r_X$、$r_Z$、$c_X$、$c_Z$ **逐条在内核内算出**
-   （$6,6,2,2$），于是 $g = 4$、$k = 9-4-4 = 1$。
+1. **The gauge generators need not commute pairwise.** The X-type ones are horizontal
+   edges ($X_iX_j$, two adjacent qubits in the same row, 6 of them) and the Z-type ones
+   are vertical edges ($Z_iZ_j$, two adjacent rows in the same column, 6 of them); a
+   horizontal edge and a vertical edge anticommute when they share a qubit, and there
+   are exactly 16 such pairs. **This is what "subsystem" means**: the gauge degrees of
+   freedom are not stabilizers. So this module does **not** require $H_XH_Z^\top=0$
+   (that is the stabilizer-code condition).
+2. **The counting uses dimensions in the Pauli group**, not ranks of a vector space.
+   The $X$-type and $Z$-type generators span two independent symplectic directions, so
+   $\operatorname{rank}(\text{gauge}) = r_X + r_Z$ (here $6+6$), rather than being
+   treated as one batch of $F_2^9$ vectors and rank-ordered (which gives 8 and a wrong
+   $k$). The counting formulas are: $c = c_X + c_Z$ for the rank of the center,
+   $g = (r_X + r_Z - c)/2$ for the number of gauge qubits, and $k = n - c - g$. This
+   module computes $r_X$, $r_Z$, $c_X$ and $c_Z$ **one by one, inside the kernel**
+   ($6,6,2,2$), hence $g = 4$ and $k = 9-4-4 = 1$.
 
-## 已落地的断言（n = 9，全部 `by decide`）
+## The assertions landed here (n = 9, each closed by `by decide`)
 
-* `bst_rX` / `bst_rZ`：规范生成元的秩，各为 6；
-* `bst_centerX_rank` / `bst_centerZ_rank`：**中心**的秩，各为 2——
-  中心的 X 型元素是"相邻两列的全 X 之积"（重量 6），Z 型是"相邻两行的全 Z 之积"，
-  实现上是把 $2^9$ 个向量按"在本型规范群内、且与另一型全部生成元对易"筛一遍再求秩；
-* `bstSX_mem_ker` / `bstSX_mem_gauge`：X 型稳定子（相邻两列，重量 6）既在另一型的核里
-  又在规范群里——所以它是稳定子，不是逻辑；
-* `bstXW_mem_ker` / `bstXW_not_mem_gauge`：重量-3 的**裸逻辑**（单列的全 X）在核里、
-  不在规范群里；
-* `bst_dX` / `bst_dZ`：两侧距离**恰为 3**（下界走重量限定枚举、上界走显式见证）。
-  **命名口径的一条例外，写在名字旁边免得后人踩**：这两个名字里的 `bst_dX` 读法是
-  **教科书口径**（核取 `bstHz`），而本库其余实例的 `_dx` 一律是 `libDX` 口径（核取
-  `Hx`，见 `Codes/DistanceLabel.lean` 的具名约定）——此处两侧同为 3，故数值无差别、
-  论文的"两侧读数在本文每个实例上一致"也不受影响。**新写实例时不要照抄这两个名字**，
-  要用 `libDX`/`textbookDX` 具名写清是哪一侧。
+* `bst_rX` / `bst_rZ`: the ranks of the gauge generators, 6 each;
+* `bst_centerX_rank` / `bst_centerZ_rank`: the ranks of the **center**, 2 each. The
+  X-type elements of the center are the products of all X's on two adjacent columns
+  (weight 6) and the Z-type ones are the products of all Z's on two adjacent rows; in
+  the implementation the $2^9$ vectors are filtered by "in the gauge group of its own
+  type and commuting with every generator of the other type", and the rank is taken
+  afterwards;
+* `bstSX_mem_ker` / `bstSX_mem_gauge`: the X-type stabilizer (two adjacent columns,
+  weight 6) lies both in the kernel of the other type and in the gauge group, so it is
+  a stabilizer, not a logical operator;
+* `bstXW_mem_ker` / `bstXW_not_mem_gauge`: the weight-3 **bare logical** (all X's on a
+  single column) lies in the kernel and not in the gauge group;
+* `bst_dX` / `bst_dZ`: the two distances are **exactly 3** (the lower bound by a
+  weight-limited enumeration, the upper bound by an explicit witness).
+  **One exception to the naming convention, recorded next to the names**: in these two
+  names `bst_dX` is read in the **textbook convention** (the kernel is taken from
+  `bstHz`), whereas the `_dx` of every other instance in this library follows the
+  `libDX` convention (the kernel is taken from `Hx`, see the named convention in
+  `Codes/DistanceLabel.lean`). Both sides are 3 here, so the numbers do not differ, and
+  the companion paper's statement that the two readings agree on every instance is
+  unaffected. **Do not copy these two names when writing a new instance**; use the
+  named `libDX`/`textbookDX` forms to say which side is meant.
 
-## 与文献的口径
+## Relation to the literature
 
-文献里的 Bacon–Shor $[[9,1,3]]$ 用 $d\times d$ 阵列、$(d-1)\times(d-1)$ 个"面"作
-规范生成元；这里用的是**边**算符，两者给出同一个码（本模块的 $k$ 与 $d$ 与文献一致）。
-选边算符是因为它让"中心"直接由相邻行/列的整条线生成，证明更短。
+The Bacon–Shor $[[9,1,3]]$ of the literature uses a $d\times d$ array with the
+$(d-1)\times(d-1)$ faces as gauge generators; **edge** operators are used here. The two
+give the same code (the $k$ and $d$ of this module agree with the literature). Edge
+operators are chosen because they let the center be generated directly by whole
+adjacent rows and columns, which makes the proofs shorter.
 -/
 
 namespace QECCertificates
@@ -58,90 +75,95 @@ open scoped BigOperators
 set_option maxRecDepth 100000
 set_option maxHeartbeats 8000000
 
-/-! ## 一、规范生成元（3×3 阵列，比特编号 $q = 3r + c$） -/
+/-! ## 1. Gauge generators (3×3 array, qubit numbering $q = 3r + c$) -/
 
-/-- **X 型规范生成元**：水平边 $X_iX_j$（同一行相邻两列），6 条。 -/
+/-- **X-type gauge generators**: horizontal edges $X_iX_j$ (two adjacent columns in the same row), 6 of them. -/
 def bstHx : Matrix (Fin 6) (Fin 9) (ZMod 2) :=
   Matrix.of ![e 0 + e 1, e 1 + e 2, e 3 + e 4, e 4 + e 5, e 6 + e 7, e 7 + e 8]
 
-/-- **Z 型规范生成元**：垂直边 $Z_iZ_j$（同一列相邻两行），6 条。 -/
+/-- **Z-type gauge generators**: vertical edges $Z_iZ_j$ (two adjacent rows in the same column), 6 of them. -/
 def bstHz : Matrix (Fin 6) (Fin 9) (ZMod 2) :=
   Matrix.of ![e 0 + e 3, e 3 + e 6, e 1 + e 4, e 4 + e 7, e 2 + e 5, e 5 + e 8]
 
-/-- 规范生成元的秩（X 型），6。 -/
+/-- The rank of the gauge generators (X-type), 6. -/
 theorem bst_rX : (rowReduce (List.ofFn fun i => bstHx i)).length = 6 := by decide
 
-/-- 规范生成元的秩（Z 型），6。 -/
+/-- The rank of the gauge generators (Z-type), 6. -/
 theorem bst_rZ : (rowReduce (List.ofFn fun i => bstHz i)).length = 6 := by decide
 
-/-! ## 二、中心（= 稳定子）的秩
+/-! ## 2. The rank of the center (the stabilizer)
 
-中心定义为"在本型规范群里、且与另一型**全部**生成元对易"的元素。
-$n = 9$ 时全空间只有 $2^9$ 个向量，直接筛一遍再求秩，比走子模语言短得多。 -/
+The center is defined as the elements that lie in the gauge group of their own type and
+commute with **every** generator of the other type. At $n = 9$ the whole space holds
+only $2^9$ vectors, so filtering once and taking the rank is much shorter than working
+with submodule language. -/
 
-/-- 中心的 X 型部分：在本型规范群里、与每条 Z 型生成元对易的**非零**向量。 -/
+/-- The X-type part of the center: the **non-zero** vectors that lie in the gauge group of their own
+type and commute with every Z-type generator. -/
 def bstCenterX : List (Vec 9) :=
   (lightVecs 9 9).filter (fun v => decide (
     v ≠ 0 ∧ inSpanB (List.ofFn fun i => bstHx i) v = true ∧
       (List.ofFn fun i => bstHz i).all (fun z => decide (z ⬝ᵥ v = 0))))
 
-/-- 中心的 Z 型部分。 -/
+/-- The Z-type part of the center. -/
 def bstCenterZ : List (Vec 9) :=
   (lightVecs 9 9).filter (fun v => decide (
     v ≠ 0 ∧ inSpanB (List.ofFn fun i => bstHz i) v = true ∧
       (List.ofFn fun i => bstHx i).all (fun z => decide (z ⬝ᵥ v = 0))))
 
-/-- **中心的秩（X 型）= 2**。 -/
+/-- **The rank of the center (X-type) = 2**. -/
 theorem bst_centerX_rank : (rowReduce bstCenterX).length = 2 := by decide
 
-/-- **中心的秩（Z 型）= 2**。 -/
+/-- **The rank of the center (Z-type) = 2**. -/
 theorem bst_centerZ_rank : (rowReduce bstCenterZ).length = 2 := by decide
 
-/-- **计数**：$c = c_X + c_Z = 4$、$g = (r_X+r_Z-c)/2 = 4$、$k = n - c - g = 1$。
+/-- **Counting**: $c = c_X + c_Z = 4$, $g = (r_X+r_Z-c)/2 = 4$, $k = n - c - g = 1$.
 
-左端的每一项都由上面四条内核断言给出（$r_X = r_Z = 6$ 见 `bst_rX`/`bst_rZ`，
-$c_X = c_Z = 2$ 见 `bst_centerX_rank`/`bst_centerZ_rank`），故这条是把**已机器检验的
-输入**代进公式的算术，而不是一个独立的声明。 -/
+Every term on the left is given by one of the four kernel-checked assertions above
+($r_X = r_Z = 6$ from `bst_rX`/`bst_rZ`, $c_X = c_Z = 2$ from
+`bst_centerX_rank`/`bst_centerZ_rank`), so this theorem is arithmetic that substitutes
+**machine-checked inputs** into the formulas, not an independent claim. -/
 theorem bst_k : 9 - (2 + 2) - ((6 + 6 - (2 + 2)) / 2) = 1 := by decide
 
-/-! ## 三、稳定子与裸逻辑 -/
+/-! ## 3. Stabilizers and bare logicals -/
 
-/-- X 型稳定子：相邻两列的全 X 之积（重量 6）。 -/
+/-- The X-type stabilizer: the product of all X's on two adjacent columns (weight 6). -/
 def bstSX : Vec 9 := e 0 + e 3 + e 6 + e 1 + e 4 + e 7
 
-/-- Z 型稳定子：相邻两行的全 Z 之积（重量 6）。 -/
+/-- The Z-type stabilizer: the product of all Z's on two adjacent rows (weight 6). -/
 def bstSZ : Vec 9 := e 0 + e 1 + e 2 + e 3 + e 4 + e 5
 
-/-- X 型裸逻辑的见证：**单列的全 X**（重量 3）。 -/
+/-- A witness for the X-type bare logical: **all X's on a single column** (weight 3). -/
 def bstXW : Vec 9 := e 0 + e 3 + e 6
 
-/-- Z 型裸逻辑的见证：单行的全 Z（重量 3）。 -/
+/-- A witness for the Z-type bare logical: all Z's on a single row (weight 3). -/
 def bstZW : Vec 9 := e 0 + e 1 + e 2
 
-/-- 稳定子与另一型的每条生成元对易（故它落在中心里）。 -/
+/-- The stabilizer commutes with every generator of the other type (so it lies in the center). -/
 theorem bstSX_mem_ker : bstHz *ᵥ bstSX = 0 := by decide
 
-/-- 稳定子**在规范群里**——这正是它做不成逻辑的原因。 -/
+/-- The stabilizer **is in the gauge group**, which is exactly why it cannot serve as a logical operator. -/
 theorem bstSX_mem_gauge : inSpanB (List.ofFn fun i => bstHx i) bstSX = true := by decide
 
-/-- 裸逻辑与另一型的每条生成元对易。 -/
+/-- The bare logical commutes with every generator of the other type. -/
 theorem bstXW_mem_ker : bstHz *ᵥ bstXW = 0 := by decide
 
-/-- 裸逻辑**不在**规范群里。 -/
+/-- The bare logical is **not** in the gauge group. -/
 theorem bstXW_not_mem_gauge : inSpanB (List.ofFn fun i => bstHx i) bstXW = false := by decide
 
-/-! ## 四、两侧距离 $= 3$ -/
+/-! ## 4. The two distances are $= 3$ -/
 
-/-- **X 型距离**：$\min\{\mathrm{wt}(v) : v\in\ker H_Z,\ v\notin\mathrm{row}\,H_X\} = 3$。
+/-- **X-type distance**: $\min\{\mathrm{wt}(v) : v\in\ker H_Z,\ v\notin\mathrm{row}\,H_X\} = 3$.
 
-下界走重量限定枚举（重量 $\le2$ 的候选集为空），上界走显式见证 `bstXW`。 -/
+The lower bound comes from a weight-limited enumeration (the candidate set of weight
+$\le2$ is empty) and the upper bound from the explicit witness `bstXW`. -/
 theorem bst_dX : min_weight_ker_not_mem_rowspace bstHz bstHx = 3 :=
   eq_minWeight_of_decide (d := 3) bstHz bstHx (by decide) (by decide) (E := bstXW)
     (mem_ker_of_inKerB bstHz (by decide))
     (not_mem_rowSpace_of_inSpanB_false bstHx (by decide))
     (by decide)
 
-/-- **Z 型距离**：对称的一侧。 -/
+/-- **Z-type distance**: the symmetric side. -/
 theorem bst_dZ : min_weight_ker_not_mem_rowspace bstHx bstHz = 3 :=
   eq_minWeight_of_decide (d := 3) bstHx bstHz (by decide) (by decide) (E := bstZW)
     (mem_ker_of_inKerB bstHx (by decide))

@@ -1,53 +1,66 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.Reflect.Encode
 
 /-!
-# 编码忠实性：完备性方向
+# Encoding faithfulness: the completeness direction
 
-`Reflect/Encode.lean` 给出的是**可靠性**：子句全被满足 $\\Longrightarrow$ 语义条件成立。
-那一条足以把"求解器说不可满足"翻成"没有轻逻辑算符"吗？不能。缺的是反方向——
-**编码不会过度约束**：只要语义条件成立，就**存在**一份辅助变量赋值使全部子句为真。
-两者合起来才是 `可满足 ⟺ 轻逻辑算符存在`，而 `UNSAT ⟹ 距离下界` 正是这条等价的前推。
+`Reflect/Encode.lean` provides **soundness**: every clause satisfied $\\Longrightarrow$ the
+semantic condition holds. Is that enough to turn "the solver reports unsatisfiable" into
+"there is no light logical operator"? No. What is missing is the converse direction:
+**the encoding does not over-constrain**, so that whenever the semantic condition holds
+there **exists** an assignment of the auxiliary variables under which all clauses are true.
+Only the two together give "satisfiable if and only if a light logical operator exists", and
+"a UNSAT verdict implies a distance lower bound" is exactly the forward direction of that
+equivalence.
 
-本模块补齐反方向。四个部件各给一条**构造性**引理：
+This module supplies the converse direction. Each of the four components comes with a
+**constructive** lemma:
 
-| 部件 | 构造 |
+| component | construction |
 |---|---|
-| `xorChain` | 辅助变量取**前缀奇偶**：计数器 `c + i` 处取 `acc ⊕ σ x₀ ⊕ ⋯ ⊕ σ xᵢ` |
-| `prodClauses` | 乘积变量取 `σ x ∧ σ w` |
-| `atMostK` | 槽位 `(i,j)` 取"前 `i` 个变量里至少有 `j` 个为真" |
-| `buildPair` | 四段串接，见 `buildPair_complete` |
+| `xorChain` | the auxiliary variables take the **prefix parity**: at counter `c + i` the value is `acc ⊕ σ x₀ ⊕ ⋯ ⊕ σ xᵢ` |
+| `prodClauses` | the product variables take `σ x ∧ σ w` |
+| `atMostK` | slot `(i,j)` takes "at least `j` of the first `i` variables are true" |
+| `buildPair` | the four segments are concatenated, see `buildPair_complete` |
 
-## 为什么构造要写成"逐段串接"而不是一个整体函数
+## Why the construction is written segment by segment rather than as a single function
 
-编码器的辅助变量号是**顺序分配**的（`c1Of`/`c2Of`/`c3Of` 由前一段的出口决定），
-逐段构造对上这个顺序就不必做 `c1Of = 2n + Σ(|r| - 1)` 这类计数算术。
-串接的接口是 `chainAssign` 的两条性质：**在计数器以下与输入一致**、
-**在计数器以上只读本段**，于是后一段赋值在前一段的地盘上原样保留。
+The encoder allocates the auxiliary variable numbers **sequentially** (`c1Of`/`c2Of`/`c3Of`
+are determined by the exit point of the preceding segment), so building the assignment
+segment by segment matches that order and avoids counting arithmetic of the form
+`c1Of = 2n + Σ(|r| - 1)`. The interface for the concatenation is the pair of properties of
+`chainAssign`: **below the counter it agrees with the input**, and **above the counter it
+reads only the current segment**, so the assignment of a later segment leaves the ground of
+an earlier one untouched.
 
-## 口径
+## What "light logical operator" means in this module
 
-"轻逻辑算符"在本模块仍只是**语义条件**（重量、两侧核、配对为 1）；
-把它翻成码级命题的那一步在 `Reflect/Encode.lean` 的模块说明里已说清，
-两侧共用同一套条件，故等价的合成不需要新的搬运。
+Here a light logical operator is still only a **semantic condition** (a weight bound,
+kernels on the two sides, and a pairing equal to 1); the step that turns it into a statement
+about codes is spelled out in the module documentation of `Reflect/Encode.lean`, and both
+sides use the same set of conditions, so composing the equivalence needs no further
+translation between them.
 -/
 
 namespace QECCertificates.LRAT
 
 open scoped BigOperators
 
-/-! ## 一、Tseitin 链的完备性 -/
+/-! ## 1. Completeness of the Tseitin chain -/
 
-/-- 链的填充值：`rest` 从计数器 `c` 起依次分配辅助变量，`acc` 是**进入本段时累加器的取值**。
+/-- The fill value of a chain: `rest` allocates the auxiliary variables starting from the
+counter `c`, and `acc` is **the value of the accumulator on entering this segment**.
 
-`t = c` 取 `acc ⊕ σ x₀`，`t = c + i` 取 `acc ⊕ σ x₀ ⊕ ⋯ ⊕ σ xⱼ`（`j` 为第 `i` 个）；
-落在分配区间之外取 `false`（那些变量号本就不该被引用）。
+At `t = c` the value is `acc ⊕ σ x₀`, and at `t = c + i` it is
+`acc ⊕ σ x₀ ⊕ ⋯ ⊕ σ xⱼ` (where `j` is the `i`-th element); outside the allocated range it is
+`false` (those variable numbers should never be referenced anyway).
 
-注意它**不读 `t < c` 处的 `σ`**：这是串接时"后一段不覆盖前一段"的来源。 -/
+Note that it **does not read `σ` at `t < c`**, which is the source of "a later segment does
+not overwrite an earlier one" during concatenation. -/
 def chainFill (σ : Assign) : List Nat → Bool → Nat → Nat → Bool
   | [], _, _, _ => false
   | x :: rest, acc, c, t =>
@@ -61,18 +74,19 @@ theorem chainFill_cons (σ : Assign) (x : Nat) (rest : List Nat) (acc : Bool) (c
     chainFill σ (x :: rest) acc c t =
       (if t = c then (acc ^^ σ x) else chainFill σ rest (acc ^^ σ x) (c + 1) t) := rfl
 
-/-- 计数器处的填充值就是本步的异或。 -/
+/-- The fill value at the counter is the xor of this step. -/
 theorem chainFill_self (σ : Assign) (x : Nat) (rest : List Nat) (acc : Bool) (c : Nat) :
     chainFill σ (x :: rest) acc c c = (acc ^^ σ x) := by
   rw [chainFill_cons, ite_eq_left rfl]
 
-/-- 跨过计数器一步：`c` 之后的部分就是"累加器已更新、计数器加一"的那条链。 -/
+/-- One step past the counter: the part after `c` is the chain with the accumulator updated
+and the counter incremented. -/
 theorem chainFill_succ (σ : Assign) (x : Nat) (rest : List Nat) (acc : Bool) (c t : Nat)
     (h : t ≠ c) :
     chainFill σ (x :: rest) acc c t = chainFill σ rest (acc ^^ σ x) (c + 1) t := by
   rw [chainFill_cons, ite_eq_right h]
 
-/-- 计数器以下不读输入：填充值恒为 `false`。 -/
+/-- Below the counter the input is not read: the fill value is always `false`. -/
 theorem chainFill_eq_false_of_lt (σ : Assign) (rest : List Nat) (acc : Bool) (c : Nat) :
     ∀ t, t < c → chainFill σ rest acc c t = false := by
   induction rest generalizing acc c with
@@ -82,7 +96,8 @@ theorem chainFill_eq_false_of_lt (σ : Assign) (rest : List Nat) (acc : Bool) (c
       rw [chainFill_succ σ x rest acc c t (by omega)]
       exact ih (acc ^^ σ x) (c + 1) t (by omega)
 
-/-- 填充值只读 `rest` 的元素与初始累加器——串接时的相容性就靠这条。 -/
+/-- The fill value reads only the elements of `rest` and the initial accumulator; the
+compatibility needed for concatenation rests on this. -/
 theorem chainFill_congr {σ σ' : Assign} (rest : List Nat) (acc acc' : Bool) (c : Nat)
     (hacc : acc = acc') (h : ∀ t ∈ rest, σ t = σ' t) :
     ∀ t, chainFill σ rest acc c t = chainFill σ' rest acc' c t := by
@@ -99,7 +114,8 @@ theorem chainFill_congr {σ σ' : Assign} (rest : List Nat) (acc acc' : Bool) (c
       · rw [ite_eq_right ht, ite_eq_right ht]
         exact ih (acc ^^ σ' x) (c + 1) hrest t
 
-/-- 链的完整赋值：计数器 `c` 以下保持 `σ`，以上取链的填充值。 -/
+/-- The complete assignment of a chain: below the counter `c` it keeps `σ`, above it it
+takes the fill value of the chain. -/
 def chainAssign (σ : Assign) (rest : List Nat) (acc : Bool) (c : Nat) : Assign :=
   fun t => if t < c then σ t else chainFill σ rest acc c t
 
@@ -107,7 +123,7 @@ theorem chainAssign_of_lt {σ : Assign} {rest : List Nat} {acc : Bool} {c t : Na
     (h : t < c) : chainAssign σ rest acc c t = σ t := by
   simp only [chainAssign, h, ite_true]
 
-/-- 跨过计数器一步（`chainAssign` 版）。 -/
+/-- One step past the counter (the `chainAssign` version). -/
 theorem chainAssign_succ (σ : Assign) (x : Nat) (rest : List Nat) (acc : Bool) (c t : Nat)
     (h : c < t) :
     chainAssign σ (x :: rest) acc c t = chainAssign σ rest (acc ^^ σ x) (c + 1) t := by
@@ -117,13 +133,14 @@ theorem chainAssign_succ (σ : Assign) (x : Nat) (rest : List Nat) (acc : Bool) 
   simp only [chainAssign, h1, h3, ite_false]
   rw [chainFill_succ σ x rest acc c t h2]
 
-/-- 计数器处 `chainAssign` 的取值。 -/
+/-- The value of `chainAssign` at the counter. -/
 theorem chainAssign_self (σ : Assign) (x : Nat) (rest : List Nat) (acc : Bool) (c : Nat) :
     chainAssign σ (x :: rest) acc c c = (acc ^^ σ x) := by
   simp only [chainAssign, Nat.lt_irrefl, ite_false]
   exact chainFill_self σ x rest acc c
 
-/-- `chainAssign` 的相容性：以下按 `hlt` 一致、`rest` 上按 `h` 一致，则两个赋值相等。 -/
+/-- Compatibility of `chainAssign`: if the two assignments agree below the counter according
+to `hlt` and on `rest` according to `h`, then they are equal. -/
 theorem chainAssign_congr {σ σ' : Assign} {rest : List Nat} {acc acc' : Bool} {c : Nat}
     (hacc : acc = acc') (hlt : ∀ t, t < c → σ t = σ' t) (h : ∀ t ∈ rest, σ t = σ' t) :
     ∀ t, chainAssign σ rest acc c t = chainAssign σ' rest acc' c t := by
@@ -134,10 +151,12 @@ theorem chainAssign_congr {σ σ' : Assign} {rest : List Nat} {acc acc' : Bool} 
     simp only [chainAssign, h1, ite_false]
     exact chainFill_congr rest acc acc' c hacc h t
 
-/-- 把一段链的赋值**接着**喂给它的尾段，得到的是同一个赋值——串接引理。
+/-- Feeding the assignment of one segment of a chain on into its tail yields the same
+assignment: the concatenation lemma.
 
-注意 `t = c` 处两者恰好一致（左边取新累加器 `acc ⊕ σ x`、右边取 `chainFill` 在计数器处的值），
-这正是 `chainFill` 不读计数器以下的原因。 -/
+Note that the two agree exactly at `t = c` (the left side takes the new accumulator
+`acc ⊕ σ x`, the right side takes the value of `chainFill` at the counter), which is
+precisely why `chainFill` does not read below the counter. -/
 theorem chainAssign_tail (σ : Assign) (x : Nat) (rest : List Nat) (acc : Bool) (c : Nat)
     (hrest : ∀ t ∈ rest, t < c) :
     ∀ t, chainAssign (chainAssign σ (x :: rest) acc c) rest
@@ -155,7 +174,8 @@ theorem chainAssign_tail (σ : Assign) (x : Nat) (rest : List Nat) (acc : Bool) 
       (chainAssign_self σ x rest acc c)
       (fun t' ht' => chainAssign_of_lt (hrest t' ht')) t
 
-/-- **一步的完备性**：值满足异或关系，则四条子句全真。 -/
+/-- **Completeness of one step**: if the values satisfy the xor relation, all four clauses
+are true. -/
 theorem xorStepClauses_sat_of {τ : Assign} {cur x nxt : Nat}
     (h : τ nxt = (τ cur ^^ τ x)) :
     ∀ C ∈ xorStepClauses cur x nxt, SatClause τ C := by
@@ -165,8 +185,9 @@ theorem xorStepClauses_sat_of {τ : Assign} {cur x nxt : Nat}
     simp only [SatClause, List.mem_cons, List.not_mem_nil, or_false] <;>
     (cases hv : τ cur <;> cases hw : τ x <;> simp_all)
 
-/-- **链的完备性**：语义条件成立、且链读到的输入变量都在计数器 `c` 以下时，
-`chainAssign` 满足链的全部子句。 -/
+/-- **Completeness of a chain**: if the semantic condition holds and every input variable
+read by the chain lies below the counter `c`, then `chainAssign` satisfies all the clauses
+of the chain. -/
 theorem xorChainAux_complete : ∀ (rest : List Nat) (want : Bool) (cur c : Nat) (σ : Assign),
     cur < c → (∀ t ∈ rest, t < c) → dotS σ (cur :: rest) = want →
     ∀ C ∈ (xorChainAux rest want cur c).1, SatClause (chainAssign σ rest (σ cur) c) C := by
@@ -217,15 +238,18 @@ theorem xorChainAux_complete : ∀ (rest : List Nat) (want : Bool) (cur c : Nat)
       · exact hstep C hC
       · exact htail C hC
 
-/-! ## 二、串接：一行一条链
+/-! ## 2. Concatenation: one chain per row
 
-`chainsFrom` 把每条行做成一条链、首尾相接地分配变量号。完备性要**逐段串接**：
-后一段赋值必须在前一段的地盘上原样保留，接口就是 `chainAssign` 的"计数器以下与输入一致"。
+`chainsFrom` turns each row into a chain and allocates the variable numbers end to end.
+Completeness has to **concatenate segment by segment**: the assignment of a later segment
+must leave the ground of an earlier one untouched, and the interface is the "agrees with the
+input below the counter" property of `chainAssign`.
 
-为此需要两条记账引理：链的**出口计数器**（新变量号恰好走到 `c + rest.length`）
-与链子句的**变量上界**（都落在出口计数器以下）。 -/
+Two bookkeeping lemmas are needed for this: the **exit counter** of a chain (the new
+variable numbers reach exactly `c + rest.length`) and the **variable bound** of the chain
+clauses (all of them lie below the exit counter). -/
 
-/-- 链的出口计数器：每处理一个变量分配一个号。 -/
+/-- The exit counter of a chain: one number is allocated per variable processed. -/
 theorem xorChainAux_snd : ∀ (rest : List Nat) (want : Bool) (cur c : Nat),
     (xorChainAux rest want cur c).2 = c + rest.length := by
   intro rest
@@ -237,7 +261,7 @@ theorem xorChainAux_snd : ∀ (rest : List Nat) (want : Bool) (cur c : Nat),
       rw [ih]
       omega
 
-/-- 一步子句里的变量只可能是三个位置之一。 -/
+/-- A variable in a step clause can only occupy one of three positions. -/
 theorem xorStepClauses_vars {cur x nxt : Nat} {C : Clause}
     (hC : C ∈ xorStepClauses cur x nxt) :
     ∀ l ∈ C, l.1 = cur ∨ l.1 = x ∨ l.1 = nxt := by
@@ -247,7 +271,7 @@ theorem xorStepClauses_vars {cur x nxt : Nat} {C : Clause}
      simp only [List.mem_cons, List.not_mem_nil, or_false] at hl
      rcases hl with rfl | rfl | rfl <;> simp)
 
-/-- 链子句的变量上界：都落在出口计数器以下。 -/
+/-- The variable bound of the chain clauses: all of them lie below the exit counter. -/
 theorem xorChainAux_vars_lt : ∀ (rest : List Nat) (want : Bool) (cur c : Nat),
     cur < c → (∀ t ∈ rest, t < c) →
     ∀ C ∈ (xorChainAux rest want cur c).1, ∀ l ∈ C, l.1 < c + rest.length := by
@@ -272,15 +296,16 @@ theorem xorChainAux_vars_lt : ∀ (rest : List Nat) (want : Bool) (cur c : Nat),
       · have h2 := ih want c (c + 1) (by omega) hrest' C hC l hl
         omega
 
-/-- 链子句在"计数器以下一致"的赋值之间传递。 -/
+/-- Chain clauses are preserved between assignments that agree below the counter. -/
 theorem satClause_of_agree {σ τ : Assign} {C : Clause} {c : Nat}
     (h : ∀ t, t < c → τ t = σ t) (hvars : ∀ l ∈ C, l.1 < c) (hC : SatClause σ C) :
     SatClause τ C := by
   obtain ⟨l, hl, hv⟩ := hC
   exact ⟨l, hl, by rw [h l.1 (hvars l hl), hv]⟩
 
-/-- **一串链的完备性**：每行的点积都为 `false` 时，存在一份赋值同时满足全部链子句，
-且在计数器 `c` 以下与输入一致。 -/
+/-- **Completeness of a sequence of chains**: if the dot product of every row is `false`,
+then there exists an assignment that satisfies all the chain clauses at once and agrees with
+the input below the counter `c`. -/
 theorem chainsFrom_complete {f : Nat → Nat} {rows : List (List Nat)}
     (hne : ∀ r ∈ rows, r ≠ []) :
     ∀ (c : Nat) (σ : Assign), (∀ r ∈ rows, ∀ t ∈ r, f t < c) →
@@ -345,23 +370,26 @@ theorem chainsFrom_complete {f : Nat → Nat} {rows : List (List Nat)}
         · rw [hc'] at hC
           exact hcl C hC
 
-/-! ## 三、乘积块的完备性
+/-! ## 3. Completeness of the product block
 
-`prodClauses c n` 用变量 `c + j` 承载 `x_j ∧ w_j`（`x_j` 是变量 `j`、`w_j` 是变量 `n + j`）。
-完备性是把 `c + j` 直接赋成合取值。 -/
+`prodClauses c n` carries `x_j ∧ w_j` in the variable `c + j` (`x_j` is variable `j` and
+`w_j` is variable `n + j`). Completeness consists in assigning `c + j` directly to the
+conjunction. -/
 
-/-- 乘积块的赋值：`c..c+n-1` 段取逐点合取，其余原样。 -/
+/-- The assignment of the product block: the range `c..c+n-1` takes the pointwise
+conjunction and the rest is kept as it is. -/
 def prodFill (σ : Assign) (c n : Nat) : Assign :=
   fun t => if c ≤ t ∧ t < c + n then (σ (t - c) && σ (n + (t - c))) else σ t
 
-/-- 乘积变量处的取值就是两个因子的合取。 -/
+/-- The value at a product variable is the conjunction of the two factors. -/
 theorem prodFill_at (σ : Assign) (c n j : Nat) (hj : j < n) :
     prodFill σ c n (c + j) = (σ j && σ (n + j)) := by
   have hsub : (c + j) - c = j := by omega
   simp only [prodFill, hsub]
   rw [ite_eq_left (by omega : c ≤ c + j ∧ c + j < c + n)]
 
-/-- 乘积块三条子句的语义：合取关系成立则三条全真。 -/
+/-- The semantics of the three product-block clauses: if the conjunction relation holds,
+all three of them are true. -/
 theorem prodClauses_three_sat {τ : Assign} {a x w : Nat}
     (h : τ a = (τ x && τ w)) :
     ∀ C ∈ ([[(a, false), (x, true)], [(a, false), (w, true)],
@@ -372,13 +400,13 @@ theorem prodClauses_three_sat {τ : Assign} {a x w : Nat}
     simp only [SatClause, List.mem_cons, List.not_mem_nil, or_false] <;>
     (cases hx : τ x <;> cases hw : τ w <;> simp_all)
 
-/-- 乘积块不碰输入变量（`c` 在它们之上）。 -/
+/-- The product block does not touch the input variables (`c` lies above them). -/
 theorem prodFill_of_lt {σ : Assign} {c n t : Nat} (h : t < c) :
     prodFill σ c n t = σ t := by
   simp only [prodFill]
   rw [ite_eq_right (by omega : ¬ (c ≤ t ∧ t < c + n))]
 
-/-- **乘积块的完备性**。 -/
+/-- **Completeness of the product block**. -/
 theorem prodClauses_complete {c n : Nat} {σ : Assign} (hc : 2 * n ≤ c) :
     ∀ C ∈ prodClauses c n, SatClause (prodFill σ c n) C := by
   intro C hC
@@ -389,45 +417,50 @@ theorem prodClauses_complete {c n : Nat} {σ : Assign} (hc : 2 * n ≤ c) :
     show prodFill σ c n j = σ j from prodFill_of_lt (by omega),
     show prodFill σ c n (n + j) = σ (n + j) from prodFill_of_lt (by omega)]
 
-/-! ## 四、顺序计数器（Sinz）的完备性
+/-! ## 4. Completeness of the sequential counter (Sinz)
 
-`atMostK` 的可靠性是"子句全真 ⟹ 真值个数 ≤ `k`"（`Reflect/Encode.lean`）。反方向要把
-**槽位 `(i,j)` 赋成"前 `i` 个变量里至少有 `j` 个为真"**，逐行验证四条子句。
+The soundness of `atMostK` is "all clauses true implies at most `k` variables are true"
+(`Reflect/Encode.lean`). The converse direction assigns **slot `(i,j)` to "at least `j` of
+the first `i` variables are true"** and verifies the four clauses row by row.
 
-三件前置：`slotBase` 的递推（第 `i+1` 行之前比第 `i` 行之前多出第 `i` 行的 `min i (k+1)` 个槽位）、
-`slotVar` 的取值刻画、以及把子句判据从 `Bool` 桥回命题的几条小引理。 -/
+Three preliminaries are needed: the recursion for `slotBase` (the block before row `i+1` has
+`min i (k+1)` slots more than the block before row `i`, namely those of row `i`), a
+characterization of the value of `slotVar`, and a few lemmas that bridge the clause
+criterion from `Bool` back to a proposition. -/
 
-/-- 第 `i+1` 行之前比第 `i` 行之前多出第 `i` 行的 `min i (k+1)` 个槽位。 -/
+/-- The block before row `i+1` has `min i (k+1)` slots more than the block before row `i`,
+namely those of row `i`. -/
 theorem slotBase_succ (k i : Nat) : slotBase k (i + 1) = slotBase k i + min i (k + 1) := by
   simp only [slotBase, List.range_succ, List.map_append, List.sum_append, List.map_cons,
     List.map_nil, List.sum_cons, List.sum_nil, Nat.add_zero]
 
-/-- 槽位基址单调。 -/
+/-- The slot base is monotone. -/
 theorem slotBase_mono (k : Nat) {i i' : Nat} (h : i ≤ i') : slotBase k i ≤ slotBase k i' := by
   induction i', h using Nat.le_induction with
   | base => exact Nat.le_refl _
   | succ n _ ih => rw [slotBase_succ]; exact le_trans ih (Nat.le_add_right _ _)
 
-/-- `slotBase` 的"前一索引"形式，前提出现在索引自身上。 -/
+/-- The "previous index" form of `slotBase`, with the hypothesis stated on the index
+itself. -/
 theorem slotBase_pred {k i : Nat} (hi : 1 ≤ i) :
     slotBase k i = slotBase k (i - 1) + min (i - 1) (k + 1) := by
   have h := slotBase_succ k (i - 1)
   rwa [show i - 1 + 1 = i from by omega] at h
 
-/-- `slotVar` 在有效槽位上取确定值。 -/
+/-- `slotVar` takes a definite value on a valid slot. -/
 theorem slotVar_of_le {c k i j : Nat} (h1 : 1 ≤ j) (h2 : j ≤ min i (k + 1)) :
     slotVar c k i j = some (c + slotBase k i + (j - 1)) := by
   rw [slotVar, ite_eq_left ⟨h1, h2⟩]
 
-/-- `slotVar` 在无效槽位上取 `none`。 -/
+/-- `slotVar` takes `none` on an invalid slot. -/
 theorem slotVar_eq_none {c k i j : Nat} (h : ¬ (1 ≤ j ∧ j ≤ min i (k + 1))) :
     slotVar c k i j = none := by
   rw [slotVar, ite_eq_right h]
 
-/-! ### 子句级的 Bool 桥
+/-! ### The Bool bridge at the clause level
 
-四条子句的语义都是"某个 Bool 蕴含另一个"，故把判据写成"值的蕴含"即可，
-不必在每一处重复拆 `decide`。 -/
+Each of the four clauses says that one `Bool` implies another, so the criterion can be
+stated as an implication between values, with no need to unfold `decide` again and again. -/
 
 theorem decide_imp {P Q : Prop} [Decidable P] [Decidable Q] (h : P → Q) :
     decide P = true → decide Q = true := fun hp => by
@@ -440,7 +473,7 @@ theorem decide_imp2 {P Q R : Prop} [Decidable P] [Decidable Q] [Decidable R]
   have := h (of_decide_eq_true hp) (of_decide_eq_true hq)
   simp only [decide_eq_true_eq]; exact this
 
-/-- 二元子句 `¬p ∨ q`：由 `bp = true → bq = true` 给出。 -/
+/-- Binary clause `¬p ∨ q`: given by `bp = true → bq = true`. -/
 theorem sat_two_of_imp {τ : Assign} {p q : Nat} {bp bq : Bool}
     (hp : τ p = bp) (hq : τ q = bq) (h : bp = true → bq = true) :
     SatClause τ [(p, false), (q, true)] := by
@@ -448,7 +481,7 @@ theorem sat_two_of_imp {τ : Assign} {p q : Nat} {bp bq : Bool}
   | false => exact ⟨(p, false), by simp, by rw [hp]⟩
   | true => exact ⟨(q, true), by simp, by rw [hq]; exact h rfl⟩
 
-/-- 三元子句 `¬a ∨ ¬x ∨ s`：由 `(a ∧ x) → s` 给出。 -/
+/-- Ternary clause `¬a ∨ ¬x ∨ s`: given by `(a ∧ x) → s`. -/
 theorem sat_three_of_imp {τ : Assign} {a x s : Nat} {ba bx bs : Bool}
     (ha : τ a = ba) (hx : τ x = bx) (hs : τ s = bs)
     (h : ba = true → bx = true → bs = true) :
@@ -460,7 +493,7 @@ theorem sat_three_of_imp {τ : Assign} {a x s : Nat} {ba bx bs : Bool}
       | false => exact ⟨(x, false), by simp, by rw [hx]⟩
       | true => exact ⟨(s, true), by simp, by rw [hs]; exact h rfl rfl⟩
 
-/-- 三元子句 `¬s ∨ a ∨ x`：由 `(s ∧ ¬a) → x` 给出。 -/
+/-- Ternary clause `¬s ∨ a ∨ x`: given by `(s ∧ ¬a) → x`. -/
 theorem sat_three_of_imp2 {τ : Assign} {s a x : Nat} {bs ba bx : Bool}
     (hs : τ s = bs) (ha : τ a = ba) (hx : τ x = bx)
     (h : bs = true → ba = false → bx = true) :
@@ -472,7 +505,7 @@ theorem sat_three_of_imp2 {τ : Assign} {s a x : Nat} {bs ba bx : Bool}
       | false => exact ⟨(x, true), by simp, by rw [hx]; exact h rfl rfl⟩
       | true => exact ⟨(a, true), by simp, by rw [ha]⟩
 
-/-- 三元子句 `¬s ∨ a ∨ b`：由 `(s ∧ ¬a) → b` 给出。 -/
+/-- Ternary clause `¬s ∨ a ∨ b`: given by `(s ∧ ¬a) → b`. -/
 theorem sat_three_of_imp3 {τ : Assign} {s a b : Nat} {bs ba bb : Bool}
     (hs : τ s = bs) (ha : τ a = ba) (hb : τ b = bb)
     (h : bs = true → ba = false → bb = true) :
@@ -484,10 +517,11 @@ theorem sat_three_of_imp3 {τ : Assign} {s a b : Nat} {bs ba bb : Bool}
       | false => exact ⟨(b, true), by simp, by rw [hb]; exact h rfl rfl⟩
       | true => exact ⟨(a, true), by simp, by rw [ha]⟩
 
-/-! ### `slotClauses` 的四个分支写成显式等式
+/-! ### The four branches of `slotClauses` as explicit equations
 
-`slotClauses` 的 `match` 的 scrutinee 是三个 `Option` 值。直接对目标里的槽位做 `rw`
-改不动它（槽位是**函数参数**），所以先把"三个取值"写成假设、再让 `match` 降下来。 -/
+The scrutinee of the `match` in `slotClauses` consists of three `Option` values. A `rw` on
+the slot in the goal does not move it, because the slot is a **function argument**; the
+three values are therefore first written as hypotheses, and the `match` then reduces. -/
 
 theorem slotClauses_eq_some_some {s : Nat → Nat → Option Nat} {i j x a b si : Nat}
     (ha : s (i - 1) j = some a) (hb : s (i - 1) (j - 1) = some b) (hs : s i j = some si) :
@@ -515,14 +549,16 @@ theorem slotClauses_eq_none_none {s : Nat → Nat → Option Nat} {i j x si : Na
     slotClauses s i j x = [[(x, false), (si, true)], [(si, false), (x, true)]] := by
   simp only [slotClauses, ha, hb, hs]
 
-/-! ### 一行的完备性
+/-! ### Completeness of one row
 
-第 `i` 行处理第 `i` 个变量，槽位 `(i,j)` 的取值由"前 `i` 个变量里至少有 `j` 个为真"定。
-`cnt'` 是前 `i-1` 个变量的真值个数、`cnt` 是前 `i` 个的、`bx` 是第 `i` 个变量的取值；
-`hprev`/`hcur` 把上一行与这一行的槽位取值写成假设，于是本条只做 `Bool` 层面的验证。
+Row `i` processes the `i`-th variable, and the value of slot `(i,j)` is determined by
+"at least `j` of the first `i` variables are true". Here `cnt'` is the number of true values
+among the first `i-1` variables, `cnt` that among the first `i`, and `bx` the value of the
+`i`-th variable; `hprev`/`hcur` state the slot values of the previous row and of this row as
+hypotheses, so this lemma only performs the verification at the level of `Bool`.
 
-四个情形的分界是"上一行的槽位 `(i-1,j)`、`(i-1,j-1)` 是否有效"，即 `slotClauses`
-那个 `match` 的分支条件。 -/
+The four cases are separated by whether the slots `(i-1,j)` and `(i-1,j-1)` of the previous
+row are valid, which is the branch condition of the `match` in `slotClauses`. -/
 
 theorem rowClauses_complete {c k i cnt' cnt : Nat} {x : Nat} {τ : Assign} {bx : Bool}
     (hx : τ x = bx) (hcnt : cnt = cnt' + (if bx then 1 else 0))
@@ -655,20 +691,23 @@ theorem rowClauses_complete {c k i cnt' cnt : Nat} {x : Nat} {τ : Assign} {bx :
               exact absurd h1 (by omega)
           | true => rfl
 
-/-! ### 逐行填充与主定理
+/-! ### Filling row by row, and the main theorem
 
-把第 `i` 行的槽位块写进赋值。**块的边界由 `slotBase` 定死**：第 `i` 行占
-`[c + slotBase k i, c + slotBase k (i+1))`，而 `slotBase k (i+1) = slotBase k i + min i (k+1)`
-（`slotBase_succ`）说明两块**首尾相接、互不重叠**。归纳里"后面几行不动前面已填好的槽位"
-就是这一条，它把逐段构造串起来而**不需要**从变量号反解行号。 -/
+Write the slot block of row `i` into the assignment. **The block boundaries are pinned down
+by `slotBase`**: row `i` occupies `[c + slotBase k i, c + slotBase k (i+1))`, and
+`slotBase k (i+1) = slotBase k i + min i (k+1)` (`slotBase_succ`) says that the two blocks
+meet end to end without overlapping. In the induction, "later rows leave the slots already
+filled by earlier rows alone" is exactly this, and it chains the segment-by-segment
+construction together **without** having to recover the row index from a variable number. -/
 
-/-- 把第 `i` 行的槽位块写进赋值：块内取"前 `i` 个变量里至少有 `j` 个为真"，块外原样保留。 -/
+/-- Write the slot block of row `i` into the assignment: inside the block it takes "at least
+`j` of the first `i` variables are true", outside the block it is kept as it is. -/
 def rowFill (τ : Assign) (c k i cnt : Nat) : Assign :=
   fun t => if c + slotBase k i ≤ t ∧ t < c + slotBase k i + min i (k + 1) then
       decide ((t - (c + slotBase k i)) + 1 ≤ cnt)
     else τ t
 
-/-- 块内第 `j` 个槽位的取值。 -/
+/-- The value of the `j`-th slot inside the block. -/
 theorem rowFill_at {τ : Assign} {c k i cnt j : Nat} (hj : j < min i (k + 1)) :
     rowFill τ c k i cnt (c + slotBase k i + j) = decide (j + 1 ≤ cnt) := by
   have hsub : c + slotBase k i + j - (c + slotBase k i) = j := by omega
@@ -676,14 +715,15 @@ theorem rowFill_at {τ : Assign} {c k i cnt j : Nat} (hj : j < min i (k + 1)) :
   rw [ite_eq_left (by omega : c + slotBase k i ≤ c + slotBase k i + j ∧
     c + slotBase k i + j < c + slotBase k i + min i (k + 1))]
 
-/-- 块外原样保留。 -/
+/-- Outside the block the assignment is kept as it is. -/
 theorem rowFill_of_notMem {τ : Assign} {c k i cnt t : Nat}
     (h : ¬ (c + slotBase k i ≤ t ∧ t < c + slotBase k i + min i (k + 1))) :
     rowFill τ c k i cnt t = τ t := by
   simp only [rowFill]
   rw [ite_eq_right h]
 
-/-- 填第 `i` 行不动第 `i-1` 行的块（两块首尾相接、不重叠）。 -/
+/-- Filling row `i` leaves the block of row `i-1` untouched (the two blocks meet end to end
+without overlapping). -/
 theorem rowFill_prev {τ : Assign} {c k i cnt j : Nat} (hi : 1 ≤ i)
     (hj : j < min (i - 1) (k + 1)) :
     rowFill τ c k i cnt (c + slotBase k (i - 1) + j) = τ (c + slotBase k (i - 1) + j) := by
@@ -692,13 +732,16 @@ theorem rowFill_prev {τ : Assign} {c k i cnt j : Nat} (hi : 1 ≤ i)
   rw [slotBase_pred hi] at h1
   omega
 
-/-- **顺序计数器的完备性**：真值个数 ≤ `k` 时，存在赋值满足全部计数器子句，
-且在输入变量上与给定赋值一致。
+/-- **Completeness of the sequential counter**: if at most `k` variables are true, then
+there exists an assignment satisfying all the counter clauses that agrees with the given
+assignment on the input variables.
 
-归纳沿 `atMostKAux` 的遍历走（`pre` 是已处理的前缀、`suf` 是剩余的），
-每步把该行的槽位块写进赋值。返回的赋值有两个性质供外层使用：**在
-`c + slotBase k (pre.length + 1)` 以下与原赋值一致**（前几行填好的槽位没被后面覆盖），
-以及**最后一行的槽位取值刻画**（下一步要用它当 `hprev`）。 -/
+The induction follows the traversal of `atMostKAux` (`pre` is the prefix already processed
+and `suf` the remainder), writing the slot block of that row into the assignment at each
+step. The returned assignment has two properties that the outer argument uses: it **agrees
+with the original assignment below `c + slotBase k (pre.length + 1)`** (the slots filled by
+earlier rows are not overwritten by later ones), and it **characterizes the slot values of
+the last row** (the next step uses this as its `hprev`). -/
 theorem atMostK_complete {k c : Nat} {xs : List Nat} {σ : Assign}
     (hc : ∀ t ∈ xs, t < c) (hcnt : cntS σ xs ≤ k) :
     ∃ τ : Assign, (∀ t, t < c → τ t = σ t) ∧
@@ -875,16 +918,19 @@ theorem atMostK_complete {k c : Nat} {xs : List Nat} {σ : Assign}
     exact hag t (by rw [List.length_nil, Nat.zero_add, h0, Nat.add_zero]; exact ht)
   · simpa only [atMostK] using hcl
 
-/-! ## 五、组装：`buildPair` 的完备性
+/-! ## 5. Assembly: completeness of `buildPair`
 
-四段的赋值逐段串接。装配要把"某一段的子句由它那一段的赋值满足"搬到**最终**赋值上，
-靠两条：**计数器只会变大**（后一段的门槛不低于前一段），以及**每段子句的变量都在自己的
-出口计数器以下**。
+The assignments of the four segments are concatenated segment by segment. The assembly has
+to move "the clauses of a segment are satisfied by that segment's assignment" to the
+**final** assignment, and it rests on two facts: **the counters only increase** (the
+threshold of a later segment is never lower than that of an earlier one), and **the
+variables of each segment's clauses lie below its own exit counter**.
 
-`buildPair` 的分段与计数器（`Reflect/Encode.lean`）：核约束在 `2n` 起、配对约束在 `c1Of` 起、
-乘积块在 `c2Of` 起、`x·w` 那条链在 `c2Of + n` 起、计数器在 `c3Of` 起。 -/
+The segments and counters of `buildPair` (`Reflect/Encode.lean`): the kernel constraints
+start at `2n`, the pairing constraints at `c1Of`, the product block at `c2Of`, the chain for
+`x·w` at `c2Of + n`, and the counter at `c3Of`. -/
 
-/-- 链的出口计数器只增不减。 -/
+/-- The exit counter of a chain never decreases. -/
 theorem xorChain_snd_ge (xs : List Nat) (w : Bool) (c : Nat) :
     c ≤ (xorChain xs w c).2 := by
   cases xs with
@@ -894,7 +940,7 @@ theorem xorChain_snd_ge (xs : List Nat) (w : Bool) (c : Nat) :
       simp only [xorChain, h]
       omega
 
-/-- 一串链的出口计数器只增不减。 -/
+/-- The exit counter of a sequence of chains never decreases. -/
 theorem chainsFrom_snd_ge {f : Nat → Nat} : ∀ (rows : List (List Nat)) (c : Nat),
     c ≤ (chainsFrom f rows c).2 := by
   intro rows
@@ -907,7 +953,8 @@ theorem chainsFrom_snd_ge {f : Nat → Nat} : ∀ (rows : List (List Nat)) (c : 
       simp only [chainsFrom]
       omega
 
-/-- 一串链的子句变量都在**本段的**出口计数器以下。 -/
+/-- The clause variables of a sequence of chains all lie below the exit counter of **that
+segment**. -/
 theorem chainsFrom_vars_lt {f : Nat → Nat} {rows : List (List Nat)} {c : Nat}
     (hne : ∀ r ∈ rows, r ≠ [])
     (hlt : ∀ r ∈ rows, ∀ t ∈ r, f t < c) :
@@ -952,7 +999,8 @@ theorem chainsFrom_vars_lt {f : Nat → Nat} {rows : List (List Nat)} {c : Nat}
           C hC l hl
         simpa only [chainsFrom] using this
 
-/-- 乘积块子句的变量都在 `c + n` 以下（`n ≤ c` 时输入变量也在其内）。 -/
+/-- The variables of the product-block clauses all lie below `c + n` (and when `n ≤ c` the
+input variables are among them). -/
 theorem prodClauses_vars_lt {c n : Nat} (hc : n ≤ c) :
     ∀ C ∈ prodClauses c n, ∀ l ∈ C, l.1 < c + n := by
   intro C hC l hl
@@ -963,7 +1011,7 @@ theorem prodClauses_vars_lt {c n : Nat} (hc : n ≤ c) :
     (simp only [List.mem_cons, List.not_mem_nil, or_false] at hl
      rcases hl with rfl | rfl | rfl <;> omega)
 
-/-- 一条链的子句变量都在本段的出口计数器以下。 -/
+/-- The clause variables of a single chain all lie below the exit counter of its segment. -/
 theorem xorChain_vars_lt {xs : List Nat} {w : Bool} {c : Nat} (hne : xs ≠ [])
     (hlt : ∀ t ∈ xs, t < c) :
     ∀ C ∈ (xorChain xs w c).1, ∀ l ∈ C, l.1 < (xorChain xs w c).2 := by
@@ -976,19 +1024,19 @@ theorem xorChain_vars_lt {xs : List Nat} {w : Bool} {c : Nat} (hne : xs ≠ [])
       simp only [xorChain, h]
       exact xorChainAux_vars_lt t w x₀ c hx₀ ht
 
-/-- 子句集在"门槛以下一致"的赋值之间传递。 -/
+/-- A set of clauses is preserved between assignments that agree below the threshold. -/
 theorem satFormula_of_agree {σ τ : Assign} {F : CNF} {c : Nat}
     (h : ∀ t, t < c → τ t = σ t) (hF : ∀ C ∈ F, ∀ l ∈ C, l.1 < c)
     (hσ : SatFormula σ F) : SatFormula τ F :=
   fun C hC => satClause_of_agree h (hF C hC) (hσ C hC)
 
-/-- "在 `c` 以下一致"可传递，门槛可降。 -/
+/-- Agreement below `c` is transitive, and the threshold may be lowered. -/
 theorem agree_le_trans {σ τ υ : Assign} {a b : Nat}
     (h1 : ∀ t, t < b → τ t = σ t) (h2 : ∀ t, t < a → υ t = τ t) (h : a ≤ b) :
     ∀ t, t < a → υ t = σ t :=
   fun t ht => by rw [h2 t ht, h1 t (lt_of_lt_of_le ht h)]
 
-/-- 单条链的完备性（非空形态）。 -/
+/-- Completeness of a single chain (the nonempty form). -/
 theorem xorChain_complete {xs : List Nat} {w : Bool} {c : Nat} {σ : Assign}
     (hne : xs ≠ []) (hlt : ∀ t ∈ xs, t < c) (h : dotS σ xs = w) :
     ∃ τ : Assign, (∀ t, t < c → τ t = σ t) ∧
@@ -1003,11 +1051,13 @@ theorem xorChain_complete {xs : List Nat} {w : Bool} {c : Nat} {σ : Assign}
           simp only [xorChain] at hC
           exact xorChainAux_complete t w x₀ c σ hx₀ ht h C hC⟩
 
-/-- **`buildPair` 的完备性**：语义四条件成立时，编码是可满足的。
+/-- **Completeness of `buildPair`**: when the four semantic conditions hold, the encoding is
+satisfiable.
 
-与 `Reflect/Encode.lean` 的 `buildPair_sat`（可靠性）合成
-**"存在轻逻辑算符 ⟺ 编码可满足"**；再配上 `Reflect/LRAT.lean` 的可靠性定理，
-一个不可满足判决就**直接给出距离下界**——两个方向由此都在内核里。 -/
+Together with `buildPair_sat` of `Reflect/Encode.lean` (soundness) this composes into
+**"a light logical operator exists if and only if the encoding is satisfiable"**; adding the
+soundness theorem of `Reflect/LRAT.lean`, an unsatisfiability verdict then **directly gives a
+distance lower bound**, so both directions are now inside the kernel. -/
 theorem buildPair_complete {Rker Rpair : List (List Nat)} {n k : Nat} {σ : Assign}
     (hn : 0 < n) (hne₁ : ∀ r ∈ Rker, r ≠ []) (hne₂ : ∀ r ∈ Rpair, r ≠ [])
     (hcol₁ : ∀ r ∈ Rker, ∀ t ∈ r, t < n) (hcol₂ : ∀ r ∈ Rpair, ∀ t ∈ r, t < n)

@@ -1,72 +1,83 @@
 /-
-Copyright (c) 2026 The QECCertificates Authors. All rights reserved.
+Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: The QECCertificates Authors
+Authors: Shuoming An
 -/
 import QECCertificates.GF2.HGP
 
 /-!
-# 提升乘积（lifted product）：群代数上的 HGP 与它对 HGP 的退化
+# The lifted product: HGP over a group algebra, and its degeneration to HGP
 
-**文献定义**（逐条注明出处）：
+**Definitions from the literature** (with the source given in each case):
 
 * Panteleev–Kalachev, *Asymptotically Good Quantum and Locally Testable Classical LDPC
-  Codes*, STOC 2022（arXiv:2111.03654v2），**Appendix B, Eq. (13)**（PDF 第 48 页）：
-  给定有限群 $G$（$|G| = \ell$）与群代数 $R = \mathbb{F}_2[G]$ 上的两个种子矩阵
-  $A \in R^{m_A \times n_A}$、$B \in R^{m_B \times n_B}$，把每个元素 $r \in R$ 换成它的
-  **正则表示的 $\ell \times \ell$ 矩阵**后再做 HGP 的分块张量：
+  Codes*, STOC 2022 (arXiv:2111.03654v2), **Appendix B, Eq. (13)** (PDF page 48):
+  given a finite group $G$ ($|G| = \ell$) and two seed matrices over the group algebra
+  $R = \mathbb{F}_2[G]$, namely $A \in R^{m_A \times n_A}$ and $B \in R^{m_B \times n_B}$,
+  replace each element $r \in R$ by its **regular-representation $\ell \times \ell$ matrix**
+  and then take the block tensor of the HGP:
 
   $$H_X = \bigl[\,\widehat A \otimes I_{m_B} \;\bigm|\; I_{m_A} \otimes \widehat B\,\bigr],\qquad
     H_Z = \bigl[\,I_{n_A} \otimes \widehat B^{\top} \;\bigm|\; \widehat A^{\top} \otimes I_{n_B}\,\bigr].$$
 
-  这就是 **lifted product** $\mathrm{LP}(A, B)$；$m_A = n_A = m_B = n_B = 1$ 时它退化为
-  **双块群代数码（2BGA）**——文献原话见 Lin–Pryadko, *Quantum two-block group algebra
-  codes*, PRA **109**, 022407 (2024), **p. 6**（"2BGA codes are a degenerate case of LP
-  codes with both matrices of dimension 1 x 1"）。
+  This is the **lifted product** $\mathrm{LP}(A, B)$; when $m_A = n_A = m_B = n_B = 1$ it
+  degenerates to a **two-block group algebra code (2BGA)**, in the words of Lin–Pryadko,
+  *Quantum two-block group algebra codes*, PRA **109**, 022407 (2024), **p. 6** ("2BGA codes
+  are a degenerate case of LP codes with both matrices of dimension 1 x 1").
 
-* 群代数元 $a = \sum_g a_g\, g$ 的两个正则表示（Lin–Pryadko, 同上, **p. 5, Eq. (36)**）：
+* The two regular representations of a group-algebra element $a = \sum_g a_g\, g$
+  (Lin–Pryadko, ibid., **p. 5, Eq. (36)**):
 
   $$[L(a)]_{\sigma,\tau} = \sum_g a_g\,\delta_{g\tau,\sigma} = a(\sigma\tau^{-1}),\qquad
     [R(b)]_{\sigma,\tau} = \sum_g b_g\,\delta_{\tau g,\sigma} = b(\tau^{-1}\sigma).$$
 
-  $L(a)$ 是"左乘 $x \mapsto a\,x$"的矩阵、$R(b)$ 是"右乘 $x \mapsto x\,b$"的矩阵；
-  本模块写作 `leftMulMat a` / `rightMulMat b`。
+  $L(a)$ is the matrix of "left multiplication $x \mapsto a\,x$" and $R(b)$ the matrix of
+  "right multiplication $x \mapsto x\,b$"; this module writes them `leftMulMat a` and
+  `rightMulMat b`.
 
-## 本模块的贡献
+## What this module contributes
 
-1. **`leftMulMat_mul_rightMulMat`**：两个正则表示**逐元素对易**（$L(a)R(b) = R(b)L(a)$）。
-   这是 LP 的 CSS 相容性的全部内容——HGP 的 `hgp_orthogonal` 用的是两个 Kronecker 因子的
-   转置配对，而 LP 用的是"两个正则表示对易"。证明是两次置换重指标
-   （$\rho \mapsto \tau^{-1}\rho$ 与 $\rho \mapsto \rho^{-1}\sigma$）加一次乘法交换。
-2. **`lp_orthogonal`**：一般种子下 $H_X H_Z^{\top} = 0$（**结构定理**，对任意 $A, B$ 成立，
-   无枚举）。它把 `hgp_orthogonal` 的"逐条目"论证抬到"每个分块是一对群代数元"的层面。
-3. **2BGA（1 x 1 种子）**：`lp2HX` / `lp2HZ` 与 `lp2_orthogonal`——即文献 `LP[a, b]`。
-4. **与 HGP 的关系**（`lpExpandR_liftConst` 等四条 + `lp_trivialGroup_eq_hgp`）：
-   种子取**常值群代数元**（即来自 $\mathbb{F}_2 \subset \mathbb{F}_2[G]$，在这里写作
-   `liftConst M`）时，$\widehat A = A \otimes I_\ell$，于是 LP 的校验矩阵按群指标
-   **块对角**，每一块恰是 $\mathrm{HGP}(A, B^{\top})$：
+1. **`leftMulMat_mul_rightMulMat`**: the two regular representations **commute entrywise**
+   ($L(a)R(b) = R(b)L(a)$). This is the whole content of the CSS compatibility of LP: the
+   `hgp_orthogonal` of HGP uses the transposed pairing of two Kronecker factors, whereas LP uses
+   "the two regular representations commute". The proof is two permutation reindexings
+   ($\rho \mapsto \tau^{-1}\rho$ and $\rho \mapsto \rho^{-1}\sigma$) plus one commutativity of
+   multiplication.
+2. **`lp_orthogonal`**: $H_X H_Z^{\top} = 0$ for general seeds (a **structure theorem**, holding
+   for arbitrary $A, B$, with no enumeration). It lifts the entrywise argument of
+   `hgp_orthogonal` to the level of "every block is a pair of group-algebra elements".
+3. **2BGA (1 x 1 seeds)**: `lp2HX` / `lp2HZ` and `lp2_orthogonal`, that is, the `LP[a, b]` of the
+   literature.
+4. **The relation to HGP** (the four lemmas `lpExpandR_liftConst` and friends, plus
+   `lp_trivialGroup_eq_hgp`): for a seed of **constant group-algebra elements** (that is, coming
+   from $\mathbb{F}_2 \subset \mathbb{F}_2[G]$, written `liftConst M` here) one has
+   $\widehat A = A \otimes I_\ell$, so the check matrices of LP are **block diagonal** in the group
+   index and every block is exactly $\mathrm{HGP}(A, B^{\top})$:
    $$H^{\mathrm{LP}}_X\bigl((i,s),\gamma\bigr)\bigl((j,t),\gamma\bigr)
      = \bigl[\mathrm{HGP}(A,B^{\top})\bigr]_{(i,s)(j,t)}.$$
-   取 $\ell = 1$（`Subsingleton G`）即得 `lp_trivialGroup_eq_hgp`：
-   **平凡群上 LP 逐条目就是 HGP**。这与文献的说法一致（Panteleev–Kalachev, p. 8：
-   "$R = \mathbb{F}_q$ 时 lifted product 等价于 product construction"，而 $\ell = 1$ 的
-   群代数就是 $\mathbb{F}_q$ 本身）。
+   Taking $\ell = 1$ (`Subsingleton G`) gives `lp_trivialGroup_eq_hgp`: **on the trivial group LP
+   is HGP entrywise**. This agrees with the literature (Panteleev–Kalachev, p. 8: "for
+   $R = \mathbb{F}_q$ the lifted product is equivalent to the product construction", and the
+   group algebra at $\ell = 1$ is $\mathbb{F}_q$ itself).
 
-## 约定说明（与文献的镜像关系）
+## A note on conventions (the mirror relation with the literature)
 
-本文的 $H_X$ 把**左乘**矩阵给第一个种子、**右乘**矩阵给第二个（与 2BGA 论文 Eq. (36)
-一致，锚点实例按此复现文献表格）；Panteleev–Kalachev 的 $\widehat A / \widehat B$ 把右正则
-表示给了第一个种子。两套约定互为镜像：本文的 $\mathrm{LP}(A,B)$ 与 PK 的
-$\mathrm{LP}(B,A)$ 只差**两个 qubit 块的交换**（一个置换），故码参数相同。
+The $H_X$ here gives the **left** multiplication matrix to the first seed and the **right**
+multiplication matrix to the second (consistent with Eq. (36) of the 2BGA paper, and the anchor
+instances reproduce the tables of the literature accordingly); the $\widehat A / \widehat B$ of
+Panteleev–Kalachev give the right regular representation to the first seed. The two conventions are
+mirror images of each other: the $\mathrm{LP}(A,B)$ here and the $\mathrm{LP}(B,A)$ of PK differ
+only by **the exchange of the two qubit blocks** (a permutation), so the code parameters agree.
 
-## 索引约定
+## Index conventions
 
-行/列都是**乘积类型 + 群指标**（不拍平成 `Fin`），让结构定理零换标：
+Rows and columns are both **product types with a group index** (not flattened to `Fin`), which is
+what makes the structure theorem require no relabelling:
 
-* $H_X$ 的行：`(Fin m_A x Fin m_B) x G`；$H_Z$ 的行：`(Fin n_A x Fin n_B) x G`；
-* 两者的列都是 `((Fin n_A x Fin m_B) x G) (+) ((Fin m_A x Fin n_B) x G)`。
+* rows of $H_X$: `(Fin m_A x Fin m_B) x G`; rows of $H_Z$: `(Fin n_A x Fin n_B) x G`;
+* the columns of both are `((Fin n_A x Fin m_B) x G) (+) ((Fin m_A x Fin n_B) x G)`.
 
-拍平到 `Fin`（实例化）交给 `Matrix.reindex` 做——见 `Codes/LPAnchor.lean`。
+Flattening to `Fin` (instantiation) is left to `Matrix.reindex`; see `Codes/LPAnchor.lean`.
 -/
 
 namespace QECCertificates
@@ -75,33 +86,35 @@ open scoped BigOperators
 
 variable {G : Type*} [Group G]
 
-/-! ## 一、群代数元的两个正则表示 -/
+/-! ## 1. The two regular representations of a group-algebra element -/
 
-/-- 群代数元 `a : G → ZMod 2` 的**左乘矩阵**：线性算子 `x ↦ a * x` 在基 `G` 下的矩阵。
+/-- The **left-multiplication matrix** of a group-algebra element `a : G → ZMod 2`: the matrix of the
+linear operator `x ↦ a * x` in the basis `G`.
 
-逐条目：`(leftMulMat a) σ τ = a (σ * τ⁻¹)`（Lin–Pryadko Eq. (36) 的 `L(a)`）。 -/
+Entrywise: `(leftMulMat a) σ τ = a (σ * τ⁻¹)` (the `L(a)` of Lin–Pryadko Eq. (36)). -/
 def leftMulMat (a : G → ZMod 2) : Matrix G G (ZMod 2) := fun σ τ => a (σ * τ⁻¹)
 
-/-- 群代数元 `b : G → ZMod 2` 的**右乘矩阵**：线性算子 `x ↦ x * b` 在基 `G` 下的矩阵。
+/-- The **right-multiplication matrix** of a group-algebra element `b : G → ZMod 2`: the matrix of the
+linear operator `x ↦ x * b` in the basis `G`.
 
-逐条目：`(rightMulMat b) σ τ = b (τ⁻¹ * σ)`（Lin–Pryadko Eq. (36) 的 `R(b)`）。 -/
+Entrywise: `(rightMulMat b) σ τ = b (τ⁻¹ * σ)` (the `R(b)` of Lin–Pryadko Eq. (36)). -/
 def rightMulMat (b : G → ZMod 2) : Matrix G G (ZMod 2) := fun σ τ => b (τ⁻¹ * σ)
 
-/-- 左平移置换 `x ↦ g * x`（重指标用）。 -/
+/-- The left-translation permutation `x ↦ g * x` (used for reindexing). -/
 def mulLeftEquiv (g : G) : G ≃ G where
   toFun x := g * x
   invFun x := g⁻¹ * x
   left_inv x := by simp
   right_inv x := by simp
 
-/-- 反向右平移置换 `x ↦ x⁻¹ * g`（重指标用）。 -/
+/-- The reversed right-translation permutation `x ↦ x⁻¹ * g` (used for reindexing). -/
 def invMulEquiv (g : G) : G ≃ G where
   toFun x := x⁻¹ * g
   invFun y := g * y⁻¹
   left_inv x := by simp
   right_inv y := by simp
 
-/-- `σ * τ⁻¹ = 1 ↔ σ = τ`（常值种子的两条引理共用）。 -/
+/-- `σ * τ⁻¹ = 1 ↔ σ = τ` (shared by the two lemmas for constant seeds). -/
 theorem mul_inv_eq_one_iff (σ τ : G) : σ * τ⁻¹ = 1 ↔ σ = τ := by
   constructor
   · intro h
@@ -109,7 +122,7 @@ theorem mul_inv_eq_one_iff (σ τ : G) : σ * τ⁻¹ = 1 ↔ σ = τ := by
     rwa [mul_assoc, inv_mul_cancel, mul_one, one_mul] at h2
   · intro h; rw [h, mul_inv_cancel]
 
-/-- `τ⁻¹ * σ = 1 ↔ σ = τ`。 -/
+/-- `τ⁻¹ * σ = 1 ↔ σ = τ`. -/
 theorem inv_mul_eq_one_iff (σ τ : G) : τ⁻¹ * σ = 1 ↔ σ = τ := by
   constructor
   · intro h
@@ -117,11 +130,12 @@ theorem inv_mul_eq_one_iff (σ τ : G) : τ⁻¹ * σ = 1 ↔ σ = τ := by
     rwa [← mul_assoc, mul_inv_cancel, one_mul, mul_one] at h2
   · intro h; rw [h, inv_mul_cancel]
 
-/-- **两个正则表示逐元素对易**：`L(a) * R(b) = R(b) * L(a)`。
+/-- **The two regular representations commute entrywise**: `L(a) * R(b) = R(b) * L(a)`.
 
-这是 LP 的 CSS 相容性的全部内容（`lp_orthogonal` 只调用它）。逐条目看两侧都等于
-$\sum_\mu a(\sigma\mu^{-1}\tau^{-1})\,b(\mu)$：左边经 $\rho \mapsto \tau^{-1}\rho$
-重指标、右边经 $\rho \mapsto \rho^{-1}\sigma$ 重指标，最后差一次乘法交换。 -/
+This is the whole content of the CSS compatibility of LP (`lp_orthogonal` calls nothing else).
+Entrywise, both sides equal $\sum_\mu a(\sigma\mu^{-1}\tau^{-1})\,b(\mu)$: the left-hand side is
+reindexed by $\rho \mapsto \tau^{-1}\rho$ and the right-hand side by $\rho \mapsto \rho^{-1}\sigma$,
+and the two then differ by one commutativity of multiplication. -/
 theorem leftMulMat_mul_rightMulMat [Fintype G] (a b : G → ZMod 2) :
     leftMulMat a * rightMulMat b = rightMulMat b * leftMulMat a := by
   ext σ τ
@@ -151,15 +165,17 @@ theorem leftMulMat_mul_rightMulMat [Fintype G] (a b : G → ZMod 2) :
     group
   rw [hL, hR]
 
-/-! ## 二、一般种子的 lifted product -/
+/-! ## 2. The lifted product with general seeds -/
 
-/-- 种子矩阵的**右正则块展开**：`A` 的第 `(i,j)` 个群代数元换成它的左乘矩阵
-（即 `A` 在右正则表示下的 $\ell \times \ell$ 块）。 -/
+/-- The **right regular block expansion** of a seed matrix: the `(i,j)`-th group-algebra element of
+`A` is replaced by its left-multiplication matrix
+(that is, the $\ell \times \ell$ block of `A` in the right regular representation). -/
 def lpExpandR {mA nA : ℕ} (A : Matrix (Fin mA) (Fin nA) (G → ZMod 2)) :
     Matrix (Fin mA × G) (Fin nA × G) (ZMod 2) :=
   fun x y => A x.1 y.1 (x.2 * y.2⁻¹)
 
-/-- 种子矩阵的**左正则块展开**：`B` 的第 `(s,t)` 个群代数元换成它的右乘矩阵。 -/
+/-- The **left regular block expansion** of a seed matrix: the `(s,t)`-th group-algebra element of `B`
+is replaced by its right-multiplication matrix. -/
 def lpExpandL {mB nB : ℕ} (B : Matrix (Fin mB) (Fin nB) (G → ZMod 2)) :
     Matrix (Fin mB × G) (Fin nB × G) (ZMod 2) :=
   fun x y => B x.1 y.1 (y.2⁻¹ * x.2)
@@ -172,11 +188,11 @@ theorem lpExpandL_apply {mB nB : ℕ} (B : Matrix (Fin mB) (Fin nB) (G → ZMod 
     (s : Fin mB) (σ : G) (t : Fin nB) (τ : G) :
     lpExpandL B (s, σ) (t, τ) = rightMulMat (B s t) σ τ := rfl
 
-/-- **lifted product 的 X 型校验**
-$H_X = [\widehat A \otimes I_{m_B} \mid I_{m_A} \otimes \widehat B]$。
+/-- **The X-type checks of the lifted product**
+$H_X = [\widehat A \otimes I_{m_B} \mid I_{m_A} \otimes \widehat B]$.
 
-行 `((i,s),σ)`；左半列 `((j,s'),τ)` 取 $\widehat A\,(i,\sigma)(j,\tau)\cdot[s=s']$，
-右半列 `((i',t'),τ)` 取 $[i=i']\cdot \widehat B\,(s,\sigma)(t',\tau)$。 -/
+Row `((i,s),σ)`; the left half column `((j,s'),τ)` takes $\widehat A\,(i,\sigma)(j,\tau)\cdot[s=s']$
+and the right half column `((i',t'),τ)` takes $[i=i']\cdot \widehat B\,(s,\sigma)(t',\tau)$. -/
 def lpHX {mA nA mB nB : ℕ} (A : Matrix (Fin mA) (Fin nA) (G → ZMod 2))
     (B : Matrix (Fin mB) (Fin nB) (G → ZMod 2)) :
     Matrix ((Fin mA × Fin mB) × G)
@@ -185,12 +201,12 @@ def lpHX {mA nA mB nB : ℕ} (A : Matrix (Fin mA) (Fin nA) (G → ZMod 2))
     (fun y => lpExpandR A (x.1.1, x.2) (y.1.1, y.2) * (if x.1.2 = y.1.2 then 1 else 0))
     (fun y => (if x.1.1 = y.1.1 then 1 else 0) * lpExpandL B (x.1.2, x.2) (y.1.2, y.2)) c
 
-/-- **lifted product 的 Z 型校验**
-$H_Z = [I_{n_A} \otimes \widehat B^{\top} \mid \widehat A^{\top} \otimes I_{n_B}]$。
+/-- **The Z-type checks of the lifted product**
+$H_Z = [I_{n_A} \otimes \widehat B^{\top} \mid \widehat A^{\top} \otimes I_{n_B}]$.
 
-行 `((j,t),σ)`；左半列 `((j',s'),τ)` 取 $[j=j']\cdot \widehat B\,(s',\tau)(t,\sigma)$
-（即块转置后的 $\widehat B$），右半列 `((i',t'),τ)` 取
-$\widehat A\,(i',\tau)(j,\sigma)\cdot[t=t']$。 -/
+Row `((j,t),σ)`; the left half column `((j',s'),τ)` takes $[j=j']\cdot \widehat B\,(s',\tau)(t,\sigma)$
+(that is, $\widehat B$ after the block transpose) and the right half column `((i',t'),τ)` takes
+$\widehat A\,(i',\tau)(j,\sigma)\cdot[t=t']$. -/
 def lpHZ {mA nA mB nB : ℕ} (A : Matrix (Fin mA) (Fin nA) (G → ZMod 2))
     (B : Matrix (Fin mB) (Fin nB) (G → ZMod 2)) :
     Matrix ((Fin nA × Fin nB) × G)
@@ -199,7 +215,7 @@ def lpHZ {mA nA mB nB : ℕ} (A : Matrix (Fin mA) (Fin nA) (G → ZMod 2))
     (fun y => (if x.1.1 = y.1.1 then 1 else 0) * lpExpandL B (y.1.2, y.2) (x.1.2, x.2))
     (fun y => lpExpandR A (y.1.1, y.2) (x.1.1, x.2) * (if x.1.2 = y.1.2 then 1 else 0)) c
 
-/-- 四个分块的逐条目刻画（`rfl` 级）。 -/
+/-- The entrywise description of the four blocks (at the `rfl` level). -/
 theorem lpHX_inl {mA nA mB nB : ℕ} (A : Matrix (Fin mA) (Fin nA) (G → ZMod 2))
     (B : Matrix (Fin mB) (Fin nB) (G → ZMod 2))
     (x : (Fin mA × Fin mB) × G) (y : (Fin nA × Fin mB) × G) :
@@ -224,14 +240,14 @@ theorem lpHZ_inr {mA nA mB nB : ℕ} (A : Matrix (Fin mA) (Fin nA) (G → ZMod 2
     lpHZ A B x (Sum.inr y)
       = lpExpandR A (y.1.1, y.2) (x.1.1, x.2) * (if x.1.2 = y.1.2 then 1 else 0) := rfl
 
-/-! ## 三、结构定理：lifted product 的 CSS 相容性 -/
+/-! ## 3. The structure theorem: CSS compatibility of the lifted product -/
 
-/-- **lifted product 的 CSS 相容性**：$H_X H_Z^{\top} = 0$，对**任意**种子 $A, B$ 成立。
+/-- **CSS compatibility of the lifted product**: $H_X H_Z^{\top} = 0$, for **any** seeds $A, B$.
 
-逐条目：左右两个分块各塌缩成一次求和（`Finset.sum_eq_single` 消掉 Kronecker 的
-$\delta$ 因子），两个被加项分别是 $(L(A_{ij})\cdot R(B_{st}))(\sigma,\sigma')$ 与
-$(R(B_{st})\cdot L(A_{ij}))(\sigma,\sigma')$，由 `leftMulMat_mul_rightMulMat` 相等，
-在 $\mathbb{F}_2$ 上相加为零。**不含任何枚举**。 -/
+Entrywise, the left and the right block each collapse to a single sum (`Finset.sum_eq_single` removes
+the Kronecker $\delta$ factor), and the two summands are $(L(A_{ij})\cdot R(B_{st}))(\sigma,\sigma')$
+and $(R(B_{st})\cdot L(A_{ij}))(\sigma,\sigma')$, which are equal by `leftMulMat_mul_rightMulMat` and
+therefore add to zero over $\mathbb{F}_2$. **No enumeration is involved.** -/
 theorem lp_orthogonal [Fintype G] {mA nA mB nB : ℕ} (A : Matrix (Fin mA) (Fin nA) (G → ZMod 2))
     (B : Matrix (Fin mB) (Fin nB) (G → ZMod 2)) :
     lpHX A B * (lpHZ A B).transpose = 0 := by
@@ -281,14 +297,14 @@ theorem lp_orthogonal [Fintype G] {mA nA mB nB : ℕ} (A : Matrix (Fin mA) (Fin 
   rw [hL, hR, ← Matrix.mul_apply, ← Matrix.mul_apply, leftMulMat_mul_rightMulMat]
   exact CharTwo.add_self_eq_zero _
 
-/-! ## 四、2BGA：1 x 1 种子的 lifted product（文献 `LP[a, b]`） -/
+/-! ## 4. 2BGA: the lifted product of 1 x 1 seeds (the `LP[a, b]` of the literature) -/
 
-/-- **2BGA 的 X 型校验** $H_X = [L(a) \mid R(b)]$（Lin–Pryadko Eq. (16)）。 -/
+/-- **The X-type checks of 2BGA** $H_X = [L(a) \mid R(b)]$ (Lin–Pryadko Eq. (16)). -/
 def lp2HX (a b : G → ZMod 2) : Matrix G (G ⊕ G) (ZMod 2) :=
   fun σ c => Sum.elim (fun τ => leftMulMat a σ τ) (fun τ => rightMulMat b σ τ) c
 
-/-- **2BGA 的 Z 型校验** $H_Z = [R(b)^{\top} \mid L(a)^{\top}]$（Lin–Pryadko Eq. (16)：
-$H_Z^{\top} = \binom{B}{-A}$，在 $\mathbb{F}_2$ 上负号消失）。 -/
+/-- **The Z-type checks of 2BGA** $H_Z = [R(b)^{\top} \mid L(a)^{\top}]$ (Lin–Pryadko Eq. (16):
+$H_Z^{\top} = \binom{B}{-A}$, and the minus sign disappears over $\mathbb{F}_2$). -/
 def lp2HZ (a b : G → ZMod 2) : Matrix G (G ⊕ G) (ZMod 2) :=
   fun σ c => Sum.elim (fun τ => rightMulMat b τ σ) (fun τ => leftMulMat a τ σ) c
 
@@ -304,7 +320,7 @@ theorem lp2HZ_inl (a b : G → ZMod 2) (σ τ : G) :
 theorem lp2HZ_inr (a b : G → ZMod 2) (σ τ : G) :
     lp2HZ a b σ (Sum.inr τ) = leftMulMat a τ σ := rfl
 
-/-- **2BGA 的 CSS 相容性**：$H_X H_Z^{\top} = L(a)R(b) + R(b)L(a) = 0$。 -/
+/-- **CSS compatibility of 2BGA**: $H_X H_Z^{\top} = L(a)R(b) + R(b)L(a) = 0$. -/
 theorem lp2_orthogonal [Fintype G] (a b : G → ZMod 2) :
     lp2HX a b * (lp2HZ a b).transpose = 0 := by
   ext σ σ'
@@ -313,10 +329,10 @@ theorem lp2_orthogonal [Fintype G] (a b : G → ZMod 2) :
   rw [← Matrix.mul_apply, ← Matrix.mul_apply, leftMulMat_mul_rightMulMat]
   exact CharTwo.add_self_eq_zero _
 
-/-! ## 五、长度与维数的可复用引理 -/
+/-! ## 5. Reusable lemmas on lengths and dimensions -/
 
 omit [Group G] in
-/-- **LP 的量子比特数**：$\ell\,(n_A m_B + m_A n_B)$。 -/
+/-- **The number of qubits of LP**: $\ell\,(n_A m_B + m_A n_B)$. -/
 theorem lp_qubit_count [Fintype G] {mA nA mB nB : ℕ} :
     Fintype.card (((Fin nA × Fin mB) × G) ⊕ ((Fin mA × Fin nB) × G))
       = (nA * mB + mA * nB) * Fintype.card G := by
@@ -325,33 +341,33 @@ theorem lp_qubit_count [Fintype G] {mA nA mB nB : ℕ} :
   ring
 
 omit [Group G] in
-/-- LP 的 X 型校验行数：$m_A m_B \ell$。 -/
+/-- The number of X-type check rows of LP: $m_A m_B \ell$. -/
 theorem lp_row_count_X [Fintype G] {mA mB : ℕ} :
     Fintype.card ((Fin mA × Fin mB) × G) = mA * mB * Fintype.card G := by
   rw [Fintype.card_prod, Fintype.card_prod, Fintype.card_fin, Fintype.card_fin]
 
 omit [Group G] in
-/-- LP 的 Z 型校验行数：$n_A n_B \ell$。 -/
+/-- The number of Z-type check rows of LP: $n_A n_B \ell$. -/
 theorem lp_row_count_Z [Fintype G] {nA nB : ℕ} :
     Fintype.card ((Fin nA × Fin nB) × G) = nA * nB * Fintype.card G := by
   rw [Fintype.card_prod, Fintype.card_prod, Fintype.card_fin, Fintype.card_fin]
 
 omit [Group G] in
-/-- **2BGA 的码长**：$n = 2\ell$（两个 $\ell$ 块的直和）。 -/
+/-- **The code length of 2BGA**: $n = 2\ell$ (the direct sum of two $\ell$ blocks). -/
 theorem lp2_qubit_count [Fintype G] : Fintype.card (G ⊕ G) = 2 * Fintype.card G := by
   rw [Fintype.card_sum]
   ring
 
-/-! ## 六、与 HGP 的关系：常值种子 ⟹ 每一个群纤维都是 HGP -/
+/-! ## 6. Relation to HGP: constant seeds make every group fibre an HGP -/
 
-/-- 把 $\mathbb{F}_2$ 上的矩阵**提升**为常值群代数元矩阵（即 $\mathbb{F}_2 \subset \mathbb{F}_2[G]$
-的像：只支撑在单位元上）。 -/
+/-- **Lifting** a matrix over $\mathbb{F}_2$ to a matrix of constant group-algebra elements (that is,
+the image of $\mathbb{F}_2 \subset \mathbb{F}_2[G]$: supported on the identity alone). -/
 def liftConst [DecidableEq G] {m n : ℕ} (M : Matrix (Fin m) (Fin n) (ZMod 2)) :
     Matrix (Fin m) (Fin n) (G → ZMod 2) :=
   fun i j g => M i j * (if g = 1 then 1 else 0)
 
-/-- 常值种子下右正则块展开退化为 $A \otimes I_\ell$：
-$\widehat A\,(i,\sigma)(j,\tau) = A_{ij}\cdot[\sigma = \tau]$。 -/
+/-- With a constant seed the right regular block expansion degenerates to $A \otimes I_\ell$:
+$\widehat A\,(i,\sigma)(j,\tau) = A_{ij}\cdot[\sigma = \tau]$. -/
 theorem lpExpandR_liftConst [DecidableEq G] {m n : ℕ} (A : Matrix (Fin m) (Fin n) (ZMod 2))
     (i : Fin m) (σ : G) (j : Fin n) (τ : G) :
     lpExpandR (liftConst A) (i, σ) (j, τ) = A i j * (if σ = τ then 1 else 0) := by
@@ -360,7 +376,7 @@ theorem lpExpandR_liftConst [DecidableEq G] {m n : ℕ} (A : Matrix (Fin m) (Fin
   · rw [ite_eq_left ((mul_inv_eq_one_iff σ τ).mpr h), ite_eq_left h]
   · rw [ite_eq_right (fun hc => h ((mul_inv_eq_one_iff σ τ).mp hc)), ite_eq_right h]
 
-/-- 常值种子下左正则块展开退化为 $B \otimes I_\ell$。 -/
+/-- With a constant seed the left regular block expansion degenerates to $B \otimes I_\ell$. -/
 theorem lpExpandL_liftConst [DecidableEq G] {m n : ℕ} (B : Matrix (Fin m) (Fin n) (ZMod 2))
     (s : Fin m) (σ : G) (t : Fin n) (τ : G) :
     lpExpandL (liftConst B) (s, σ) (t, τ) = B s t * (if σ = τ then 1 else 0) := by
@@ -369,7 +385,8 @@ theorem lpExpandL_liftConst [DecidableEq G] {m n : ℕ} (B : Matrix (Fin m) (Fin
   · rw [ite_eq_left ((inv_mul_eq_one_iff σ τ).mpr h), ite_eq_left h]
   · rw [ite_eq_right (fun hc => h ((inv_mul_eq_one_iff σ τ).mp hc)), ite_eq_right h]
 
-/-- **LP 的 X 型校验在常值种子下按群指标块对角，每块是 HGP**（左块）。 -/
+/-- **With constant seeds the X-type checks of LP are block diagonal in the group index, and every
+block is an HGP** (left block). -/
 theorem lpHX_liftConst_inl [DecidableEq G] {mA nA mB nB : ℕ} (A : Matrix (Fin mA) (Fin nA) (ZMod 2))
     (B : Matrix (Fin mB) (Fin nB) (ZMod 2))
     (x : (Fin mA × Fin mB) × G) (y : (Fin nA × Fin mB) × G) :
@@ -410,11 +427,12 @@ theorem lpHZ_liftConst_inr [DecidableEq G] {mA nA mB nB : ℕ} (A : Matrix (Fin 
   · simp [h]
   · simp [h, Ne.symm h]
 
-/-- **平凡群（$\ell = 1$）时 LP 逐条目就是 HGP**（$X$ 侧）。
+/-- **On the trivial group ($\ell = 1$) LP is HGP entrywise** ($X$ side).
 
-$\ell = 1$ 时群指标只有一个元素（`Subsingleton G`），$\delta_{\sigma\tau}$ 恒为 $1$，
-于是 `lpHX_liftConst_inl` 里的因子消失。这正是文献所说的"$R = \mathbb{F}_q$ 时 lifted
-product 等价于 product construction"（Panteleev–Kalachev, p. 8）。 -/
+At $\ell = 1$ the group index has a single element (`Subsingleton G`), so $\delta_{\sigma\tau}$ is
+constantly $1$ and the factor in `lpHX_liftConst_inl` disappears. This is the statement of the
+literature that "for $R = \mathbb{F}_q$ the lifted product is equivalent to the product
+construction" (Panteleev–Kalachev, p. 8). -/
 theorem lp_trivialGroup_eq_hgp [Subsingleton G] [DecidableEq G] {mA nA mB nB : ℕ}
     (A : Matrix (Fin mA) (Fin nA) (ZMod 2)) (B : Matrix (Fin mB) (Fin nB) (ZMod 2))
     (i : Fin mA) (s : Fin mB) (j : Fin nA) (t : Fin mB) :
@@ -422,7 +440,7 @@ theorem lp_trivialGroup_eq_hgp [Subsingleton G] [DecidableEq G] {mA nA mB nB : �
       = hgpHX A B.transpose (i, s) (Sum.inl (j, t)) := by
   rw [lpHX_liftConst_inl, ite_eq_left rfl, mul_one]
 
-/-- **平凡群（$\ell = 1$）时 LP 逐条目就是 HGP**（$Z$ 侧）。 -/
+/-- **On the trivial group ($\ell = 1$) LP is HGP entrywise** ($Z$ side). -/
 theorem lp_trivialGroup_eq_hgp_Z [Subsingleton G] [DecidableEq G] {mA nA mB nB : ℕ}
     (A : Matrix (Fin mA) (Fin nA) (ZMod 2)) (B : Matrix (Fin mB) (Fin nB) (ZMod 2))
     (j : Fin nA) (t : Fin nB) (j' : Fin nA) (s : Fin mB) :
