@@ -203,7 +203,12 @@ jobs:
       # leaves out, and the log of every run repeats it.
       - name: Build the modules in scope (0 error, 0 warning in this package)
         run: |
-          set -o pipefail
+          # No `set -o pipefail` here, deliberately.  The build's status comes from
+          # waiting on the background job rather than from a pipeline, and pipefail
+          # makes a pipeline fail for a reason that is not an error: `grep` exits 1
+          # when it matches nothing, so counting the warnings with `grep | wc -l`
+          # aborted this step exactly when the package had none -- the case the gate
+          # exists to confirm.
           source "$RUNNER_TEMP/fail.sh"
           # A step that is killed rather than failed runs no handler and so leaves
           # no annotation, which is exactly what the last two runs did.  These two
@@ -299,14 +304,20 @@ jobs:
           # The dependencies warn too -- deprecation notices, aesop on a goal it
           # cannot close -- and on the runner their paths sit under a directory called
           # QECCertificates, so matching a bare "QECCertificates/" counts them.
-          warns=$(grep -E '^warning: (QECCertificates\.lean|QECCertificates/)' build.log | wc -l)
+          #
+          # Counted with grep rather than grep piped into wc, because the pipe loses
+          # the count to the exit status: `set -o pipefail` is on, grep exits 1 when
+          # it matches nothing, and the composition then aborts the script -- so the
+          # step failed exactly when the package had no warnings, which is the case
+          # the gate is there to confirm.
+          warns=$(grep -cE '^warning: (QECCertificates\.lean|QECCertificates/)' build.log || true)
           echo "package warning lines: $warns (want 0)"
           if [ "$errs" != "0" ]; then
-            grep -E 'error[(:]' build.log | head -20
+            grep -E 'error[(:]' build.log | head -20 || true
             fail "the build reported errors" build.log
           fi
           if [ "$warns" != "0" ]; then
-            grep -E '^warning: (QECCertificates\.lean|QECCertificates/)' build.log | head -20
+            grep -E '^warning: (QECCertificates\.lean|QECCertificates/)' build.log | head -20 || true
             fail "a module of this package warned during the build" build.log \
               "this package's own modules warned, and the standard here is none"
           fi
