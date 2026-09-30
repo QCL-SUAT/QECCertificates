@@ -32,3 +32,13 @@ jobs:
 
       - name: Axiom audit (three standard axioms only)
         run: python3 tools/check_axioms.py build.log
+
+      # Portability first, before the build: it is the one gate that a fresh clone
+      # can fail for reasons that have nothing to do with Lean -- a machine-coupled
+      # path, a tracked file missing from the checkout, a control byte folded into a
+      # source file.  Its own self-test runs too, because a gate that only ever
+      # printed PASS is an assumption.
+      - name: Portability gate
+        run: |
+          python3 tools/check_portability.py --self-test
+          python3 tools/check_portability.py
