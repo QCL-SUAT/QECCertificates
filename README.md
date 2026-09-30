@@ -4,6 +4,8 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 ![Lean](https://img.shields.io/badge/Lean-v4.34.0-blueviolet)
 
+**English** | [简体中文](README.zh-CN.md)
+
 **Certified code parameters and fault distances for quantum error correction.**
 A Lean 4 library that replaces "trust the solver" with "check the certificate".
 

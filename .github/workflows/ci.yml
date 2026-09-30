@@ -42,3 +42,11 @@ jobs:
         run: |
           python3 tools/check_portability.py --self-test
           python3 tools/check_portability.py
+
+      # The two READMEs are one document in two languages; the repository shows the
+      # English one and links the Chinese one, which is only worth doing while they
+      # say the same thing section for section.
+      - name: README pair gate
+        run: |
+          python3 tools/check_readme_pair.py --self-test
+          python3 tools/check_readme_pair.py
