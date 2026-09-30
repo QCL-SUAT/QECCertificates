@@ -10,58 +10,81 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The static gates come first: they cost seconds, and they are the ones that
-      # a fresh clone can fail for reasons that have nothing to do with Lean -- a
-      # machine-coupled path, a control byte folded into a source file, the two
-      # READMEs drifting, a theorem whose audit line was forgotten.  Each runs its
-      # own self-test too, because a gate that only ever printed PASS is an
-      # assumption.
-      - name: Portability gate
-        run: |
-          python3 tools/check_portability.py --self-test
-          python3 tools/check_portability.py
-
-      - name: README pair gate
-        run: |
-          python3 tools/check_readme_pair.py --self-test
-          python3 tools/check_readme_pair.py
-
-      - name: Audit-coverage gate
-        run: |
-          python3 tools/check_audit_coverage.py --self-test
-          python3 tools/check_audit_coverage.py
-
-      - name: CI scope gate
-        run: |
-          python3 tools/ci_scope.py --self-test
-          python3 tools/ci_scope.py --check
-
       # A failing step has to say why, and the only channel that carries a reason
       # to the checks view is an annotation.  The job log does not count: reading it
       # from outside needs repository admin rights, so a reason that lives only in
       # the log is a reason nobody outside can act on.  Every step below that can
       # fail ends with `|| fail <title> <log>`, which prints the tail, annotates the
-      # first error line, and exits 1.
+      # reason, and exits 1.
       - name: A helper that turns a failure into an annotation
         run: |
           cat > "$RUNNER_TEMP/fail.sh" <<'SH'
           fail() {
-            title="$1"; log="$2"
+            title="$1"; log="$2"; reason="${3:-}"
             echo "::group::the tail of $(basename "$log")"
             tail -40 "$log" 2>/dev/null || true
             echo "::endgroup::"
-            msg=$(grep -m1 -E 'error[(:]|fatal:|Error:|Cannot|cannot|No space|space left|uncaught' \
-                  "$log" 2>/dev/null | tr -d '\r' | cut -c1-400 | sed 's/%/%25/g')
-            # A failure that matches no known pattern still has to say something,
-            # so the last lines of the log travel in the annotation itself: the
-            # checks view is the only place a reader outside this repository can
-            # look, and a dead process often leaves no line that looks like an error.
+            msg="$reason"
+            if [ -z "$msg" ]; then
+              msg=$(grep -m1 -E 'error[(:]|fatal:|Error:|Cannot|cannot|No space|space left|uncaught' \
+                    "$log" 2>/dev/null | tr -d '\r' | cut -c1-400 | sed 's/%/%25/g')
+            fi
+            # A failure that matches no known pattern still has to say something, so
+            # the last lines of the log travel in the annotation itself: the checks
+            # view is the only place a reader outside this repository can look, and a
+            # dead process often leaves no line that looks like an error.
             tail3=$(tail -3 "$log" 2>/dev/null | tr -d '\r' | tr '\n' '|' | cut -c1-350 | sed 's/%/%25/g')
             echo "::error title=${title}::${msg:-no line matches an error pattern}; last lines: ${tail3}"
             exit 1
           }
           SH
           echo "the helper is in $RUNNER_TEMP/fail.sh"
+
+      # The static gates cost seconds, and they are the ones that a fresh clone can
+      # fail for reasons that have nothing to do with Lean: a machine-coupled path, a
+      # control byte folded into a source file, the two READMEs drifting, a theorem
+      # whose audit line was forgotten, a module outside the scope that continuous
+      # integration builds.  Each runs its own self-test too, because a gate that
+      # only ever printed PASS is an assumption.
+      - name: Portability gate
+        run: |
+          source "$RUNNER_TEMP/fail.sh"
+          log="$RUNNER_TEMP/portability.log"
+          python3 tools/check_portability.py --self-test > "$log" 2>&1 \
+            || fail "the portability gate failed its own self-test" "$log"
+          python3 tools/check_portability.py >> "$log" 2>&1 \
+            || fail "the portability gate failed" "$log"
+          tail -4 "$log"
+
+      - name: README pair gate
+        run: |
+          source "$RUNNER_TEMP/fail.sh"
+          log="$RUNNER_TEMP/readme.log"
+          python3 tools/check_readme_pair.py --self-test > "$log" 2>&1 \
+            || fail "the README gate failed its own self-test" "$log"
+          python3 tools/check_readme_pair.py >> "$log" 2>&1 \
+            || fail "the two READMEs have drifted apart" "$log"
+          tail -4 "$log"
+
+      - name: Audit-coverage gate
+        run: |
+          source "$RUNNER_TEMP/fail.sh"
+          log="$RUNNER_TEMP/audit_coverage.log"
+          python3 tools/check_audit_coverage.py --self-test > "$log" 2>&1 \
+            || fail "the audit-coverage gate failed its own self-test" "$log"
+          python3 tools/check_audit_coverage.py >> "$log" 2>&1 \
+            || fail "a theorem has no line in the audit region" "$log"
+          tail -4 "$log"
+
+      - name: CI scope gate
+        run: |
+          source "$RUNNER_TEMP/fail.sh"
+          log="$RUNNER_TEMP/ci_scope.log"
+          python3 tools/ci_scope.py --self-test > "$log" 2>&1 \
+            || fail "the scope gate failed its own self-test" "$log"
+          python3 tools/ci_scope.py --check >> "$log" 2>&1 \
+            || fail "the recorded scope no longer matches the tree" "$log"
+          tail -4 "$log"
 
       - name: Install elan (Lean toolchain manager)
         run: |
@@ -166,18 +189,23 @@ jobs:
             fail "the build failed" build.log
           fi
           errs=$(grep -cE 'error[(:]' build.log || true)
+          echo "error lines: $errs (want 0)"
           # A warning counts against this package only when it names a file of it.
           # The dependencies warn too -- deprecation notices, aesop on a goal it
           # cannot close -- and on the runner their paths sit under a directory called
           # QECCertificates, so matching a bare "QECCertificates/" counts them.
           warns=$(grep -E '^warning: (QECCertificates\.lean|QECCertificates/)' build.log | wc -l)
-          echo "error lines: $errs (want 0)"
           echo "package warning lines: $warns (want 0)"
-          if [ "$warns" != "0" ]; then
-            grep -E '^warning: (QECCertificates\.lean|QECCertificates/)' build.log
+          if [ "$errs" != "0" ]; then
+            grep -E 'error[(:]' build.log | head -20
+            fail "the build reported errors" build.log
           fi
-          test "$errs" = "0"
-          test "$warns" = "0"
+          if [ "$warns" != "0" ]; then
+            grep -E '^warning: (QECCertificates\.lean|QECCertificates/)' build.log | head -20
+            fail "a module of this package warned during the build" build.log \
+              "this package's own modules warned, and the standard here is none"
+          fi
+          echo "Build completed successfully (0 errors, 0 warnings in this package)."
 
       # The audit region lives in the root module, and the root module imports the
       # whole library, so this step runs when -- and only when -- the scope above
