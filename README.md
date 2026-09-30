@@ -103,10 +103,6 @@ carries the same information in machine-readable form.
 }
 ```
 
-Zenodo mints two numbers from one deposit: this concept DOI, which always resolves to
-the newest version, and a DOI for each archived artifact in it (10.5281/zenodo.23056680
-for the artifact deposited first). The machine-readable form is in [`CITATION.cff`](CITATION.cff).
-
 ## License
 
 Apache-2.0; see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE). The three dependencies

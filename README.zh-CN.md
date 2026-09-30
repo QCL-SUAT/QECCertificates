@@ -88,10 +88,6 @@ python3 tools/check_axioms.py build.log   # 逐条受审计声明，只允许三
 }
 ```
 
-一次归档，Zenodo 会给两个号：上面这个**概念 DOI**（永远解析到最新版），以及每个已归档
-产物各自的 DOI（最先归档的那一份是 10.5281/zenodo.23056680）。机器可读的那份在
-[`CITATION.cff`](CITATION.cff)。
-
 ## 许可
 
 Apache-2.0；见 [`LICENSE`](LICENSE) 与 [`NOTICE`](NOTICE)。三个依赖（mathlib、Lean-QEC、
