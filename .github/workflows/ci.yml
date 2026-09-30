@@ -50,9 +50,14 @@ jobs:
             echo "::group::the tail of $(basename "$log")"
             tail -40 "$log" 2>/dev/null || true
             echo "::endgroup::"
-            msg=$(grep -m1 -E 'error[(:]|fatal:|Error:|Cannot|cannot' "$log" 2>/dev/null \
-                  | tr -d '\r' | cut -c1-400 | sed 's/%/%25/g')
-            echo "::error title=${title}::${msg:-the failure left no error line in $(basename "$log")}"
+            msg=$(grep -m1 -E 'error[(:]|fatal:|Error:|Cannot|cannot|No space|space left|uncaught' \
+                  "$log" 2>/dev/null | tr -d '\r' | cut -c1-400 | sed 's/%/%25/g')
+            # A failure that matches no known pattern still has to say something,
+            # so the last lines of the log travel in the annotation itself: the
+            # checks view is the only place a reader outside this repository can
+            # look, and a dead process often leaves no line that looks like an error.
+            tail3=$(tail -3 "$log" 2>/dev/null | tr -d '\r' | tr '\n' '|' | cut -c1-350 | sed 's/%/%25/g')
+            echo "::error title=${title}::${msg:-no line matches an error pattern}; last lines: ${tail3}"
             exit 1
           }
           SH
@@ -87,11 +92,42 @@ jobs:
       - name: Fetch the prebuilt caches (mathlib, and the two upstream libraries)
         run: |
           source "$RUNNER_TEMP/fail.sh"
-          lake exe cache get > "$RUNNER_TEMP/cache.log" 2>&1 \
-            || fail "fetching the mathlib cache failed" "$RUNNER_TEMP/cache.log"
+          echo "disk before the cache download:"
+          df -h / "$HOME" /mnt 2>/dev/null | sed 's/^/  /'
+          # The cache program keeps one archive per module under ~/.cache/mathlib and
+          # unpacks it into the mathlib checkout, so the download and the unpacked
+          # oleans both compete for the same small root filesystem.  The runner has a
+          # large second disk at /mnt: put the archives there, and they stop counting
+          # against the space the unpacked oleans need.
+          if sudo -n mkdir -p /mnt/mathlib-cache && sudo -n chown "$USER" /mnt/mathlib-cache; then
+            rm -rf "$HOME/.cache/mathlib"
+            mkdir -p "$HOME/.cache"
+            ln -s /mnt/mathlib-cache "$HOME/.cache/mathlib"
+            echo "the archive cache lives on /mnt"
+          else
+            echo "no writable /mnt; the archives stay under \$HOME"
+          fi
+          ok=0
+          for attempt in 1 2 3; do
+            if lake exe cache get > "$RUNNER_TEMP/cache.log" 2>&1; then ok=1; break; fi
+            echo "attempt $attempt of the mathlib cache download failed; the last lines:"
+            tail -5 "$RUNNER_TEMP/cache.log"
+            sleep 20
+          done
+          if [ "$ok" != "1" ]; then
+            echo "disk after the failed download:"
+            df -h / "$HOME" /mnt 2>/dev/null | sed 's/^/  /'
+            fail "fetching the mathlib cache failed" "$RUNNER_TEMP/cache.log"
+          fi
+          df -h / "$HOME" | sed 's/^/disk: /'
           mathlib=$(find .lake/packages/mathlib/.lake/build/lib/lean -name '*.olean' 2>/dev/null | wc -l)
           echo "mathlib oleans in place: $mathlib"
           echo "::notice title=mathlib cache::$mathlib olean(s) in place"
+          # The archives have done their work; the build below needs the room.  A
+          # second `cache get` in the same job would re-download them, and there is
+          # no second call.
+          rm -rf "$HOME/.cache/mathlib"
+          df -h / "$HOME" | sed 's/^/disk: /'
           env -u LEAN_PATH lake build --no-build >/dev/null 2>&1 || true
           for spec in "LeanQEC QCL-SUAT/Lean-QEC" "QEC QCL-SUAT/QECLean"; do
             set -- $spec
