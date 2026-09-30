@@ -36,35 +36,79 @@ jobs:
           python3 tools/ci_scope.py --self-test
           python3 tools/ci_scope.py --check
 
+      # A failing step has to say why, and the only channel that carries a reason
+      # to the checks view is an annotation.  The job log does not count: reading it
+      # from outside needs repository admin rights, so a reason that lives only in
+      # the log is a reason nobody outside can act on.  Every step below that can
+      # fail ends with `|| fail <title> <log>`, which prints the tail, annotates the
+      # first error line, and exits 1.
+      - name: A helper that turns a failure into an annotation
+        run: |
+          cat > "$RUNNER_TEMP/fail.sh" <<'SH'
+          fail() {
+            title="$1"; log="$2"
+            echo "::group::the tail of $(basename "$log")"
+            tail -40 "$log" 2>/dev/null || true
+            echo "::endgroup::"
+            msg=$(grep -m1 -E 'error[(:]|fatal:|Error:|Cannot|cannot' "$log" 2>/dev/null \
+                  | tr -d '\r' | cut -c1-400 | sed 's/%/%25/g')
+            echo "::error title=${title}::${msg:-the failure left no error line in $(basename "$log")}"
+            exit 1
+          }
+          SH
+          echo "the helper is in $RUNNER_TEMP/fail.sh"
+
       - name: Install elan (Lean toolchain manager)
         run: |
-          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
-            | sh -s -- -y --default-toolchain none
+          source "$RUNNER_TEMP/fail.sh"
+          { curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+              | sh -s -- -y --default-toolchain none; } > "$RUNNER_TEMP/elan.log" 2>&1 \
+            || fail "installing elan failed" "$RUNNER_TEMP/elan.log"
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          tail -3 "$RUNNER_TEMP/elan.log"
 
+      # Its own step, because the toolchain download is the first thing that touches
+      # the network and the first thing that can fail for a reason that is nobody's
+      # mistake -- a release page that is slow, a runner without disk.
+      - name: Resolve the Lean toolchain named by lean-toolchain
+        run: |
+          source "$RUNNER_TEMP/fail.sh"
+          echo "lean-toolchain asks for: $(cat lean-toolchain)"
+          lake --version > "$RUNNER_TEMP/toolchain.log" 2>&1 \
+            || fail "the Lean toolchain could not be resolved" "$RUNNER_TEMP/toolchain.log"
+          cat "$RUNNER_TEMP/toolchain.log"
+
+      # The mathlib oleans come from the project's cache server; the two upstream
+      # libraries ship theirs on a `build-cache` branch.  Replaying them is the
+      # difference between a job that finishes and one that compiles ten thousand
+      # modules from source and runs into the six-hour limit.  The replay is best
+      # effort and says so out loud, because whether it worked is the first thing
+      # worth knowing about a failing run.
       - name: Fetch the prebuilt caches (mathlib, and the two upstream libraries)
         run: |
-          lake exe cache get
-          # Best effort, and deliberately not fatal.  The two upstream libraries ship
-          # prebuilt olean trees on a `build-cache` branch; replaying them is the
-          # difference between a job that finishes and one that compiles ten thousand
-          # modules from source and runs into the six-hour limit.  If a branch has
-          # moved or the fetch fails, the loop says so and the build below compiles
-          # them instead, which is where we were before this step existed.
+          source "$RUNNER_TEMP/fail.sh"
+          lake exe cache get > "$RUNNER_TEMP/cache.log" 2>&1 \
+            || fail "fetching the mathlib cache failed" "$RUNNER_TEMP/cache.log"
+          mathlib=$(find .lake/packages/mathlib/.lake/build/lib/lean -name '*.olean' 2>/dev/null | wc -l)
+          echo "mathlib oleans in place: $mathlib"
+          echo "::notice title=mathlib cache::$mathlib olean(s) in place"
           env -u LEAN_PATH lake build --no-build >/dev/null 2>&1 || true
           for spec in "LeanQEC QCL-SUAT/Lean-QEC" "QEC QCL-SUAT/QECLean"; do
             set -- $spec
             dir=".lake/packages/$1"
             if [ ! -e "$dir/.git" ]; then
               echo "no checkout for $1 yet, skipping its cache"
+              echo "::warning title=$1 cache::no checkout, so its modules compile from source"
               continue
             fi
-            if git -C "$dir" fetch --depth 1 origin build-cache \
+            if git -C "$dir" fetch --depth 1 origin build-cache >/dev/null 2>&1 \
                && git -C "$dir" checkout --quiet FETCH_HEAD -- .lake; then
               n=$(find "$dir/.lake/build/lib/lean" -name '*.olean' 2>/dev/null | wc -l)
               echo "replayed the prebuilt cache of $1: $n olean(s) in place"
+              echo "::notice title=$1 cache::$n olean(s) in place"
             else
               echo "cache replay skipped for $1 (branch unreachable or moved)"
+              echo "::warning title=$1 cache::the build-cache branch is unreachable, so its modules compile from source"
             fi
           done
 
@@ -77,20 +121,13 @@ jobs:
       - name: Build the modules in scope (0 error, 0 warning in this package)
         run: |
           set -o pipefail
+          source "$RUNNER_TEMP/fail.sh"
           python3 tools/ci_scope.py
           targets=$(python3 tools/ci_scope.py --lake-targets)
           echo "building $(echo "$targets" | wc -l) module(s) of 56"
           if ! env -u LEAN_PATH lake build $targets 2>&1 | tee build.log; then
-            echo "::group::the tail of the build log"
-            tail -60 build.log
-            echo "::endgroup::"
-            # A failure has to say what it was in the checks view: reading a log is
-            # a download away, and a failure that needs one is a failure nobody acts
-            # on.  The first error line goes into the annotation.
-            msg=$(grep -m1 -E 'error[(:]' build.log | tr -d '\r' | cut -c1-400 \
-                  | sed 's/%/%25/g')
-            echo "::error title=the build failed::${msg:-no error line in build.log}"
-            exit 1
+            echo "::warning title=the build was interrupted::the process died without an error line of ours. A death by memory shows up in dmesg, not in the log."
+            fail "the build failed" build.log
           fi
           errs=$(grep -cE 'error[(:]' build.log || true)
           # A warning counts against this package only when it names a file of it.
@@ -112,8 +149,11 @@ jobs:
       # "audited here" and "audited elsewhere" would be the wrong kind of green.
       - name: Axiom audit, when the scope covers the audit region
         run: |
+          source "$RUNNER_TEMP/fail.sh"
           if python3 tools/ci_scope.py --lake-targets | grep -qxF 'QECCertificates'; then
-            python3 tools/check_axioms.py build.log
+            python3 tools/check_axioms.py build.log > "$RUNNER_TEMP/audit.log" 2>&1 \
+              || fail "the axiom audit failed" "$RUNNER_TEMP/audit.log"
+            tail -5 "$RUNNER_TEMP/audit.log"
           else
             echo "Not run in this job.  The audit region is the root module, which"
             echo "imports the whole library; the modules outside this runner's memory"
