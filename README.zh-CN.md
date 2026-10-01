@@ -31,14 +31,14 @@ work"——而介于两者之间的产物，用 schema 自己的话说，是证�
 | `QECCertificates/Pauli/` | 算符树 ↔ 辛表示的翻译 |
 | `QECCertificates/Reflect/` | 证书框架：内核复核的 LRAT/RUP 检查器及其可靠性定理、双向的编码忠实性——CNF 的一个模型**就是**一个轻逻辑算符——保持不可满足性的对称性破缺，以及本库用到的那几条求解器证书的逐条回放 |
 | `QECCertificates/Codes/` | 码论层：稳定子码、CSS 码与子系统码；gauging 与测量协议的表示；共享实例族（Bacon–Shor、BB、HGP、提升乘积） |
-| [`tools/check_axioms.py`](tools/check_axioms.py) | 读构建日志，凡 `#print axioms` 一行不是恰三条标准公理的声明一律拒绝 |
+| [`tools/check_axioms.py`](tools/check_axioms.py) | 读构建日志，凡 `#print axioms` 一行点名了三条标准公理之外的公理的声明一律拒绝 |
 
 共 **57 个模块**，审计区覆盖包里**每一条**非私有 `theorem`/`lemma`——本仓库没有审计不到的角落。
 
 ## 保证
 
 * 零 `sorry`、零自定义公理、零 `native_decide`；
-* 每条受审计声明都恰依赖 `propext`、`Classical.choice` 与 `Quot.sound` 三条；
+* 受审计声明不得依赖 `propext`、`Classical.choice` 与 `Quot.sound` 之外的公理；只用到其中一条、一条都不用的，一样算过；
 * 证书检查器与任何求解器**不共享一行代码**——UNSAT 判决只由公式与证明文件重新推出；
 * 可移植是要求而不是愿望：没有机器耦合路径，每个依赖按 40 位完整 revision 钉住，全文 LF 行尾。
 
@@ -72,7 +72,7 @@ env -u LEAN_PATH lake build     # 按钉住的 revision 取 mathlib、Lean-QEC �
 
 ```bash
 env -u LEAN_PATH lake build > build.log 2>&1
-python3 tools/check_axioms.py build.log   # 逐条受审计声明，只允许三条标准公理
+python3 tools/check_axioms.py build.log   # 逐条受审计声明，不得超出三条标准公理
 ```
 
 这道门禁拒绝任何超出三条标准公理的声明，并且**把"一条都没审计到"判成失败而不是通过**。

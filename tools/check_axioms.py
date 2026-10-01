@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
-"""Axiom audit: every `#print axioms` line that comes from this package must show
-exactly the three standard axioms (`propext`, `Classical.choice`, `Quot.sound`).
+"""Axiom audit: every `#print axioms` line that comes from this package must name
+nothing beyond the three standard axioms (`propext`, `Classical.choice`, `Quot.sound`).
 
 Why this exists: "no custom axioms" is the kind of claim that is either machine-checked
 or it is marketing.  Lean prints the axioms of a declaration on request; this script
 reads that output out of a build log and refuses anything outside the standard three.
-The audit region of the root module prints exactly the load-bearing declarations, so
-covering the root module's own lines covers the claim.
+The audit region of the root module prints a line for every non-private theorem and
+lemma, so covering the root module's own lines covers the claim.  Fewer than the three
+is not a finding: a declaration whose axiom list is `[propext]`, or empty, passes, and
+what the gate rules out is an axiom outside the three, not a short list.
 
 Lean's output folds long axiom lists across lines; the reader joins continuation lines
 until the closing bracket, because a folded list read line by line produces a bogus
 axiom whose name ends in a comma.
 
 Usage:  check_axioms.py <build.log>
-Exit:   0 = at least one declaration audited, all of them exactly the standard three;
+Exit:   0 = at least one declaration audited, none outside the standard three;
         1 = an axiom outside the standard three, or nothing audited at all (not
             "nothing to check" -- a fresh clone with no `#print axioms` output must
             not read as a pass).

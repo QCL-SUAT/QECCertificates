@@ -34,8 +34,9 @@ python3 tools/check_axioms.py build.log
 
 The build must be free of errors, and free of warnings from this package (warnings from a
 dependency are not ours to fix). The gate then reads the audit region out of the build log
-and refuses any declaration whose `#print axioms` line is not exactly `propext`,
-`Classical.choice`, `Quot.sound`. Declarations that depend on no axioms at all are welcome.
+and refuses any declaration whose `#print axioms` line names an axiom beyond `propext`,
+`Classical.choice` and `Quot.sound`. Declarations that depend on fewer, or on none at all,
+are welcome.
 `sorry`, `admit`, custom `axiom` declarations and `native_decide` are not.
 
 A cached build does not replay `#print axioms` output, so the gate treats "nothing

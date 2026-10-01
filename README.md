@@ -35,7 +35,7 @@ an audit region so that a reader can see which axioms it rests on.
 | `QECCertificates/Pauli/` | the operator-tree ↔ symplectic-representation translation |
 | `QECCertificates/Reflect/` | the certificate framework: a kernel-checked LRAT/RUP checker with its soundness theorem, encoding faithfulness in both directions, where a model of the CNF **is** a light logical operator, symmetry breaking that preserves unsatisfiability, and the worked replays of the solver certificates used here |
 | `QECCertificates/Codes/` | the code-theoretic layer: stabilizer, CSS and subsystem codes; gauging and measurement-protocol representations; the shared instance families (Bacon–Shor, BB, HGP, lifted product) |
-| [`tools/check_axioms.py`](tools/check_axioms.py) | reads a build log and refuses any declaration whose `#print axioms` line is not exactly the three standard axioms |
+| [`tools/check_axioms.py`](tools/check_axioms.py) | reads a build log and refuses any declaration whose `#print axioms` line names an axiom outside the three standard ones |
 
 **57 modules**, and the audit region covers **every** non-private `theorem`/`lemma` in
 the package. This repository has no un-audited corner.
@@ -43,8 +43,8 @@ the package. This repository has no un-audited corner.
 ## Guarantees
 
 * zero `sorry`, zero custom axioms, zero `native_decide`;
-* each audited declaration depends on exactly `propext`, `Classical.choice` and
-  `Quot.sound`;
+* no audited declaration depends on an axiom outside `propext`, `Classical.choice` and
+  `Quot.sound`; one that needs fewer of them, or none, is as good a statement;
 * the certificate checker shares no code with any solver: an UNSAT verdict is re-derived
   from the formula and the proof file alone;
 * portability is a requirement, not an aspiration: no machine-coupled paths, every
