@@ -355,9 +355,15 @@ def sepKeepPathHzM : Matrix (Fin 4) (Fin 11) (ZMod 2) :=
 def sepKeepPathHz : List (Vec 11) := List.ofFn sepKeepPathHzM
 
 /-- **The distance-preserving side, the C1 verdict**: the path $0$–$4$–$5$–$2$ likewise
-violates C1. -/
+violates C1.
+
+**The index type is `Fin 6`, not `Fin 4`.** 顶点是那四个支撑比特，标号 $0,2,4,5$；
+Lean 的 `Fin` 字面量**按模取值**（`(4 : Fin 4) = 0`、`(5 : Fin 4) = 1`），写成 `Fin 4`
+会让这条边表**静默变成另一张图**（实测展开成 `[(0,0),(2,1),(0,1)]`，含自环），
+而 `by decide` 照样通过。同文件 `sepFail_not_C1` 的标号 $0,1,2,3$ 全在 `Fin 4` 范围内，
+故它写 `Fin 4` 是对的——两处的约定因此看起来一致，这是这个坑最隐蔽的地方。 -/
 theorem sepKeepPath_not_C1 :
-    ¬ HasExpansionOne ([(0, 4), (2, 5), (4, 5)] : List (Fin 4 × Fin 4)) := by decide
+    ¬ HasExpansionOne ([(0, 4), (2, 5), (4, 5)] : List (Fin 6 × Fin 6)) := by decide
 
 /-- **The distance-preserving side, the lower bound**: the deformed code has no logical
 operator of weight $\le 1$. Both sides are checked. -/
@@ -375,7 +381,7 @@ theorem sepKeepPath_lightLogical_two :
 /-- **The distance-preserving side, the conclusion**: C1 is violated, yet the Z-side
 distance of the deformed code is still $2=d$. -/
 theorem sepKeepPath_summary :
-    ¬ HasExpansionOne ([(0, 4), (2, 5), (4, 5)] : List (Fin 4 × Fin 4)) ∧
+    ¬ HasExpansionOne ([(0, 4), (2, 5), (4, 5)] : List (Fin 6 × Fin 6)) ∧
       (lightSet sepKeepPathHxM sepKeepPathHzM 2).card = 0 ∧
       (lightSet sepKeepPathHzM sepKeepPathHxM 2).card = 0 ∧
       min_weight_ker_not_mem_rowspace toricHx toricHz = 2 :=
