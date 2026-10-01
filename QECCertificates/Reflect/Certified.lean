@@ -325,7 +325,7 @@ theorem no_light_logical_of_unsat {n k : ℕ} {Rker Rpair : List (List Nat)}
     cases h : dotS (fun t => certAssign n E w t && certAssign n E w (n + t))
         (List.range n) <;> simp_all
   -- 七、与不可满足判决矛盾
-  obtain ⟨τ, hτ⟩ := buildPair_complete (Rker := Rker) (Rpair := Rpair) (n := n) (k := k)
+  obtain ⟨τ, -, hτ⟩ := buildPair_complete (Rker := Rker) (Rpair := Rpair) (n := n) (k := k)
     (σ := certAssign n E w) hn hne₁ hne₂ hb₁ hb₂ hwt hkerS hpairS hxwS
   exact hunsat ⟨τ, by rwa [hF] at hτ⟩
 

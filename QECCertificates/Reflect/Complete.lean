@@ -1052,12 +1052,21 @@ theorem xorChain_complete {xs : List Nat} {w : Bool} {c : Nat} {σ : Assign}
           exact xorChainAux_complete t w x₀ c σ hx₀ ht h C hC⟩
 
 /-- **Completeness of `buildPair`**: when the four semantic conditions hold, the encoding is
-satisfiable.
+satisfiable — **with the witness pinned down on the input variables**.
 
 Together with `buildPair_sat` of `Reflect/Encode.lean` (soundness) this composes into
 **"a light logical operator exists if and only if the encoding is satisfiable"**; adding the
 soundness theorem of `Reflect/LRAT.lean`, an unsatisfiability verdict then **directly gives a
-distance lower bound**, so both directions are now inside the kernel. -/
+distance lower bound**, so both directions are now inside the kernel.
+
+The **agreement clause** `∀ t, t < 2 * n → τ t = σ t` is what an assembly needs and what a bare
+"there exists a model" cannot supply: the base part is followed by other clause blocks, and to
+carry a model of the base part past those blocks one has to know that the base model reads the
+**input** variables — that is, the ones a lexicographic comparator compares — exactly as the
+semantic data does. It costs nothing here, since the whole proof is already built out of
+extensions that agree below their own starting point: the first segment agrees below `2 * n`, and
+every later segment agrees with the previous one below a number that is at least `2 * n`
+(`hge1`). -/
 theorem buildPair_complete {Rker Rpair : List (List Nat)} {n k : Nat} {σ : Assign}
     (hn : 0 < n) (hne₁ : ∀ r ∈ Rker, r ≠ []) (hne₂ : ∀ r ∈ Rpair, r ≠ [])
     (hcol₁ : ∀ r ∈ Rker, ∀ t ∈ r, t < n) (hcol₂ : ∀ r ∈ Rpair, ∀ t ∈ r, t < n)
@@ -1065,7 +1074,8 @@ theorem buildPair_complete {Rker Rpair : List (List Nat)} {n k : Nat} {σ : Assi
     (hker : ∀ r ∈ Rker, dotS σ r = false)
     (hpair : ∀ r ∈ Rpair, dotS (fun t => σ (n + t)) r = false)
     (hxw : dotS (fun t => σ t && σ (n + t)) (List.range n) = true) :
-    ∃ τ : Assign, SatFormula τ (buildPair Rker Rpair n k) := by
+    ∃ τ : Assign, (∀ t, t < 2 * n → τ t = σ t) ∧
+      SatFormula τ (buildPair Rker Rpair n k) := by
   -- 各段计数器只增不减
   have hge1 : 2 * n ≤ c1Of Rker n := chainsFrom_snd_ge Rker (2 * n)
   have hge2 : c1Of Rker n ≤ c2Of Rker Rpair n := chainsFrom_snd_ge Rpair (c1Of Rker n)
@@ -1181,10 +1191,14 @@ theorem buildPair_complete {Rker Rpair : List (List Nat)} {n k : Nat} {σ : Assi
     refine satFormula_of_agree hag₅ ?_ hcl₄
     intro C hC l hl
     exact xorChain_vars_lt hprodvars_ne hlt₄ C hC l hl
-  refine ⟨τ₅, ?_⟩
-  rw [buildPair]
-  exact satFormula_append.mpr
-    ⟨satFormula_append.mpr ⟨satFormula_append.mpr ⟨hSeg1, hSeg2⟩,
-      satFormula_append.mpr ⟨hSeg3, hSeg4⟩⟩, hcl₅⟩
+  refine ⟨τ₅, fun t ht => ?_, ?_⟩
+  · -- 输入变量上固定：第一段在 `2 * n` 以下与 `σ` 一致，其后每一段都与前一段在**不小于**
+    -- `2 * n` 处一致（`hge1`/`hge2`/`hge3`），故整条链在 `2 * n` 以下逐点等于 `σ`。
+    rw [e51 t (lt_of_lt_of_le ht hge1)]
+    exact hag₁ t ht
+  · rw [buildPair]
+    exact satFormula_append.mpr
+      ⟨satFormula_append.mpr ⟨satFormula_append.mpr ⟨hSeg1, hSeg2⟩,
+        satFormula_append.mpr ⟨hSeg3, hSeg4⟩⟩, hcl₅⟩
 
 end QECCertificates.LRAT
