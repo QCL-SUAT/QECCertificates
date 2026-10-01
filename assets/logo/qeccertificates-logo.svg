@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 512 512">
+  <title>QECCertificates</title>
+  <desc>A white ring carrying five qubits -- the five-qubit code -- around a gold checkmark: a code parameter that comes with a certificate. The file renders at 128 px wherever its own size is used; the drawing is resolution-independent, so any size is faithful.</desc>
+  <rect width="512" height="512" fill="#3538A6"/>
+  <circle cx="256" cy="256" r="146" fill="none" stroke="#FFFFFF" stroke-width="13"/>
+  <g fill="#FFFFFF">
+    <circle cx="256" cy="110" r="31"/>
+    <circle cx="394.9" cy="210.9" r="31"/>
+    <circle cx="341.8" cy="374.1" r="31"/>
+    <circle cx="170.2" cy="374.1" r="31"/>
+    <circle cx="117.1" cy="210.9" r="31"/>
+  </g>
+  <path d="M 178 254 L 234 310 L 332 202" fill="none" stroke="#FFC53D" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,5 +1,11 @@
 # QECCertificates
 
+<div align="center">
+
+![The QECCertificates logo: five qubits on a ring around a checkmark](assets/logo/qeccertificates-logo.svg)
+
+</div>
+
 [![build](https://github.com/QCL-SUAT/QECCertificates/actions/workflows/ci.yml/badge.svg)](https://github.com/QCL-SUAT/QECCertificates/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 ![Lean](https://img.shields.io/badge/Lean-v4.34.0-blueviolet)
