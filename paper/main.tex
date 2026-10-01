@@ -40,7 +40,7 @@ refutation is sound. A distance claim can then be closed by a kernel that never 
 search. The
 closest previous route replays the solver's proof inside a proof assistant, and its
 authors report that at 144 qubits the replay is the wall; separating search from check
-keeps the expensive part outside the trusted base. Fifty-five Lean~4 modules carry the
+keeps the expensive part outside the trusted base. Fifty-seven Lean~4 modules carry the
 algebra, the translation from Pauli operators to bit-vectors and the code instances, and
 every non-private theorem and lemma is printed in an audit region whose statements rest on
 the three axioms the kernel's logic needs. A certificate that is checkable without the
@@ -122,7 +122,7 @@ like, because everything beyond the wall is checked, and both rooms stand on the
 
 \section{What is in the library}
 
-\package{QECCertificates} is a Lean~4 development of 55 modules on Lean 4.34, built
+\package{QECCertificates} is a Lean~4 development of 57 modules on Lean 4.34, built
 against mathlib at a pinned revision, on the same toolchain as the two developments that
 consume it.
 
@@ -191,7 +191,7 @@ most $w$. The library spends its machinery on the left-hand side.}
 \paragraph{The trusted base.} No declaration in the library uses \package{sorry}, a custom
 axiom, or \package{native\_decide}; the computations that matter are carried out by the
 kernel itself, so a proof that leans on such a computation is a proof the kernel has
-already performed. The root module carries an audit region of 1{,}060 lines, each a
+already performed. The root module carries an audit region of 1{,}071 lines, each a
 request that the kernel print the axioms one load-bearing declaration depends on, and the
 region covers every non-private theorem and lemma in the package. A script in
 \package{tools/} reads those lines out of a build log and fails on any axiom outside

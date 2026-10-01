@@ -1231,7 +1231,14 @@ rests on exactly the three standard axioms.
 -- QECCertificates.Reflect.LexComplete
 #print axioms QECCertificates.LRAT.eVal_spec
 #print axioms QECCertificates.LRAT.eVal_succ
+#print axioms QECCertificates.LRAT.eVal_one
+#print axioms QECCertificates.LRAT.lexExtend_of_lt
+#print axioms QECCertificates.LRAT.lexExtend_of_mem
 #print axioms QECCertificates.LRAT.lexExtend_eVar
+#print axioms QECCertificates.LRAT.idx_mem
+#print axioms QECCertificates.LRAT.satClause_two_of
+#print axioms QECCertificates.LRAT.satClause_three_of
+#print axioms QECCertificates.LRAT.satClause_four_of
 #print axioms QECCertificates.LRAT.lexClauses_complete
 -- QECCertificates.Reflect.SBAssembly
 #print axioms QECCertificates.LRAT.lexHead_length

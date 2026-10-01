@@ -52,7 +52,10 @@ before running it.
 5. measure it and record the peak in `tools/ci_scope.py`, because the scope of the
    continuous-integration build is computed from that table and a module with no entry
    fails the scope gate;
-6. add a row to `README.md` if it opens a new layer, and rebuild.
+6. add a row to `README.md` if it opens a new layer; either way both READMEs now
+   state the wrong number of modules, and `tools/ci_scope.py --check` fails until
+   they are brought back in step, which is the point of that gate reading the prose;
+7. rebuild.
 
 Step 2 is not optional: the gate audits what the build printed, so a module that is never
 compiled is never audited, and nothing else would notice.

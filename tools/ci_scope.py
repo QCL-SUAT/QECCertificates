@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CI scope: which modules a hosted runner can afford to build.
+r"""CI scope: which modules a hosted runner can afford to build.
 
 Why this exists: the library's memory-hungry modules are the ones that close a
 statement by kernel reduction over a large object, and one of them peaks far above
@@ -16,26 +16,40 @@ transitively: lake cannot build a module without its dependencies, so the closur
 is what a runner actually has to afford.  The table is meant to be maintained: a
 new module is measured and recorded before it can be built anywhere.
 
-Measuring one module, with nothing else of this project building:
+The two READMEs also state three of these numbers -- the size of the package, the
+size of the scope, and the peak of the heaviest module -- and they are the same
+kind of claim: true when written, silently false the moment a module lands.  Nothing
+else here reads prose, so this does too (see README_NUMBERS); a module added without
+the READMEs following it fails --check rather than passing quietly.
 
-    peak=0
-    env -u LEAN_PATH lake env lean QECCertificates/<Layer>/<Module>.lean &
+Measuring one module, with nothing else of this project building.  The sampler has
+to name the process it measures: a machine with an editor open has a `lean --server`
+of its own, that server outlives the compile, and its peak is reported as a real
+number, so a sampler that takes the maximum over every `lean` process on the machine
+measures the editor -- or a sibling project's build -- instead of the module.
+
+    mod=QECCertificates/<Layer>/<Module>.lean
+    env -u LEAN_PATH lake env lean "$mod" &
     job=$!
+    peak=0
     while kill -0 $job 2>/dev/null; do
-        m=$(powershell -NoProfile -Command "(Get-Process lean -ErrorAction \\
-            SilentlyContinue | Measure-Object PeakWorkingSet64 -Maximum).Maximum")
+        m=$(powershell -NoProfile -Command "(Get-CimInstance Win32_Process \
+            -Filter \"Name='lean.exe'\" | Where-Object { \$_.CommandLine -like \
+            '*$mod*' } | ForEach-Object { Get-Process -Id \$_.ProcessId \
+            -ErrorAction SilentlyContinue } | Measure-Object PeakWorkingSet64 \
+            -Maximum).Maximum")
         case "$m" in ''|*[!0-9]*) ;; *) [ "$m" -gt "$peak" ] && peak=$m ;; esac
-        sleep 8
+        sleep 3
     done
     wait $job; echo $((peak/1048576)) MiB
 
-On GNU/Linux the same number comes out of `/usr/bin/time -v lake env lean <file>`
-as the maximum resident set size.  The sampler reads the peak of every lean
-process on the machine, so a second build running at the same time inflates it.
+Read the peak with `Get-Process`: the `PeakWorkingSetSize` that `Win32_Process`
+carries comes back as zero on this toolchain.  On GNU/Linux the same number comes
+out of `/usr/bin/time -v lake env lean <file>` as the maximum resident set size.
 
 Modes: --report (the table), --lake-targets (the CI command's argument list),
 --build-order (the same modules, each one's imports before it), --check (fail when
-the tree and the table disagree), --self-test.
+the tree, the table and the two READMEs disagree), --self-test.
 
 Exit: 0 = the scope is complete and consistent; 1 = the tree changed under it.
 """
@@ -113,12 +127,43 @@ PEAK_MIB = {
     "QECCertificates/Reflect/LRAT.lean": 2932,
     "QECCertificates/Reflect/LRATData.lean": 38738,
     "QECCertificates/Reflect/LRATDataCircuit.lean": 5601,
+    "QECCertificates/Reflect/LexComplete.lean": 3300,
     "QECCertificates/Reflect/LexLeader.lean": 3300,
     "QECCertificates/Reflect/SBAssembly.lean": 2971,
     "QECCertificates/Reflect/SymmetryBreak.lean": 2963,
 }
 
 IMPORT = re.compile(r"^import\s+([A-Za-z0-9_.]+)", re.M)
+
+README_EN = "README.md"
+README_ZH = "README.zh-CN.md"
+
+# The counts the two READMEs state about this tree, as (file, what it states,
+# pattern, the order the numbers come out in).  Every one of them is derivable from
+# the table above and the tree, which is the point: they are the claims a reader
+# checks the repository against, and neither README can be checked against the other
+# -- both can be stale together, and were.
+#
+# The patterns are anchored on the bold markers, so they match the sentence that
+# states the number and nothing else.  A pattern that matches nothing is reported as
+# a problem rather than passed over: a README reworded out from under this check has
+# to say so, or this becomes a gate that quietly checks nothing.
+#
+# Not covered, deliberately: counts spelled out in words ("Eleven modules").  The
+# numerals below are what a machine reads unambiguously; words would need a
+# number-word table that goes stale in a way of its own.
+README_NUMBERS = (
+    (README_EN, "the size of the package", r"\*\*(\d[\d,]*)\s+modules\*\*", "size"),
+    (README_ZH, "the size of the package", r"\*\*(\d[\d,]*)\s*个模块\*\*", "size"),
+    (README_EN, "the size of the build scope",
+     r"\*\*(\d[\d,]*)\s+of\s+the\s+(\d[\d,]*)\s+modules\*\*", "covered,total"),
+    (README_ZH, "the size of the build scope",
+     r"\*\*(\d[\d,]*)\s*个模块里的\s*(\d[\d,]*)\s*个\*\*", "total,covered"),
+    (README_EN, "the peak of the heaviest module",
+     r"\*\*(\d[\d,]*)\s+GiB\*\*", "heaviest"),
+    (README_ZH, "the peak of the heaviest module",
+     r"\*\*(\d[\d,]*)\s+GiB\*\*", "heaviest"),
+)
 
 
 def modules(root):
@@ -202,8 +247,48 @@ def build_order(root):
     return order
 
 
+def readme_numbers(root):
+    """Problem strings for the counts the two READMEs state about this tree."""
+    mods = modules(root)
+    values = {
+        # both README sentences count the same thing: the modules of the package,
+        # the root module among them, which is what this script's total is
+        "size": len(mods),
+        "total": len(mods),
+        "covered": len(scope(root)[0]),
+        "heaviest": int(round(max(PEAK_MIB.values()) / 1024.0)) if PEAK_MIB else 0,
+    }
+    out = []
+    for rel, what, pattern, order in README_NUMBERS:
+        expect = [values[k] for k in order.split(",")]
+        path = os.path.join(root, rel)
+        if not os.path.isfile(path):
+            out.append("%s is missing, so %s cannot be checked" % (rel, what))
+            continue
+        text = io.open(path, encoding="utf-8").read()
+        found = re.findall(pattern, text)
+        if not found:
+            out.append("%s no longer states %s in a form this gate reads -- "
+                       "restore the wording or teach README_NUMBERS the new one"
+                       % (rel, what))
+            continue
+        if len(found) > 1:
+            out.append("%s states %s in %d places, and this gate cannot tell which "
+                       "one is the claim" % (rel, what, len(found)))
+            continue
+        got = [int(x.replace(",", "")) for x in
+               (found[0] if isinstance(found[0], tuple) else (found[0],))]
+        if got != expect:
+            out.append("%s states %s as %s; the tree says %s -- the READMEs are "
+                       "prose and nothing else here reads them, so update both"
+                       % (rel, what, " and ".join(map(str, got)),
+                          " and ".join(map(str, expect))))
+    return out
+
+
 def findings(root):
-    """Problem strings; empty means the recorded scope matches the tree."""
+    """Problem strings; empty means the recorded scope matches the tree and the
+    two READMEs state it."""
     covered, excluded, unrecorded = scope(root)
     mods = set(modules(root))
     out = []
@@ -214,6 +299,7 @@ def findings(root):
         out.append("PEAK_MIB names %s, which is not in the tree" % m)
     if not covered:
         out.append("the scope covers no module at all")
+    out += readme_numbers(root)
     return out, covered, excluded
 
 
@@ -233,6 +319,15 @@ def self_test():
         put(MODULE_DIR + "/L/B.lean", "import QECCertificates.L.C\n")
         put(MODULE_DIR + "/L/C.lean", "theorem c : True := trivial\n")
         put(MODULE_DIR + "/L/D.lean", "theorem d : True := trivial\n")
+        # The READMEs are part of the fixture from the start: the counts they
+        # state go through the same findings() call as the table, so a fixture
+        # without them would report them missing instead of checking the scope.
+        put(README_EN, "The package carries **4 modules**.\n"
+                       "It builds **1 of the 4 modules**.\n"
+                       "The heaviest peaks at **10 GiB**.\n")
+        put(README_ZH, "本包共 **4 个模块**。\n"
+                       "它在范围内构建 **4 个模块里的 1 个**。\n"
+                       "最重者峰值 **10 GiB**。\n")
         subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
         subprocess.run(["git", "add", "-A"], cwd=tmp, check=True,
                        capture_output=True)
@@ -302,6 +397,64 @@ def self_test():
         else:
             print("  ok control 4: the build order is the covered set, imports "
                   "first, and the check catches a reversed order")
+
+        # control 5: the counts the two READMEs state are read out of the prose and
+        # compared with the tree.  A gate that only ever saw correct READMEs would
+        # not show that it reads them at all, so there are three arms: the numbers
+        # right, a number wrong, and the sentence reworded out from under it.
+        PEAK_MIB.clear()
+        PEAK_MIB.update({MODULE_DIR + "/A.lean": 4096,
+                         MODULE_DIR + "/L/B.lean": 4096,
+                         MODULE_DIR + "/L/C.lean": 4096,
+                         MODULE_DIR + "/L/D.lean": 4096})
+        good_en = ("The package carries **4 modules**, and the audit region covers "
+                   "them.\nIt builds **4 of the 4 modules** in the scope.\n"
+                   "The heaviest peaks at **4 GiB**.\n")
+        good_zh = ("本包共 **4 个模块**，审计区覆盖它们。\n"
+                   "它在范围内构建 **4 个模块里的 4 个**。\n"
+                   "最重者峰值 **4 GiB**。\n")
+        put(README_EN, good_en)
+        put(README_ZH, good_zh)
+        got = readme_numbers(tmp)
+        if got:
+            print("  x control 5: a paired README was reported: %s" % got,
+                  file=sys.stderr)
+            bad = 1
+        else:
+            print("  ok control 5: the READMEs' counts are read and agree with the "
+                  "scope")
+        put(README_EN, good_en.replace("**4 modules**", "**5 modules**"))
+        got = readme_numbers(tmp)
+        if not any(README_EN in m and "size of the package" in m for m in got):
+            print("  x control 5: a wrong module count was not reported: %s" % got,
+                  file=sys.stderr)
+            bad = 1
+        elif any(README_ZH in m for m in got):
+            print("  x control 5: the other README was blamed: %s" % got,
+                  file=sys.stderr)
+            bad = 1
+        else:
+            print("  ok control 5: a stale count is reported, and only for the "
+                  "file that carries it")
+        reworded = good_en.replace("**4 of the 4 modules**", "4 of the 4 modules")
+        put(README_EN, reworded)
+        got = readme_numbers(tmp)
+        if not any(README_EN in m and "no longer states" in m for m in got):
+            print("  x control 5: a reworded count passed: %s" % got,
+                  file=sys.stderr)
+            bad = 1
+        else:
+            print("  ok control 5: a reworded count is reported rather than "
+                  "passed over")
+        os.remove(os.path.join(tmp, README_EN))
+        got = readme_numbers(tmp)
+        if not any(README_EN in m for m in got):
+            print("  x control 5: a missing README passed: %s" % got,
+                  file=sys.stderr)
+            bad = 1
+        else:
+            print("  ok control 5: a missing README is reported rather than "
+                  "assumed clean")
     finally:
         PEAK_MIB.clear()
         PEAK_MIB.update(saved)
