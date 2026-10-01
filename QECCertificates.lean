@@ -82,7 +82,7 @@ rests on exactly the three standard axioms.
 | `QECCertificates.Codes.BB144Symmetry` | **translation symmetry** of BB $[[144,12,12]]$ (the first step of the symmetry-breaking route) |
 | `QECCertificates.Codes.BB144Witness` | BB $[[144,12,12]]$: in-kernel assertions for the witness upper bound |
 | `QECCertificates.Codes.BB18Anchor` | the BB anchor $[[18,4,4]]$: all parameters (the smallest instance of the family, and the base code for gauging) |
-| `QECCertificates.Codes.BB18Symmetry` | the BB18 translation group lifted to the pair space, with its closure properties |
+| `QECCertificates.Codes.BB18Symmetry` | the BB18 translation group lifted to the pair space, with its closure properties and the key order on it |
 | `QECCertificates.Codes.BB24Gauged` | a gauging instance of the BB family: $[[18,4,4]]$ through the $K_4$ auxiliary graph to $[[24,3,4]]$ |
 | `QECCertificates.Codes.BB24Separation` | the two-component separation statement for BB $[[24,3,4]]$ (C1 discharged by the expansion of $K_4$) |
 | `QECCertificates.Codes.BaconShor` | Bacon–Shor $[[9,1,3]]$: the structure and distance of a **subsystem code** (in-kernel) |
@@ -295,6 +295,9 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.bb18Trans_mul
 #print axioms QECCertificates.bb18Group_one_mem
 #print axioms QECCertificates.bb18Group_mul_mem
+#print axioms QECCertificates.zmod2Fin2
+#print axioms QECCertificates.keyWord_injective
+#print axioms QECCertificates.keyOrder
 #print axioms QECCertificates.bb18_ofFn_x
 #print axioms QECCertificates.bb18_ofFn_z
 #print axioms QECCertificates.bb18_k

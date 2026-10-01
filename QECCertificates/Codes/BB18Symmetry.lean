@@ -148,4 +148,63 @@ theorem bb18Group_mul_mem {g h : Equiv.Perm (Vec 18 × Vec 18)}
   refine Finset.mem_image.mpr ⟨(c + a, d + b), Finset.mem_univ _, ?_⟩
   rw [← pairPerm_mul, bb18Trans_mul]
 
+/-! ## 5. The key order on the pair space
+
+The symmetry-breaking comparison is lexicographic on the word "`x` bits, then `w` bits", which is
+what the tool builds under `key = "xw"` (`key = xvars ++ wvars` there, and its `lex_leader` is the
+same clause set this development ports as `lexClauses`).
+
+**Why the order has to be built rather than found**: `ZMod 2` has no `LinearOrder` in the library,
+so `Vec n = Fin n → ZMod 2` has none — `Pi` carries only the pointwise partial order — and
+therefore neither `Lex (Vec n)` nor a `Finsupp.Lex` over `ZMod 2` synthesises one. The route taken
+here transports the order from the one place it does exist, `Fin 2`, along the injection
+`ZMod 2 ≃ Fin 2` followed by reading the pair as a word indexed by `Fin (2n)`.
+
+The order agrees with the tool's: `Finsupp.Lex` decides at the **smallest** index on which the two
+words differ, so bit `0` is the most significant one, exactly as in `lex_leader`.
+-/
+
+/-- `ℤ₂` read as `Fin 2`: the same two-element set, linearly ordered. -/
+def zmod2Fin2 : ZMod 2 ≃ Fin 2 where
+  toFun z := ⟨z.val, by have h := ZMod.val_lt z; omega⟩
+  invFun i := (i.val : ZMod 2)
+  left_inv z := by simp
+  right_inv i := by ext; simp [ZMod.val_natCast]; omega
+
+/-- **The key word** of a pair: the `x` bits and then the `w` bits, as one word of length `2n`. -/
+noncomputable def keyWord {n : ℕ} (p : Vec n × Vec n) : Fin (2 * n) →₀ Fin 2 :=
+  Finsupp.equivFunOnFinite.symm fun k =>
+    if h : k.val < n then zmod2Fin2 (p.1 ⟨k.val, h⟩)
+    else zmod2Fin2 (p.2 ⟨k.val - n, by omega⟩)
+
+/-- The key word determines the pair, which is what lets the order be pulled back along it. -/
+theorem keyWord_injective {n : ℕ} : Function.Injective (@keyWord n) := by
+  intro a b h
+  have h' : (fun k : Fin (2 * n) => if h : k.val < n then zmod2Fin2 (a.1 ⟨k.val, h⟩)
+              else zmod2Fin2 (a.2 ⟨k.val - n, by omega⟩))
+          = (fun k : Fin (2 * n) => if h : k.val < n then zmod2Fin2 (b.1 ⟨k.val, h⟩)
+              else zmod2Fin2 (b.2 ⟨k.val - n, by omega⟩)) := by
+    simpa [keyWord] using congrArg Finsupp.equivFunOnFinite h
+  refine Prod.ext ?_ ?_
+  · funext i
+    have hh := congrFun h' ⟨i.val, by omega⟩
+    rw [dite_eq_left i.isLt] at hh
+    exact zmod2Fin2.injective (by simpa using hh)
+  · funext i
+    have hh := congrFun h' ⟨n + i.val, by omega⟩
+    rw [dite_eq_right (by omega : ¬ n + i.val < n)] at hh
+    exact zmod2Fin2.injective (by simpa using hh)
+
+/-! **The key order** on the pair space: the two halves read as one word, `x` first.
+
+Not a global instance: it is installed with `letI := keyOrder n` at the point where the orbit lemma
+is applied, so no other statement in the library acquires an order it did not ask for. -/
+
+set_option warn.classDefReducibility false in
+noncomputable def keyOrder (n : ℕ) : LinearOrder (Vec n × Vec n) :=
+  letI : LinearOrder (Fin (2 * n) →₀ Fin 2) :=
+    inferInstanceAs (LinearOrder (Lex (Fin (2 * n) →₀ Fin 2)))
+  LinearOrder.lift' (@keyWord n) (@keyWord_injective n)
+
 end QECCertificates
+
