@@ -318,7 +318,7 @@ only the way the auxiliary graph is wired**:
 
 | | auxiliary graph | C1 | Z-side distance |
 |---|---|---|---|
-| `sepFail*` | the path $0$–$2$–$4$–$5$ | ✗ | $1$ |
+| `sepFail*` | the path $2$–$0$–$4$–$5$ | ✗ | $1$ |
 | `sepKeepPath*` | the path $0$–$4$–$5$–$2$ | ✗ | $2$ |
 
 **Both graphs are $P_4$**, so C1 takes the same value, violated in both, **and the distances
