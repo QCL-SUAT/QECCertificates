@@ -357,13 +357,18 @@ def sepKeepPathHz : List (Vec 11) := List.ofFn sepKeepPathHzM
 /-- **The distance-preserving side, the C1 verdict**: the path $0$–$4$–$5$–$2$ likewise
 violates C1.
 
-**The index type is `Fin 6`, not `Fin 4`.** 顶点是那四个支撑比特，标号 $0,2,4,5$；
-Lean 的 `Fin` 字面量**按模取值**（`(4 : Fin 4) = 0`、`(5 : Fin 4) = 1`），写成 `Fin 4`
-会让这条边表**静默变成另一张图**（实测展开成 `[(0,0),(2,1),(0,1)]`，含自环），
-而 `by decide` 照样通过。同文件 `sepFail_not_C1` 的标号 $0,1,2,3$ 全在 `Fin 4` 范围内，
-故它写 `Fin 4` 是对的——两处的约定因此看起来一致，这是这个坑最隐蔽的地方。 -/
+**The edge list is written on the relabelled four vertices $0,1,2,3$** — the support qubits
+$0,2,4,5$ renamed in increasing order — the same convention `sepFail_not_C1` above already
+uses, so the two witnesses sit on one and the same index type and C1 is read the same way in
+both. The code's own labels are what one must **not** write down here: `Fin` literals reduce
+modulo the index bound (`(4 : Fin 4) = 0`, `(5 : Fin 4) = 1`), so `[(0,4),(2,5),(4,5)]` on
+`Fin 4` expands to `[(0,0),(2,1),(0,1)]`, a graph with a self-loop, and `by decide` accepts it
+all the same. On `Fin 6` the same four labels would instead leave $1$ and $3$ isolated, and an
+isolated vertex violates expansion on its own, so the verdict would hold for the wrong reason.
+The statement below is the non-trivial one: the cut $\{0,2\}$ has one edge leaving it against
+a minimum of two. -/
 theorem sepKeepPath_not_C1 :
-    ¬ HasExpansionOne ([(0, 4), (2, 5), (4, 5)] : List (Fin 6 × Fin 6)) := by decide
+    ¬ HasExpansionOne ([(0, 2), (1, 3), (2, 3)] : List (Fin 4 × Fin 4)) := by decide
 
 /-- **The distance-preserving side, the lower bound**: the deformed code has no logical
 operator of weight $\le 1$. Both sides are checked. -/
@@ -381,7 +386,7 @@ theorem sepKeepPath_lightLogical_two :
 /-- **The distance-preserving side, the conclusion**: C1 is violated, yet the Z-side
 distance of the deformed code is still $2=d$. -/
 theorem sepKeepPath_summary :
-    ¬ HasExpansionOne ([(0, 4), (2, 5), (4, 5)] : List (Fin 6 × Fin 6)) ∧
+    ¬ HasExpansionOne ([(0, 2), (1, 3), (2, 3)] : List (Fin 4 × Fin 4)) ∧
       (lightSet sepKeepPathHxM sepKeepPathHzM 2).card = 0 ∧
       (lightSet sepKeepPathHzM sepKeepPathHxM 2).card = 0 ∧
       min_weight_ker_not_mem_rowspace toricHx toricHz = 2 :=
