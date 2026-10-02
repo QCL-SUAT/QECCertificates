@@ -81,6 +81,9 @@ PEAK_MIB = {
     "QECCertificates/Codes/BB144Symmetry.lean": 2965,
     "QECCertificates/Codes/BB144Witness.lean": 35327,
     "QECCertificates/Codes/BB18Anchor.lean": 8473,
+    # measured apart from the table's header: 2026-10-03, the 32 GB macOS host,
+    # quiet machine, the process sampled every 0.3 s of an 11 s compile
+    "QECCertificates/Codes/BB18Symmetry.lean": 6498,
     "QECCertificates/Codes/BB24Gauged.lean": 40829,
     "QECCertificates/Codes/BB24Separation.lean": 3218,
     "QECCertificates/Codes/BaconShor.lean": 11248,
