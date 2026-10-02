@@ -290,7 +290,9 @@ rests on exactly the three standard axioms.
 -- QECCertificates.Codes.BB18Anchor
 -- QECCertificates.Codes.BB18Symmetry
 #print axioms QECCertificates.permVec_permVec
+#print axioms QECCertificates.perm_mul_symm_apply
 #print axioms QECCertificates.pairPerm_mul
+#print axioms QECCertificates.pairPerm_one
 #print axioms QECCertificates.bb18ShiftX_comm
 #print axioms QECCertificates.bb18Trans_mul
 #print axioms QECCertificates.bb18Group_one_mem
