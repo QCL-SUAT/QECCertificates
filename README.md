@@ -109,6 +109,14 @@ carries the same information in machine-readable form.
 }
 ```
 
+## Support
+
+Questions and bug reports go to the [issue
+tracker](https://github.com/QCL-SUAT/QECCertificates/issues). A report that carries the
+pinned revisions and the tail of the build log gets a useful answer fastest. Support is
+best effort: there is no service-level agreement, and the Build section above is the
+first thing to try before opening an issue.
+
 ## License
 
 Apache-2.0; see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE). The three dependencies

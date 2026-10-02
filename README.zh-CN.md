@@ -94,6 +94,11 @@ python3 tools/check_axioms.py build.log   # 逐条受审计声明，不得超出
 }
 ```
 
+## 支持
+
+问题与缺陷报告走 [issue
+跟踪器](https://github.com/QCL-SUAT/QECCertificates/issues)。带上所钉 revision 与构建日志末尾的报告最快得到有效回应。支持为尽力而为：没有服务等级承诺，开 issue 前先按上面的构建一节自查一遍。
+
 ## 许可
 
 Apache-2.0；见 [`LICENSE`](LICENSE) 与 [`NOTICE`](NOTICE)。三个依赖（mathlib、Lean-QEC、
