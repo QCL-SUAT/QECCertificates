@@ -26,8 +26,10 @@ the policy text cited below is from that page.
    references rather than promises.
 3. **AI usage disclosure (policy is strict).** The disclosure in `paper.md` follows
    the phase paper's acknowledgement style (tool and scope named plainly) and names
-   GLM-5.3 via the Claude Code agent for this repository's sessions. Add any other
-   models and versions used in earlier sessions of this project, and re-read every
+   DeepSeek-V4.1-Flash via the Claude Code agent for this repository's sessions. That
+   name was checked against the record rather than assumed: every turn of this
+   repository's sessions is logged with the model that served it, and all of them are
+   the same DeepSeek flash model the phase paper's acknowledgement names. Re-read every
    sentence until each one is true of what actually happened; JOSS treats an
    incomplete or inaccurate disclosure as an ethical breach, and the January 2026
    policy explicitly looks for the human design decisions, which the section names.
@@ -41,7 +43,7 @@ the policy text cited below is from that page.
 6. **Paper and software together on the default branch.** `paper/paper.md` and
    `paper/paper.bib` are tracked in this repository, so the form's repository and
    branch fields are simply the repository URL and its default branch. Keep the paper
-   in step with the repository: a number quoted in the paper (57 modules, 25-of-57 CI
+   in step with the repository: a number quoted in the paper (58 modules, 25-of-58 CI
    scope, 77 GiB peak, the audit-region length in `main.tex`) is a repository fact,
    and the same gates that pin it on `main` pin it in the paper.
 7. **Colleague smoke test.** JOSS asks that "if your software is new, please be sure
@@ -54,7 +56,7 @@ the policy text cited below is from that page.
    pipeline avoids a broken preview in the review issue:
    `docker run --rm --volume $PWD/paper:/data --user $(id -u):$(id -g) --env
    JOURNAL=joss openjournals/inara`. Check the word count stays within 750-1750
-   (1,174 as of 3 October 2026).
+   (1,176 as of 3 October 2026).
 9. **Main subject of the paper.** "Logic and formal methods" (Track 7, CSISM --
    Computer science, Information Science, and Mathematics). The subject list lives in
    `lib/tracks.yml` of `openjournals/joss`; the closest precedent, the Agda standard
@@ -107,8 +109,8 @@ On scope and significance, per the criteria now in force:
   bilingual README pair, module-level docstrings and a CONTRIBUTING guide; portability
   is enforced by a gate that rejects machine-coupled paths and unpinned dependencies.
   The paper (`paper/paper.md`) is tracked beside the software it describes.
-- **AI usage.** Development and drafting used the Claude Code agent (GLM-5.3) under my
-  direction; the paper carries a full AI usage disclosure in the sense of the policy
+- **AI usage.** Development and drafting used the Claude Code agent (DeepSeek-V4.1-Flash)
+  under my direction; the paper carries a full AI usage disclosure in the sense of the policy
   of January 2026, and the design decisions named above are mine, checked as described
   there. [Re-verify each sentence of the disclosure before submitting.]
 

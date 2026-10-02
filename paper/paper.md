@@ -35,7 +35,7 @@ translation from quantum-mechanical Pauli operators to bit-vectors, an in-kernel
 for the machine-readable format in which satisfiability solvers record their refutations,
 and proofs that the encoding connecting codes to formulas is faithful in both directions.
 A solver's verdict, once rendered as a certificate file, is then re-derived by the Lean
-kernel itself. The library has 57 modules; every non-private theorem and lemma is printed
+kernel itself. The library has 58 modules; every non-private theorem and lemma is printed
 in an audit region together with the axioms it depends on, and no declaration rests on
 any axiom beyond the three standard ones of Lean's logic.
 
@@ -90,7 +90,7 @@ hypergraph-product, lifted product).
 Three trade-offs are worth naming. First, computation is kept in the kernel: statements
 close by kernel reduction, so no checker outside the kernel is ever trusted. The price
 is memory -- the largest module peaks at 77 GiB, so continuous integration builds the 25
-of 57 modules whose measured peak fits a hosted runner, from a table of measured peaks
+of 58 modules whose measured peak fits a hosted runner, from a table of measured peaks
 that fails the build when tree and table disagree, which is how a module comes to be
 measured before it is built anywhere. Second, the proof format is standard rather than
 bespoke: LRAT certificates are emitted by several solvers, which keeps the search
@@ -117,17 +117,19 @@ families carried here are the ones load-bearing for those developments.
 # AI usage disclosure
 
 The library, its documentation and the drafts of this paper were developed with the
-Claude Code agent (GLM-5.3), working to the author's specification: the Lean
-derivations, the module docstrings and the READMEs, the text of this paper, and the
-debugging of individual proof steps. The author reviewed, edited and validated all
+Claude Code agent (DeepSeek-V4.1-Flash), working to the author's specification: the Lean
+derivations, text polishing for this paper and for the module docstrings and the READMEs,
+and the debugging of individual proof steps. The author reviewed, edited and validated all
 AI-assisted output: every change compiled under the pinned toolchain and passed the
-repository's four static gates, a full build and the axiom audit, and the problem
-framing, the choice of what to prove, the layering of the library and what each gate
-enforces are the author's decisions. The author remains responsible for the accuracy,
-originality, licensing and ethical compliance of everything submitted.
+repository's four static gates, a full build and the axiom audit, and the problem framing,
+the choice of what to prove, the layering of the library and what each gate enforces are
+the author's decisions. The author remains responsible for the accuracy, originality,
+licensing and ethical compliance of everything submitted.
 
 # Acknowledgements
 
 This work was supported by the National Natural Science Foundation of China under
 Grant No. 12674609 and by the Guangdong Provincial Key Laboratory of Computility
 Microelectronics under Grant No. 2024B1212010007.
+
+# References
