@@ -6,6 +6,8 @@ contains and what it guarantees, `CONTRIBUTING.md` says how a change is made, an
 file is the short version for a working session. Where the two of them already say
 something, this file points at them rather than repeating it.
 
+**Numerics default to Julia** (global rules, the "numerical tooling" section): new numerical work starts in Julia; falling back to Python needs a measured reason, not a hunch.
+
 ## The gates
 
 Four static gates, each with a self-test, all of them part of a change:
