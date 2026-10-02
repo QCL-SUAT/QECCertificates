@@ -86,7 +86,8 @@ python3 tools/check_axioms.py build.log   # 逐条受审计声明，不得超出
 
 ```bibtex
 @software{qeccertificates,
-  title     = {{QECCertificates}: certified code parameters and fault distances},
+  title     = {{QECCertificates}: checkable distance certificates for quantum
+              error correction},
   author    = {An, Shuoming},
   year      = {2026},
   doi       = {10.5281/zenodo.23056679},

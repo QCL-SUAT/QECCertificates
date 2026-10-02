@@ -52,7 +52,8 @@ side: the encoding of the search problem, the soundness of the certificate check
 the composition of the two are theorems, so the search may be as fast, as heuristic and
 as untrusted as its users like, because it is no longer part of the argument. The
 intended users are the groups that search for and tabulate quantum low-density
-parity-check codes, the authors of code tables who want their numbers to carry proofs,
+parity-check codes [@breuckmann2021], the authors of code tables who want their numbers
+to carry proofs,
 and formal-methods researchers who need certified code parameters as hypotheses rather
 than as trust.
 
@@ -63,8 +64,9 @@ satisfiability question and replays the solver's proof inside a proof assistant;
 authors report a reach of 90 qubits and state that at 144 qubits the replay itself is the
 wall. That architecture binds the check to the search: the proof travels with the solver
 run. QECCertificates takes the other road, and the road was chosen deliberately. The
-refutation format LRAT [@cade2017] is the classical satisfiability community's standard
-for checkable unsatisfiability proofs, so a checker for it -- proved sound, running in
+refutation format LRAT [@cade2017], the descendant of the clausal proofs that DRAT-trim
+checks for the competitions [@wetzler2014], is the classical satisfiability community's
+standard for checkable unsatisfiability proofs, so a checker for it -- proved sound, running in
 the kernel, sharing no code with any solver -- accepts certificates from any solver that
 emits the format, and the search stays outside the trusted base entirely. The library is
 not a patch to Lean-QEC, whose end-to-end pipeline serves its own purpose; it is the
@@ -76,16 +78,16 @@ another formal library in this area that separates the two roles in this way.
 
 The library is layered, and the layering is the design. At the bottom, GF(2) linear
 algebra: row reduction with a proved pivot invariant, kernel bases, rank certificates,
-dual witnesses, weight-limited enumeration with a covering theorem, and the hypergraph
-and lifted products with the Kunneth formulas that make their distances computable in
-pieces. Above it a Pauli layer translating operator trees to the symplectic
+dual witnesses, weight-limited enumeration with a covering theorem, and the hypergraph [@tillichzemor]
+and lifted [@panteleev2022] products with the Künneth formulas that make their distances
+computable in pieces. Above it a Pauli layer translating operator trees to the symplectic
 bit-vector representation and back. Then the certificate framework: the LRAT/RUP checker
 with its soundness theorem, the CNF encoding whose faithfulness is proved in both
 directions -- a model of the encoded formula *is* a light logical operator -- and
 symmetry breaking by lex-leader predicates whose reduction is proved rather than
 assumed. On top, the code layer: stabilizer, CSS and subsystem codes, gauging and
-measurement-protocol representations, and the shared instance families (Bacon-Shor, BB,
-hypergraph-product, lifted product).
+measurement-protocol representations, and the shared instance families (Bacon-Shor
+[@bacon2006], BB [@bravyi2024], hypergraph-product, lifted product).
 
 Three trade-offs are worth naming. First, computation is kept in the kernel: statements
 close by kernel reduction, so no checker outside the kernel is ever trusted. The price

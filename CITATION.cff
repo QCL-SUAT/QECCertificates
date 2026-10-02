@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use QECCertificates in academic work, please cite it as below."
-title: "QECCertificates: certified code parameters and fault distances"
+title: "QECCertificates: checkable distance certificates for quantum error correction"
 abstract: >-
   A Lean 4 library for certified quantum error correction: the GF(2) and symplectic
   machinery that turns a code parameter into a checkable statement, an in-kernel checker
@@ -14,15 +14,15 @@ authors:
     given-names: "Shuoming"
 repository-code: "https://github.com/QCL-SUAT/QECCertificates"
 license: Apache-2.0
-version: "0.1.0"
-date-released: "2026-09-30"
+version: "0.1.2"
+date-released: "2026-10-03"
 doi: 10.5281/zenodo.23056679
 identifiers:
   - type: doi
     value: 10.5281/zenodo.23056679
   - type: doi
     value: 10.5281/zenodo.23056680
-    description: "the archived artifact for this version"
+    description: "the archived artifact deposited on 2026-09-30"
 keywords:
   - quantum error correction
   - formal verification

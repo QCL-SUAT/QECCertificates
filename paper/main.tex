@@ -20,7 +20,7 @@ for quantum error correction}
 \small Shenzhen, Guangdong 518107, China\\[3pt]
 \small Pengxin Quantum Technology (Shenzhen) Co., Ltd., Shenzhen 518107, China\\[3pt]
 \small \texttt{anshuoming@suat-sz.edu.cn}}
-\date{Draft of 30 September 2026}
+\date{Draft of 3 October 2026}
 
 \begin{document}
 \maketitle
@@ -40,7 +40,7 @@ refutation is sound. A distance claim can then be closed by a kernel that never 
 search. The
 closest previous route replays the solver's proof inside a proof assistant, and its
 authors report that at 144 qubits the replay is the wall; separating search from check
-keeps the expensive part outside the trusted base. Fifty-seven Lean~4 modules carry the
+keeps the expensive part outside the trusted base. Fifty-eight Lean~4 modules carry the
 algebra, the translation from Pauli operators to bit-vectors and the code instances, and
 every non-private theorem and lemma is printed in an audit region whose statements rest on
 no axiom beyond the three the kernel's logic needs. A certificate that is checkable without the
@@ -50,7 +50,7 @@ companion developments already import the library as the home of their shared st
 
 \section{Why this exists}
 
-Quantum low-density parity-check codes are designed by search: choose a construction,
+Quantum low-density parity-check codes~\cite{breuckmann2021} are designed by search: choose a construction,
 enumerate candidates, compute a distance. The public schema behind the qLDPC
 Challenge~\cite{qldpc} records what a search leaves open. A distance that is not certified
 is reported there as an upper bound, for a non-CSS code because the Pauli-weight
@@ -128,9 +128,9 @@ like, because everything beyond the wall is checked, and both rooms stand on the
 
 \section{What is in the library}
 
-\package{QECCertificates} is a Lean~4 development of 58 modules on Lean 4.34, built
-against mathlib at a pinned revision, on the same toolchain as the two developments that
-consume it.
+\package{QECCertificates} is a Lean~4 development of 58 modules on Lean
+4.34~\cite{lean4}, built against mathlib~\cite{mathlib} at a pinned revision, on the
+same toolchain as the two developments that consume it.
 
 \begin{itemize}
 \item \textbf{A layer for the two-element field.} Vectors over that field, row spaces, a trusted
@@ -142,7 +142,9 @@ which a Pauli operator is recorded by two bit-vectors per qubit saying whether i
 an X and whether it carries a Z, and translation theorems that make the vector-level
 decisions equal to statements about the matrices the surrounding ecosystem uses.
 \item \textbf{A certificate framework.} An in-kernel checker for LRAT proofs, the format
-in which a satisfiability solver records its refutation~\cite{cade2017}, with a proof that
+in which a satisfiability solver records its refutation~\cite{cade2017} -- the descendant
+of the clausal proofs that DRAT-trim checks for the competitions~\cite{wetzler2014} --
+with a proof that
 the checker is sound; a formalization of the encoding step that ties satisfiability of the
 encoded formula to the existence of a light logical operator, in both directions; and
 symmetry breaking by lex-leader predicates, which keep the lexicographically smallest
@@ -151,7 +153,9 @@ rather than assumed.
 \item \textbf{Instances.} Kernel-checked assertions of the triple $(n,k,d)$, the number
 of physical qubits, of logical qubits and the least weight of an undetected logical error,
 for a table of codes, including a hypergraph-product family covered by general theorems
-rather than by instance-by-instance evaluation.
+rather than by instance-by-instance evaluation; the shared instance families are
+Bacon-Shor~\cite{bacon2006}, BB~\cite{bravyi2024}, hypergraph-product~\cite{tillichzemor}
+and the lifted product~\cite{panteleev2022}.
 \end{itemize}
 
 \section{What is checked, and how}
@@ -242,7 +246,7 @@ repository.
 
 Nothing is configured per machine: every dependency is fetched at a pinned revision, and
 a script that links a local prebuilt layer is optional and never required for a build to
-succeed. The released version is archived at
+succeed. The released version~\cite{qeccertificates} is archived at
 \url{https://doi.org/10.5281/zenodo.23056679}, which is what to cite. The audit region is
 part of the build, so a downstream user sees the axiom list for the statements they
 consume in their own build log.
@@ -271,14 +275,38 @@ mirrored in the other, and the adapters that turn a check matrix into a certifie
 later white paper will report that chain's end-to-end results on the instances the two
 companion developments use.
 
-\begin{thebibliography}{9}
+\begin{thebibliography}{99}
+\bibitem{breuckmann2021} N.~P.~Breuckmann and J.~N.~Eberhardt, \emph{Quantum
+low-density parity-check codes}, PRX Quantum 2, 040101 (2021).
+\bibitem{qldpc} The qLDPC Challenge, public data schema and tier descriptions,
+\url{https://github.com/unitaryfoundation/qldpc-challenge} (read 30 September 2026).
 \bibitem{leanqec} M.~Ehatamm, Y.~Lee, X.~Wu and R.~Tao, \emph{End-to-End
 Formalization of Quantum Error Correction}, arXiv:2605.16523 (2026).
+\bibitem{lean4} The Lean 4 theorem prover, \url{https://lean-lang.org},
+version 4.34.0 (2026).
+\bibitem{mathlib} The mathlib Community, \emph{The Lean mathematical library}, in
+Proceedings of the 9th ACM SIGPLAN International Conference on Certified Programs and
+Proofs (CPP 2020), 367--381 (2020).
 \bibitem{cade2017} L.~Cruz-Filipe, M.~J.~H.~Heule, W.~A.~Hunt, M.~Kaufmann and
 P.~Schneider-Kamp, \emph{Efficient certified RAT verification}, in Automated
 Deduction (CADE-26), LNCS 10395, 220--236 (2017).
-\bibitem{qldpc} The qLDPC Challenge, public data schema and tier descriptions,
-\url{https://github.com/unitaryfoundation/qldpc-challenge} (read 30 September 2026).
+\bibitem{wetzler2014} N.~Wetzler, M.~J.~H.~Heule and W.~A.~Hunt,
+\emph{DRAT-trim: efficient checking and trimming using expressive clausal proofs},
+in Theory and Applications of Satisfiability Testing (SAT 2014), LNCS 8561,
+422--429 (2014).
+\bibitem{bacon2006} D.~Bacon, \emph{Operator quantum error-correcting subsystems
+for self-correcting quantum memories}, Phys. Rev. A 73, 012340 (2006).
+\bibitem{bravyi2024} S.~Bravyi, A.~W.~Cross, J.~M.~Gambetta, D.~Maslov, P.~Rall
+and T.~J.~Yoder, \emph{High-threshold and low-overhead fault-tolerant quantum
+memory}, Nature 627, 778--782 (2024).
+\bibitem{tillichzemor} J.-P.~Tillich and G.~Z{\'e}mor, \emph{Quantum LDPC codes
+with positive rate and minimum distance proportional to the square root of the
+blocklength}, IEEE Trans. Inf. Theory 60, 1193--1202 (2014).
+\bibitem{panteleev2022} P.~Panteleev and G.~Kalachev, \emph{Quantum LDPC codes
+with almost linear minimum distance}, IEEE Trans. Inf. Theory 68, 213--229 (2022).
+\bibitem{qeccertificates} S.~An, \emph{QECCertificates: checkable distance
+certificates for quantum error correction}, Zenodo,
+\url{https://doi.org/10.5281/zenodo.23056679} (2026).
 \end{thebibliography}
 
 \end{document}
