@@ -789,6 +789,7 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.dotProduct_e_sum
 #print axioms QECCertificates.sum_e_apply
 #print axioms QECCertificates.dot_map_e
+#print axioms QECCertificates.dotProduct_e
 -- QECCertificates.GF2.Canonical
 #print axioms QECCertificates.readOff_nil
 #print axioms QECCertificates.readOff_apply

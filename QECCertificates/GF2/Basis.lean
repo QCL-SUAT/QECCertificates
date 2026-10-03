@@ -11,7 +11,7 @@ import QECCertificates.GF2.Basic
 Check matrices are assembled from literals in two ways. Sometimes a row is written as a
 `Matrix` and read entry by entry; sometimes, when every row touches a fixed number of block
 columns, it is written as the GF(2) **sum of basis vectors** `e a` over its support, and
-the whole file's comparisons collapse to a handful of terms. This module holds the four
+the whole file's comparisons collapse to a handful of terms. This module holds the five
 lemmas the second style rests on. They are generic in `n` and mention no code.
 
 ## Main results
@@ -23,6 +23,8 @@ lemmas the second style rests on. They are generic in `n` and mention no code.
   exactly on the support.
 * `dot_map_e`: pairing two basis-vector sums gives the parity of the intersection of the
   two supports.
+* `dotProduct_e`: the commuted form of `e_dotProduct`, with the basis vector on the right of
+  the pairing.
 
 ## Where the duplicate-free hypothesis comes from
 
