@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""README pair gate: the English and Chinese READMEs stay in step.
+r"""README pair gate: the English and Chinese READMEs stay in step.
 
 Why this exists: a bilingual README is two files that drift the moment one side is
 edited -- and drift here is silent, because each file reads perfectly on its own. The
@@ -16,7 +16,16 @@ What is checked, in both directions:
     side's build or verify snippet changes, this fails until the other follows);
   * the set of repository-relative link targets agrees (every file one side links, the
     other links too);
-  * neither file carries a control character or a curly quote.
+  * neither file carries a control character or a curly quote;
+  * each file is clean of the whitespace a bilingual README collects by accident: no
+    trailing spaces, no tabs, no non-breaking or ideographic spaces, no CRLF, no run of
+    two spaces inside prose, and, on the Chinese side, no space between a Chinese
+    character and the Latin, digits or code beside it, no half-width comma or full stop
+    against one, and no half-width brackets wrapped around Chinese (`GF(2)线性代数` and a
+    link's `](...)` followed by Chinese are both fine, so brackets are judged as a pair).
+    Fenced code blocks are left alone -- they align their own columns, and `**77 GiB**`
+    keeps the space it has because `ci_scope.py` reads that count with `\s+` and would
+    stop matching a tightened one.
 
 Exit 0 when the pair is in step, 1 otherwise. `--self-test` runs the positive and
 negative controls on a temporary pair, so a run that only ever prints PASS is not the
@@ -39,6 +48,72 @@ BADGE = re.compile(r"https://(?:github\.com/[^)\s]*/badge\.svg|img\.shields\.io/
 FENCE = re.compile(r"```(\w*)\n(.*?)```", re.S)
 LINK = re.compile(r"\[[^\]]+\]\(([^)#\s]+)\)")
 CURLY = re.compile(r"[“”‘’]")
+
+
+CJK = "一-鿿"
+# whitespace that is not the ordinary space: non-breaking, the several narrow spaces,
+# the ideographic space, and the byte-order mark that reads as one
+ODD_WS = re.compile("[\u00a0\u2000-\u200a\u202f\u205f\u3000\ufeff]")   # not the ordinary space
+
+
+def prose_segments(line):
+    """The prose parts of one line, with Markdown structure stripped off.
+
+    A heading, list item or table cell carries a separator space of its own
+    (`## Title`, `* item`, `| cell |`), and that space is syntax, not prose -- so it
+    is removed before the spacing rules run, or every well-formed file would fail.
+    """
+    body = re.sub(r"^\s*(?:#{1,6}\s+|[-*+]\s+|\d+\.\s+)", "", line)
+    if line.lstrip().startswith("|"):
+        cells = body.strip().strip("|").split("|")
+        return [c for c in cells if set(c.strip()) - set("-: ")]
+    return [body]
+
+
+def spacing_findings(name, text):
+    """Whitespace hygiene for one README; empty means clean.
+
+    Both files go through the same rules, so the pair cannot drift in how it is
+    typed.  A rule that names a Chinese character simply finds nothing in the
+    English file -- which is the point of running it there too: a Chinese string
+    landing in either file is checked the same way.
+    """
+    out = []
+    if "\r" in text:
+        out.append("%s 里有 CRLF；本仓一律 LF 行尾" % name)
+    if text and not text.endswith("\n"):
+        out.append("%s 末尾缺一个换行" % name)
+    if re.search(r"\n{3,}", text):
+        out.append("%s 里有连续空行" % name)
+    in_fence = False
+    for i, ln in enumerate(text.split("\n"), 1):
+        if ln.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue                      # code blocks align their own columns
+        if ln != ln.rstrip():
+            out.append("%s:%d 行尾有多余空白" % (name, i))
+        if "\t" in ln:
+            out.append("%s:%d 含制表符" % (name, i))
+        for ch in ODD_WS.findall(ln):
+            out.append("%s:%d 含异常空白 U+%04X（应为普通空格）" % (name, i, ord(ch)))
+        for seg in prose_segments(ln):
+            m = re.search(r"\S {2,}\S", seg)
+            if m:
+                out.append("%s:%d 正文里有连续空格：%r" % (name, i, m.group(0)))
+            for m in re.finditer("[%s] +\\S|\\S +[%s]" % (CJK, CJK), seg):
+                out.append("%s:%d 中文与英文/数字/代码之间有多余空格：%r"
+                           % (name, i, m.group(0)))
+            # 半角的逗号句号一类紧贴中文就是事故。半角括号不能这样一刀切：`GF(2)线性代数`
+            # 与 Markdown 链接的 `](...)` 后面紧跟中文都是合法的，故括号只看成对的那一对
+            # ——括号**里**包着中文才算错。
+            for m in re.finditer("[%s][,.;:!?]|[,.;:!?][%s]" % (CJK, CJK), seg):
+                out.append("%s:%d 中文旁用了半角标点：%r" % (name, i, m.group(0)))
+            for m in re.finditer(r"\(([^)]*)\)", seg):
+                if re.search("[%s]" % CJK, m.group(1)):
+                    out.append("%s:%d 半角括号里包着中文：%r" % (name, i, m.group(0)))
+    return out
 
 
 def read(path):
@@ -118,8 +193,10 @@ def findings(root):
             out.append("%s 含控制字符 %s" % (name, ctl))
         if CURLY.search(text):
             out.append("%s 含弯引号" % name)
-    if "  " in zh.replace("  ", "  "):      # 中文正文里的双空格是排版事故（表格缩进除外）
-        pass
+
+    # 7. 空格与排版：两版走同一套规则（原先这里是个什么都不做的占位）
+    for name, text in ((EN, en), (ZH, zh)):
+        out.extend(spacing_findings(name, text))
     return out
 
 
@@ -189,6 +266,43 @@ def self_test():
             bad = 1
         else:
             print("  ✓ 对照 4：缺互链被抓到")
+
+        # 对照 5-8（阳性）：空格与排版卫生，每类各植一处
+        def spacing_case(tag, zh_body, want, start=61):
+            d = os.path.join(tmp, tag)
+            os.makedirs(d)
+            seed(d)
+            write(d,
+                  "# T\n\n[a](README.zh-CN.md)\n\n## One\n\n```bash\nlake build\n```\n\n## Two\n\n[f](f.txt)\n",
+                  "# T\n\n[a](README.md)\n\n## 一\n\n```bash\nlake build\n```\n\n## 二\n\n%s\n\n[f](f.txt)\n"
+                  % zh_body)
+            got = findings(d)
+            if not any(want in m for m in got):
+                print("  ✗ 对照 %s（%s）没被抓到（实得 %s）" % (start, tag, got), file=sys.stderr)
+                return 1
+            print("  ✓ 对照 %s：%s 被抓到" % (start, tag))
+            return 0
+
+        bad |= spacing_case("行尾空格", "文字 ", "行尾有多余空白", 5)
+        bad |= spacing_case("正文连续空格", "文字   连着", "连续空格", 6)
+        bad |= spacing_case("中英之间多余空格", "中文 words 混排", "中文与英文", 7)
+        bad |= spacing_case("中文旁半角标点", "你好,世界", "半角标点", 8)
+
+        # 对照 9（阴性，最要紧的一条）：**必须**放行的几种不能报——代码块里的对齐
+        # 空格、`**77 GiB**` 里被 ci_scope.py 用 `\s+` 读的那个空格，以及 `GF(2)线性代数`
+        # 与链接收尾 `](...)中文` 这种半角括号紧邻中文的合法写法（本轮真红过一次）。
+        d9 = os.path.join(tmp, "exempt")
+        os.makedirs(d9)
+        seed(d9)
+        write(d9,
+              "# T\n\n[a](README.zh-CN.md)\n\n## One\n\n```bash\nlake build     # aligned comment\n```\n\n## Two\n\n[f](f.txt)\n",
+              "# T\n\n[a](README.md)\n\n## 一\n\n```bash\nlake build     # 对齐注释\n```\n\n## 二\n\n峰值**77 GiB**。\n\nGF(2)线性代数，见[f](f.txt)与上面。\n")
+        got9 = findings(d9)
+        if got9:
+            print("  ✗ 对照 9：放行项被误报：%s" % got9, file=sys.stderr)
+            bad = 1
+        else:
+            print("  ✓ 对照 9：代码块对齐、`**77 GiB**` 的空格、半角括号紧邻中文均未被误报")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     return bad
@@ -206,7 +320,9 @@ def main():
         print("\nREADME 对门禁：失败（见上）。")
         return 1
     print("  ✓ 两版同步：小节数一致、目录条数一致、徽章一致、命令行块逐字一致、"
-          "仓库内链接目标一致、互链齐全、无控制字符与弯引号")
+          "仓库内链接目标一致、互链齐全、无控制字符与弯引号；"
+          "两版都过同一套空格与排版检查（行尾、制表符、异常空白、CRLF、连续空行、"
+          "正文连续空格、中英/中码之间、中文旁半角标点）")
     return 0
 
 

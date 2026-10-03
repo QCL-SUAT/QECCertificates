@@ -21,7 +21,9 @@ Run the self-test as well as the gate: a gate that has only ever printed PASS is
 assumption. None of the four needs the Lean toolchain, so all four are worth running
 before a build.
 
-`check_readme_pair.py` checks the two READMEs against each other. `ci_scope.py --check`
+`check_readme_pair.py` checks the two READMEs against each other, and each of them for
+whitespace hygiene -- trailing spaces, tabs, odd spaces, CRLF, and, on the Chinese side,
+a space between a Chinese character and the Latin or code beside it. `ci_scope.py --check`
 checks them against the tree, which is a different question: the pair can be in step and
 both wrong, and theirs are the counts a reader takes on trust. Its three numbers come
 from the tree, so a reworded sentence that it can no longer read is a failure rather

@@ -16,16 +16,16 @@ A Lean 4 library of machine-checked distance certificates for quantum error corr
 
 ## Overview
 
-QECCertificates formalizes three things and the composition of them: the encoding of a
-code-parameter search as a satisfiability problem, a certificate checker for the solver's
-answer whose soundness is a theorem, and the translation between the operator-tree and
+QECCertificates formalizes three things and the way they compose: the encoding of a
+code-parameter search as a satisfiability problem; a certificate checker for the solver's
+answer whose soundness is a theorem; and the translation between the operator-tree and
 symplectic descriptions of a Pauli operator that the encoding rests on. Every load-bearing
 declaration is printed in an audit region, so a reader can see which axioms it depends on
 rather than having to trust the tool that printed a number.
 
-The library is developed together with the two companion developments that import it. It
-is a self-contained Lake package; its dependencies are fetched at pinned revisions and
-none of them is vendored.
+The library is developed alongside the two companion developments that import it. It is a
+self-contained Lake package: its dependencies are fetched at pinned revisions, and none of
+them is vendored.
 
 ## Motivation
 
@@ -82,7 +82,7 @@ env -u LEAN_PATH lake build
 ```
 
 Eleven of this package's own modules close their statements by kernel reduction over an
-object large enough to need more memory than a runner can give one process; the budget is
+object large enough to need more memory than a runner can give one process. The budget is
 ten gigabytes, which leaves a 16 GB runner room for the toolchain and the system, and the
 largest module, the separation instances, peaks at **77 GiB**. Continuous integration
 therefore builds **25 of the 58 modules**: every module whose measured peak fits the
@@ -94,9 +94,9 @@ cores, which is how a job dies of memory with no error line of its own.
 [`tools/ci_scope.py`](tools/ci_scope.py) holds the measured peak of every module, computes
 that set, and fails when the tree and the table disagree, so a module has to be measured
 before continuous integration will build it. The audit region is the root module, which
-imports the whole library, so the axiom audit is run on a machine with the memory for a
-full build, as under Verification below, and not in the runner; every run prints what it
-left out.
+imports the whole library, so the axiom audit runs on a machine with the memory for a full
+build, as under Verification below, and not in the runner; every run prints what it left
+out.
 
 ## Verification
 

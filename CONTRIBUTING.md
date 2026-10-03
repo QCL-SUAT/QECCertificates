@@ -17,7 +17,7 @@ integration and on your machine alike:
 
 ```bash
 python3 tools/check_portability.py      # machine-coupled paths, tracked build residue
-python3 tools/check_readme_pair.py      # the two READMEs, section for section
+python3 tools/check_readme_pair.py      # the two READMEs, section for section, and each one's spacing
 python3 tools/check_audit_coverage.py   # every non-private theorem has an audit line
 python3 tools/ci_scope.py --check       # every module has a measured memory peak
 ```
