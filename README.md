@@ -12,7 +12,22 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-## Why this exists
+A Lean 4 library of machine-checked distance certificates for quantum error correction.
+
+## Overview
+
+QECCertificates formalizes three things and the composition of them: the encoding of a
+code-parameter search as a satisfiability problem, a certificate checker for the solver's
+answer whose soundness is a theorem, and the translation between the operator-tree and
+symplectic descriptions of a Pauli operator that the encoding rests on. Every load-bearing
+declaration is printed in an audit region, so a reader can see which axioms it depends on
+rather than having to trust the tool that printed a number.
+
+The library is developed together with the two companion developments that import it. It
+is a self-contained Lake package; its dependencies are fetched at pinned revisions and
+none of them is vendored.
+
+## Motivation
 
 Code parameters are found by search, and a search ends in a solver's verdict. The public
 schema behind the qLDPC Challenge records what that costs: a distance that is not
@@ -23,11 +38,10 @@ but not a proof.
 
 There are two ways out: trust the tool that printed the number, or make the number come
 with something a third party can check. This library is the second way, on the formal
-side. The encoding of the search problem, the soundness of the certificate checker, and
-the composition of the two are theorems, and every load-bearing declaration is printed in
-an audit region so that a reader can see which axioms it rests on.
+side: the encoding of the search problem, the soundness of the certificate checker, and
+the composition of the two are theorems.
 
-## What is here
+## Repository layout
 
 | Layer | Contents |
 |---|---|
@@ -37,33 +51,35 @@ an audit region so that a reader can see which axioms it rests on.
 | `QECCertificates/Codes/` | the code-theoretic layer: stabilizer, CSS and subsystem codes; gauging and measurement-protocol representations; the shared instance families (Bacon–Shor, BB, HGP, lifted product) |
 | [`tools/check_axioms.py`](tools/check_axioms.py) | reads a build log and refuses any declaration whose `#print axioms` line names an axiom outside the three standard ones |
 
-**58 modules**, and the audit region covers **every** non-private `theorem`/`lemma` in
-the package. This repository has no un-audited corner.
+The package is **58 modules**, and the audit region covers **every** non-private
+`theorem`/`lemma` in it.
 
 ## Guarantees
 
 * zero `sorry`, zero custom axioms, zero `native_decide`;
 * no audited declaration depends on an axiom outside `propext`, `Classical.choice` and
-  `Quot.sound`; one that needs fewer of them, or none, is as good a statement;
+  `Quot.sound`; a declaration that needs fewer of them, or none, is equally acceptable;
 * the certificate checker shares no code with any solver: an UNSAT verdict is re-derived
   from the formula and the proof file alone;
-* portability is a requirement, not an aspiration: no machine-coupled paths, every
-  dependency pinned by a full 40-character revision hash, LF line endings everywhere.
+* portability is enforced by a gate: no machine-coupled paths, every dependency pinned by
+  a full 40-character revision hash, LF line endings throughout.
+
+## Requirements
+
+Lean `v4.34.0`, pinned in `lean-toolchain`, and mathlib at the revision pinned in
+`lakefile.toml`, both fetched by `lake`. A full build wants a machine with a large memory
+budget, because the audit region alone elaborates every theorem in the library.
+
+On a machine that already has a global Lean checkout, [`setup_links.sh`](setup_links.sh)
+links the project to it. The script selects layers by the revisions in
+`lake-manifest.json` rather than by directory names, and verifies the result, which saves
+a download and a dependency build.
 
 ## Build
-
-Lean `v4.34.0` (pinned in `lean-toolchain`) and mathlib at the revision pinned in
-`lakefile.toml` are fetched by `lake`:
 
 ```bash
 env -u LEAN_PATH lake build
 ```
-
-The pinned dependencies are heavy: a full build wants a machine with a large memory
-budget, because the audit region alone elaborates every theorem in the library. On a
-machine that already has a global Lean checkout, [`setup_links.sh`](setup_links.sh) links the project to
-it. The script selects layers by the revisions in `lake-manifest.json` rather than by
-directory names, and verifies the result, which saves a download and a dependency build.
 
 Eleven of this package's own modules close their statements by kernel reduction over an
 object large enough to need more memory than a runner can give one process; the budget is
@@ -79,10 +95,10 @@ cores, which is how a job dies of memory with no error line of its own.
 that set, and fails when the tree and the table disagree, so a module has to be measured
 before continuous integration will build it. The audit region is the root module, which
 imports the whole library, so the axiom audit is run on a machine with the memory for a
-full build, as under Verify below, and not in the runner; every run prints what it left
-out.
+full build, as under Verification below, and not in the runner; every run prints what it
+left out.
 
-## Verify
+## Verification
 
 ```bash
 env -u LEAN_PATH lake build > build.log 2>&1
@@ -110,6 +126,18 @@ carries the same information in machine-readable form.
 }
 ```
 
+## Contributing
+
+How a change is made, and what a change has to pass, is in
+[`CONTRIBUTING.md`](CONTRIBUTING.md). In short: the four static gates and their self-tests
+run before a build, and a new module needs its audit-region entry and its measured peak.
+
+## License
+
+Apache-2.0; see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE). The three dependencies
+(mathlib, Lean-QEC, QECLean) are fetched by `lake` at the pinned revisions; none of them
+is vendored here.
+
 ## Support
 
 Questions and bug reports go to the [issue
@@ -117,9 +145,3 @@ tracker](https://github.com/QCL-SUAT/QECCertificates/issues). A report that carr
 pinned revisions and the tail of the build log gets a useful answer fastest. Support is
 best effort: there is no service-level agreement, and the Build section above is the
 first thing to try before opening an issue.
-
-## License
-
-Apache-2.0; see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE). The three dependencies
-(mathlib, Lean-QEC, QECLean) are fetched by `lake` at the pinned revisions; none of them
-is vendored here. How to contribute is in [`CONTRIBUTING.md`](CONTRIBUTING.md).

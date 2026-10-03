@@ -12,7 +12,19 @@
 
 [English](README.md) | **简体中文**
 
-## 为什么有它
+一个用 Lean 4 写成、由机器检验的量子纠错距离证书库。
+
+## 概述
+
+QECCertificates 形式化的是三样东西以及它们的复合：把码参数搜索编码成一个可满足性问题、
+对求解器给出的答案作检查且其可靠性是定理的证书检查器，以及编码所依赖的、Pauli 算符的算符
+树描述与辛描述之间的翻译。每条承重声明都印在审计区里，读者因此能看到它依赖哪些公理，而不
+必去相信那个打印出数字的工具。
+
+本库连同导入它的两个配套发展一起开发。它是一个自包含的 Lake 包：依赖按钉住的 revision
+取用，一个都不 vendored。
+
+## 动机
 
 码参数是搜出来的，而一次搜索以某个求解器的判决收尾。qLDPC Challenge 背后的公开 schema
 把这件事的代价写在了自己的文档里：未经认证的距离只报成**上界**——非 CSS 码是因为
@@ -21,9 +33,9 @@ work"——而介于两者之间的产物，用 schema 自己的话说，是证�
 
 出路有两条：相信打印出这个数的那个工具，或者让这个数**自带一样第三方能检查的东西**。
 这个库走第二条路，且只做形式化那一侧：搜索问题的编码、证书检查器的可靠性、以及两者的
-复合，都是定理；每条承重声明都印在审计区里，读者能看到它依赖哪些公理。
+复合，都是定理。
 
-## 这里有什么
+## 仓库结构
 
 | 层 | 内容 |
 |---|---|
@@ -33,28 +45,30 @@ work"——而介于两者之间的产物，用 schema 自己的话说，是证�
 | `QECCertificates/Codes/` | 码论层：稳定子码、CSS 码与子系统码；gauging 与测量协议的表示；共享实例族（Bacon–Shor、BB、HGP、提升乘积） |
 | [`tools/check_axioms.py`](tools/check_axioms.py) | 读构建日志，凡 `#print axioms` 一行点名了三条标准公理之外的公理的声明一律拒绝 |
 
-共 **58 个模块**，审计区覆盖包里**每一条**非私有 `theorem`/`lemma`——本仓库没有审计不到的角落。
+本包共 **58 个模块**，审计区覆盖其中**每一条**非私有 `theorem`/`lemma`。
 
 ## 保证
 
 * 零 `sorry`、零自定义公理、零 `native_decide`；
 * 受审计声明不得依赖 `propext`、`Classical.choice` 与 `Quot.sound` 之外的公理；只用到其中一条、一条都不用的，一样算过；
 * 证书检查器与任何求解器**不共享一行代码**——UNSAT 判决只由公式与证明文件重新推出；
-* 可移植是要求而不是愿望：没有机器耦合路径，每个依赖按 40 位完整 revision 钉住，全文 LF 行尾。
+* 可移植由门禁保证：没有机器耦合路径，每个依赖按 40 位完整 revision 钉住，全文 LF 行尾。
+
+## 系统要求
+
+Lean `v4.34.0`（钉在 `lean-toolchain` 里）与 `lakefile.toml` 中钉住 revision 的 mathlib，
+都由 `lake` 取。全量构建需要一台内存宽裕的机器，因为光审计区就要把库里每条定理
+elaborate 一遍。
+
+在本机已有全局 Lean 检出的机器上，[`setup_links.sh`](setup_links.sh) 可以把工程接到那份
+检出上——它**按 `lake-manifest.json` 里的 revision 选层**而不是按目录名，并在收尾逐条
+复核——省下一次下载与一次依赖构建。
 
 ## 构建
-
-Lean `v4.34.0`（钉在 `lean-toolchain` 里）与 `lakefile.toml` 中钉住 revision 的 mathlib
-都由 `lake` 取：
 
 ```bash
 env -u LEAN_PATH lake build     # 按钉住的 revision 取 mathlib、Lean-QEC 与 QECLean
 ```
-
-钉住的依赖很重；全量构建需要一台内存宽裕的机器（光审计区就要把库里每条定理 elaborate
-一遍）。在本机已有全局 Lean 检出的机器上，[`setup_links.sh`](setup_links.sh) 可以把工程接到
-那份检出上——它**按 `lake-manifest.json` 里的 revision 选层**而不是按目录名，并在收尾逐条
-复核——省下一次下载与一次依赖构建。
 
 本包自己有十一个模块的收尾是内核在一个大对象上的归约，单个进程要的内存超过托管 runner 给
 得起的量；预算定在十个 GiB，正好给 16 GB 的 runner 留出工具链与系统的余量，其中最重的那
@@ -95,13 +109,17 @@ python3 tools/check_axioms.py build.log   # 逐条受审计声明，不得超出
 }
 ```
 
-## 支持
+## 贡献
 
-问题与缺陷报告走 [issue
-跟踪器](https://github.com/QCL-SUAT/QECCertificates/issues)。带上所钉 revision 与构建日志末尾的报告最快得到有效回应。支持为尽力而为：没有服务等级承诺，开 issue 前先按上面的构建一节自查一遍。
+一次改动怎么做、必须过哪些关，见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。概言之：四道静态
+门禁及其自检在构建前跑；新模块要补上它的审计区条目与实测峰值。
 
 ## 许可
 
 Apache-2.0；见 [`LICENSE`](LICENSE) 与 [`NOTICE`](NOTICE)。三个依赖（mathlib、Lean-QEC、
-QECLean）都由 `lake` 按钉住的 revision 取用，本仓库一个都不 vendored。如何贡献见
-[`CONTRIBUTING.md`](CONTRIBUTING.md)。
+QECLean）都由 `lake` 按钉住的 revision 取用，本仓库一个都不 vendored。
+
+## 支持
+
+问题与缺陷报告走 [issue
+跟踪器](https://github.com/QCL-SUAT/QECCertificates/issues)。带上所钉 revision 与构建日志末尾的报告最快得到有效回应。支持为尽力而为：没有服务等级承诺，开 issue 前先按上面的构建一节自查一遍。
