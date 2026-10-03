@@ -70,7 +70,10 @@ ROOT_MODULE = "QECCertificates.lean"
 BUDGET_MIB = 10240
 
 MEASURED = "2026-09-30"
-MEASURED_ON = "Windows 11, 192-core host, 639 GB"   # the volume, not the runner
+# The host as it now stands.  The peaks below were taken on it while it carried
+# 639 GB; 128 GB was added afterwards, and a compile's peak working set does not
+# depend on how much memory is installed, so the table was not re-taken.
+MEASURED_ON = "Windows 11, 192-core host, 767 GB"   # the volume, not the runner
 
 # module (path in the repository) -> peak working set of one compile, MiB
 PEAK_MIB = {
