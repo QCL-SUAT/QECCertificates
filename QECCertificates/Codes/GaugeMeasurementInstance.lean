@@ -6,6 +6,7 @@ Authors: Shuoming An
 import QECCertificates.Codes.BB24Gauged
 import QECCertificates.Codes.CaseMatrix
 import QECCertificates.GF2.HGPCompression
+import QECCertificates.GF2.Basis
 
 /-!
 # The timelike detector code of the BB gauging measurement circuit: $|V| = 4$ Gauss laws, $T = 4 = d$ rounds
@@ -218,12 +219,8 @@ theorem bbGauge44H_row (v : Fin 4) (i : Fin 3) :
       = (e (bbGauge44RowL v i) + e (bbGauge44RowR v i) : Vec 16) := by
   fin_cases v <;> fin_cases i <;> decide
 
-/-- The dot product on a support reads `e i` as the `i`-th component (`e` and `unitVec` are the same
-definition, so `unitVec_dot` of `Codes/Gauging.lean` applies directly). -/
-theorem e_dot {n : ℕ} (i : Fin n) (x : Vec n) : e i ⬝ᵥ x = x i := by
-  have h : e i = unitVec i := rfl
-  rw [h]
-  exact unitVec_dot i x
+-- The dot product on a support reads `e i` as the `i`-th component; that is
+-- `QECCertificates.GF2.Basis.e_dotProduct`, which this module imports.
 
 /-- Row-by-row orthogonality (`inKerB` unfolds to "the dot product of every row is zero"). -/
 theorem inKerB_dot_row {k n : ℕ} (M : Matrix (Fin k) (Fin n) (ZMod 2)) {f : Vec n}
@@ -242,7 +239,7 @@ theorem bbGauge44_ker_row_eq {f : Vec 16} (hf : inKerB bbGauge44H f = true)
     (v : Fin 4) (i : Fin 3) :
     f (bbGauge44RowL v i) = f (bbGauge44RowR v i) := by
   have hrow := inKerB_dot_row bbGauge44H hf (bbGauge44RowIdx v i)
-  rw [bbGauge44H_row, add_dotProduct, e_dot, e_dot] at hrow
+  rw [bbGauge44H_row, add_dotProduct, e_dotProduct, e_dotProduct] at hrow
   exact (add_eq_zero_iff_eq _ _).mp hrow
 
 /-- Every qubit lies on the time axis of some law ($4v + t$ runs over $0..15$). -/

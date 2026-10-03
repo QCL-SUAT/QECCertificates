@@ -84,4 +84,9 @@ lemma dot_map_e (A B : List (Fin n)) (hB : B.Nodup) :
         ring
       · simp [ha]
 
+/-- The commuted form: a basis vector on the **right** of a pairing. Two call sites want this
+shape rather than the one above, and stating it once keeps them from rediscovering it. -/
+lemma dotProduct_e (v : Vec n) (a : Fin n) : v ⬝ᵥ e a = v a := by
+  rw [dotProduct_comm]; exact e_dotProduct a v
+
 end QECCertificates

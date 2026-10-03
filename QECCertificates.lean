@@ -544,7 +544,6 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.bbGauge44_block_witnesses
 #print axioms QECCertificates.bbGauge44Blk_injective
 #print axioms QECCertificates.bbGauge44H_row
-#print axioms QECCertificates.e_dot
 #print axioms QECCertificates.inKerB_dot_row
 #print axioms QECCertificates.bbGauge44_ker_row_eq
 #print axioms QECCertificates.bbGauge44Blk_surjective

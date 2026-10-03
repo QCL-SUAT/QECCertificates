@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Shuoming An
 -/
 import QECCertificates.GF2.Basic
+import QECCertificates.GF2.Basis
 
 /-!
 # Removing the boundary detectors collapses the distance to $1$ for **any** code (family-level form)
@@ -88,16 +89,9 @@ lemma cum_witFault {T n : ℕ} (j : Fin n) (t : Fin (T + 1)) :
     exact absurd (Finset.mem_filter.mpr
       ⟨Finset.mem_univ (0 : Fin (T + 1)), Fin.zero_le t⟩) h
 
-/-- `w ⬝ᵥ e j = w j`. -/
-lemma dot_e {n : ℕ} (w : Vec n) (j : Fin n) : w ⬝ᵥ e j = w j := by
-  classical
-  rw [dotProduct]
-  rw [Finset.sum_eq_single j]
-  · simp [e]
-  · intro b _ hb
-    simp [e, hb]
-  · intro h
-    exact absurd (Finset.mem_univ j) h
+/-- `w ⬝ᵥ e j = w j` — an instance of the shared lemma, in its commuted form. -/
+lemma dot_e {n : ℕ} (w : Vec n) (j : Fin n) : w ⬝ᵥ e j = w j :=
+  dotProduct_e w j
 
 /-- The witness keeps the comparison of adjacent rounds silent for **any** parity-check matrix: the
 syndrome is the same in every round. -/
