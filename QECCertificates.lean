@@ -32,6 +32,7 @@ import QECCertificates.Codes.SeparationInstances
 import QECCertificates.Codes.TimeLikeInstance
 import QECCertificates.Codes.ToricFamilySpatial
 import QECCertificates.GF2.Basic
+import QECCertificates.GF2.Basis
 import QECCertificates.GF2.Canonical
 import QECCertificates.GF2.HGP
 import QECCertificates.GF2.HGPCleaning
