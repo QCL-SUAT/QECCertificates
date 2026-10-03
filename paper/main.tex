@@ -2,7 +2,7 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{url}
-\usepackage{hyperref}
+\usepackage[hidelinks]{hyperref}
 \usepackage{booktabs}
 \usepackage{microtype}
 \usepackage{tikz}
@@ -48,18 +48,18 @@ tool that produced it can travel to other constructions and other solvers, and t
 companion developments already import the library as the home of their shared statements.
 \end{abstract}
 
-\section{Why this exists}
+\section{Introduction}
 
-Quantum low-density parity-check codes~\cite{breuckmann2021} are designed by search: choose a construction,
-enumerate candidates, compute a distance. The public schema behind the qLDPC
-Challenge~\cite{qldpc} records what a search leaves open. A distance that is not certified
-is reported there as an upper bound, for a non-CSS code because the Pauli-weight
-certifier ``is not available yet'' and for a circuit-level distance because an exact tier
-``is deferred future work''; what lies between an upper bound and a proof, the schema
-calls evidence.\footnote{The quotations are from the schema's own descriptions of the
+Quantum low-density parity-check codes~\cite{breuckmann2021} are designed by search:
+choose a construction, enumerate candidates, compute a distance. The public schema behind
+the qLDPC Challenge~\cite{qldpcchallenge} records what a search leaves open. A distance
+that is not certified is reported there as an upper bound, for a non-CSS code because the
+Pauli-weight certifier ``is not available yet'' and for a circuit-level distance because
+an exact tier ``is deferred future work''; what lies between an upper bound and a proof,
+the schema calls evidence.\footnote{The quotations are from the schema's own descriptions of the
 distance tiers, read on 30 September 2026. The wording is theirs, not ours.}
 
-Two notions in that sentence name what is missing, and both need a word of explanation. A
+Two notions in that sentence need a word of explanation. A
 CSS code is one whose parity checks split into two families, one measuring X-type errors
 and one measuring Z-type; the Pauli-weight certifier is the component that would bound
 how few qubits a logical operator touches. A circuit-level distance counts faults in the
@@ -128,8 +128,8 @@ like, because everything beyond the wall is checked, and both rooms stand on the
 
 \section{What is in the library}
 
-\package{QECCertificates} is a Lean~4 development of 58 modules on Lean
-4.34~\cite{lean4}, built against mathlib~\cite{mathlib} at a pinned revision, on the
+\package{QECCertificates} is a Lean~4 development of 58 modules, written for
+Lean~4.34~\cite{lean4}, built against mathlib~\cite{mathlib} at a pinned revision, on the
 same toolchain as the two developments that consume it.
 
 \begin{itemize}
@@ -231,7 +231,7 @@ the papers that report those results cite this library as the home of the shared
 statements, so a reader can check the interface claims without reading either paper's
 repository.
 
-\section{Using it}
+\section{Usage}
 
 \begin{verbatim}
     # in a lakefile.toml
@@ -247,11 +247,11 @@ repository.
 Nothing is configured per machine: every dependency is fetched at a pinned revision, and
 a script that links a local prebuilt layer is optional and never required for a build to
 succeed. The released version~\cite{qeccertificates} is archived at
-\url{https://doi.org/10.5281/zenodo.23056679}, which is what to cite. The audit region is
+\url{https://doi.org/10.5281/zenodo.23056679}; that is the version to cite. The audit region is
 part of the build, so a downstream user sees the axiom list for the statements they
 consume in their own build log.
 
-\section{What it does not do}
+\section{Limitations}
 
 The library does not simulate circuits, decode syndromes, or enumerate codes; those are
 served by mature projects, and the point of a certificate layer is to sit beside them
@@ -278,7 +278,7 @@ companion developments use.
 \begin{thebibliography}{99}
 \bibitem{breuckmann2021} N.~P.~Breuckmann and J.~N.~Eberhardt, \emph{Quantum
 low-density parity-check codes}, PRX Quantum 2, 040101 (2021).
-\bibitem{qldpc} The qLDPC Challenge, public data schema and tier descriptions,
+\bibitem{qldpcchallenge} The qLDPC Challenge, public data schema and tier descriptions,
 \url{https://github.com/unitaryfoundation/qldpc-challenge} (read 30 September 2026).
 \bibitem{leanqec} M.~Ehatamm, Y.~Lee, X.~Wu and R.~Tao, \emph{End-to-End
 Formalization of Quantum Error Correction}, arXiv:2605.16523 (2026).

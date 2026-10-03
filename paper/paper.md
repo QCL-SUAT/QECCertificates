@@ -53,9 +53,8 @@ the composition of the two are theorems, so the search may be as fast, as heuris
 as untrusted as its users like, because it is no longer part of the argument. The
 intended users are the groups that search for and tabulate quantum low-density
 parity-check codes [@breuckmann2021], the authors of code tables who want their numbers
-to carry proofs,
-and formal-methods researchers who need certified code parameters as hypotheses rather
-than as trust.
+to carry proofs, and formal-methods researchers who need certified code parameters as
+hypotheses rather than as trust.
 
 # State of the field
 
@@ -78,10 +77,11 @@ another formal library in this area that separates the two roles in this way.
 
 The library is layered, and the layering is the design. At the bottom, GF(2) linear
 algebra: row reduction with a proved pivot invariant, kernel bases, rank certificates,
-dual witnesses, weight-limited enumeration with a covering theorem, and the hypergraph [@tillichzemor]
-and lifted [@panteleev2022] products with the Künneth formulas that make their distances
-computable in pieces. Above it a Pauli layer translating operator trees to the symplectic
-bit-vector representation and back. Then the certificate framework: the LRAT/RUP checker
+dual witnesses, weight-limited enumeration with a covering theorem, and the hypergraph
+[@tillichzemor] and lifted [@panteleev2022] products with the Künneth formulas that make
+their distances computable in pieces. Above it a Pauli layer translating operator trees
+to the symplectic bit-vector representation and back. Then the certificate framework: the
+LRAT/RUP checker
 with its soundness theorem, the CNF encoding whose faithfulness is proved in both
 directions -- a model of the encoded formula *is* a light logical operator -- and
 symmetry breaking by lex-leader predicates whose reduction is proved rather than
