@@ -108,6 +108,9 @@ PEAK_MIB = {
     "QECCertificates/Codes/TimeLikeInstance.lean": 3693,
     "QECCertificates/Codes/ToricFamilySpatial.lean": 2945,
     "QECCertificates/GF2/Basic.lean": 3171,
+    # measured 2026-10-03 on the table's host, with the sampler checked against a
+    # re-measurement of GF2/Basic (3245 MiB against the 3171 recorded here)
+    "QECCertificates/GF2/Basis.lean": 3230,
     "QECCertificates/GF2/Canonical.lean": 2933,
     "QECCertificates/GF2/HGP.lean": 2936,
     "QECCertificates/GF2/HGPCleaning.lean": 3250,

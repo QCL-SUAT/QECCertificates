@@ -105,6 +105,7 @@ rests on exactly the three standard axioms.
 | `QECCertificates.Codes.TimeLikeInstance` | a named instance of the timelike component: a repetition-code detector with $m = 3$ checks and $T = 4$ rounds |
 | `QECCertificates.Codes.ToricFamilySpatial` | the **spacelike side** of the toric family (both distances of the deformed code are $m$, with a surviving witness of weight $m$) |
 | `QECCertificates.GF2.Basic` | GF(2) vector algebra primitives |
+| `QECCertificates.GF2.Basis` | basis-vector sums: a check-row comparison costs `\|A\|` terms, not `n` |
 | `QECCertificates.GF2.Canonical` | uniqueness of the canonical form: the row-reduction output of a row space is a canonical invariant |
 | `QECCertificates.GF2.HGP` | the tensor decomposition of the hypergraph-product parity-check matrix |
 | `QECCertificates.GF2.HGPCleaning` | HGP, part three: the cleaning argument and the X-distance lower bound |
@@ -784,6 +785,11 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.addSmul_cancel
 #print axioms QECCertificates.addSmul_mem_span
 #print axioms QECCertificates.spanL_map_addSmul_append
+-- QECCertificates.GF2.Basis
+#print axioms QECCertificates.e_dotProduct
+#print axioms QECCertificates.dotProduct_e_sum
+#print axioms QECCertificates.sum_e_apply
+#print axioms QECCertificates.dot_map_e
 -- QECCertificates.GF2.Canonical
 #print axioms QECCertificates.readOff_nil
 #print axioms QECCertificates.readOff_apply

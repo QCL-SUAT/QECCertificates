@@ -51,7 +51,7 @@ the composition of the two are theorems.
 | `QECCertificates/Codes/` | the code-theoretic layer: stabilizer, CSS and subsystem codes; gauging and measurement-protocol representations; the shared instance families (Bacon–Shor, BB, HGP, lifted product) |
 | [`tools/check_axioms.py`](tools/check_axioms.py) | reads a build log and refuses any declaration whose `#print axioms` line names an axiom outside the three standard ones |
 
-The package is **58 modules**, and the audit region covers **every** non-private
+The package is **59 modules**, and the audit region covers **every** non-private
 `theorem`/`lemma` in it.
 
 ## Guarantees
@@ -85,7 +85,7 @@ Eleven of this package's own modules close their statements by kernel reduction 
 object large enough to need more memory than a runner can give one process. The budget is
 ten gigabytes, which leaves a 16 GB runner room for the toolchain and the system, and the
 largest module, the separation instances, peaks at **77 GiB**. Continuous integration
-therefore builds **25 of the 58 modules**: every module whose measured peak fits the
+therefore builds **26 of the 59 modules**: every module whose measured peak fits the
 budget, together with everything those modules import, since lake cannot build one without
 the other. It builds them one at a time and in import order, because the budget is what one
 process needs: with a module's imports already built, the call that builds it has nothing
