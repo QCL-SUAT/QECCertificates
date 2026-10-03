@@ -348,7 +348,7 @@ operator, 4 rows over 11 bits. -/
 def sepKeepPathHzM : Matrix (Fin 4) (Fin 11) (ZMod 2) :=
   Matrix.of ![(0 + e 0 + e 2 + e 4 + e 5 + e 8 + e 9 : Vec 11),
     (0 + e 1 + e 3 + e 4 + e 5 + e 10 : Vec 11),
-    (0 + e 0 + e 2 + e 6 + e 7 : Vec 11),
+    (0 + e 0 + e 2 + e 6 + e 7 + e 8 + e 9 + e 10 : Vec 11),
     (0 + e 1 + e 3 + e 6 + e 7 : Vec 11)]
 
 /-- The same checks in row-list form. -/
