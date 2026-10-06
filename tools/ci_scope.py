@@ -84,8 +84,6 @@ PEAK_MIB = {
     "QECCertificates/Codes/BB144Symmetry.lean": 2965,
     "QECCertificates/Codes/BB144Witness.lean": 35327,
     "QECCertificates/Codes/BB18Anchor.lean": 8473,
-    # measured apart from the table's header: 2026-10-03, the 32 GB macOS host,
-    # quiet machine, the process sampled every 0.3 s of an 11 s compile
     "QECCertificates/Codes/BB18Symmetry.lean": 6498,
     "QECCertificates/Codes/BB24Gauged.lean": 40829,
     "QECCertificates/Codes/BB24Separation.lean": 3218,
@@ -94,6 +92,7 @@ PEAK_MIB = {
     "QECCertificates/Codes/BoundaryCollapse.lean": 3207,
     "QECCertificates/Codes/CSSPair.lean": 3100,
     "QECCertificates/Codes/CaseMatrix.lean": 28062,
+    "QECCertificates/Codes/ClosureTheorem.lean": 245,
     "QECCertificates/Codes/DistanceLabel.lean": 2934,
     "QECCertificates/Codes/FoldTransversal.lean": 4956,
     "QECCertificates/Codes/FullProtocolFaults.lean": 18931,
@@ -108,8 +107,6 @@ PEAK_MIB = {
     "QECCertificates/Codes/TimeLikeInstance.lean": 3693,
     "QECCertificates/Codes/ToricFamilySpatial.lean": 2945,
     "QECCertificates/GF2/Basic.lean": 3171,
-    # measured 2026-10-03 on the table's host, with the sampler checked against a
-    # re-measurement of GF2/Basic (3245 MiB against the 3171 recorded here)
     "QECCertificates/GF2/Basis.lean": 3230,
     "QECCertificates/GF2/Canonical.lean": 2933,
     "QECCertificates/GF2/HGP.lean": 2936,
@@ -140,6 +137,28 @@ PEAK_MIB = {
     "QECCertificates/Reflect/LexLeader.lean": 3300,
     "QECCertificates/Reflect/SBAssembly.lean": 2971,
     "QECCertificates/Reflect/SymmetryBreak.lean": 2963,
+    # measured 2026-10-03 on the table's host, with the sampler checked against a
+    # measured 2026-10-06 on this host, the sampler naming the process
+    # measured apart from the table's header: 2026-10-03, the 32 GB macOS host,
+    # quiet machine, the process sampled every 0.3 s of an 11 s compile
+    # re-measurement of GF2/Basic (3245 MiB against the 3171 recorded here)
+    "QECCertificates/Homology/AuxComplex.lean": 2942,
+    "QECCertificates/Homology/BoundaryLinearCore.lean": 3212,
+    "QECCertificates/Homology/CosystolicCertificate.lean": 3177,
+    "QECCertificates/Homology/CosystolicCharacterization.lean": 2949,
+    "QECCertificates/Homology/CosystolicLowWeight.lean": 3234,
+    "QECCertificates/Homology/CosystolicLowerBound.lean": 3208,
+    "QECCertificates/Homology/DetectorDecomposition.lean": 3291,
+    "QECCertificates/Homology/FaultComplex.lean": 15053,
+    "QECCertificates/Homology/FaultComplexKunneth.lean": 3452,
+    "QECCertificates/Homology/FaultDistance.lean": 3299,
+    "QECCertificates/Homology/HypergraphSurgery.lean": 3275,
+    "QECCertificates/Homology/MappingCone.lean": 2935,
+    "QECCertificates/Homology/MappingConeSnake.lean": 3282,
+    "QECCertificates/Homology/ModuleExpansion.lean": 2938,
+    "QECCertificates/Homology/PortFunction.lean": 2938,
+    "QECCertificates/Homology/SubcodeChainMap.lean": 2937,
+    "QECCertificates/Homology/SubcodeLayer.lean": 3263,
 }
 
 IMPORT = re.compile(r"^import\s+([A-Za-z0-9_.]+)", re.M)

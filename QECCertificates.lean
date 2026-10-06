@@ -18,6 +18,7 @@ import QECCertificates.Codes.BaconShorMeasurement
 import QECCertificates.Codes.BoundaryCollapse
 import QECCertificates.Codes.CSSPair
 import QECCertificates.Codes.CaseMatrix
+import QECCertificates.Codes.ClosureTheorem
 import QECCertificates.Codes.DistanceLabel
 import QECCertificates.Codes.FoldTransversal
 import QECCertificates.Codes.FullProtocolFaults
@@ -49,6 +50,23 @@ import QECCertificates.GF2.RankEchelon
 import QECCertificates.GF2.RowReduce
 import QECCertificates.GF2.WeightEnum
 import QECCertificates.GF2.Witness
+import QECCertificates.Homology.AuxComplex
+import QECCertificates.Homology.BoundaryLinearCore
+import QECCertificates.Homology.CosystolicCertificate
+import QECCertificates.Homology.CosystolicCharacterization
+import QECCertificates.Homology.CosystolicLowWeight
+import QECCertificates.Homology.CosystolicLowerBound
+import QECCertificates.Homology.DetectorDecomposition
+import QECCertificates.Homology.FaultComplex
+import QECCertificates.Homology.FaultComplexKunneth
+import QECCertificates.Homology.FaultDistance
+import QECCertificates.Homology.HypergraphSurgery
+import QECCertificates.Homology.MappingCone
+import QECCertificates.Homology.MappingConeSnake
+import QECCertificates.Homology.ModuleExpansion
+import QECCertificates.Homology.PortFunction
+import QECCertificates.Homology.SubcodeChainMap
+import QECCertificates.Homology.SubcodeLayer
 import QECCertificates.Pauli.Expr
 import QECCertificates.Reflect.Certified
 import QECCertificates.Reflect.Complete
@@ -91,6 +109,7 @@ rests on exactly the three standard axioms.
 | `QECCertificates.Codes.BoundaryCollapse` | removing the boundary detectors collapses the distance to $1$ for **every** code (family-level form) |
 | `QECCertificates.Codes.CSSPair` | feeding into LeanQEC's `CSS_pair`: the distance conclusions of the case matrix meet the upstream interface |
 | `QECCertificates.Codes.CaseMatrix` | the case matrix: machine-checked assertions of code parameters (end to end) |
+| `QECCertificates.Codes.ClosureTheorem` | the syndrome-closure dichotomy for an abstract check matrix: closure and its sharp converse, the Steiner structure, detection, and the $[[7,1,3]]$ instance |
 | `QECCertificates.Codes.DistanceLabel` | the X/Z distance labels: fixing the convention, and machine-checking that the two sides agree |
 | `QECCertificates.Codes.FoldTransversal` | fold-transversal gates: an in-kernel instance for BB $[[18,4,4]]$ |
 | `QECCertificates.Codes.FullProtocolFaults` | the fault model of the full protocol: data, ancilla and measurement errors (a Bacon–Shor instance) |
@@ -122,6 +141,23 @@ rests on exactly the three standard axioms.
 | `QECCertificates.GF2.RowReduce` | trusted GF(2) row reduction |
 | `QECCertificates.GF2.WeightEnum` | weight-bounded vector enumeration: shrinking the search space from $2^n$ to $\sum_{k\le w}\binom nk$ |
 | `QECCertificates.GF2.Witness` | dual-witness certificates, and the two exact-distance theorems |
+| `QECCertificates.Homology.AuxComplex` | the four-term auxiliary cochain complex, its complex condition, and the gauging case of the 1-cosystolic distance |
+| `QECCertificates.Homology.BoundaryLinearCore` | solver-free linear algebra over a field: exactness and rank identities, and a cleaning-based distance theorem for a legal CSS coupling |
+| `QECCertificates.Homology.CosystolicCertificate` | turning an exact 1-cosystolic distance into the GF(2) certificate engine |
+| `QECCertificates.Homology.CosystolicCharacterization` | the 1-cosystolic distance as parity and intersection conditions on supports |
+| `QECCertificates.Homology.CosystolicLowWeight` | the decidable low-weight criterion for the 1-cosystolic distance, with the weight-1 and weight-2 classifications |
+| `QECCertificates.Homology.CosystolicLowerBound` | lower-bound tools for the 1-cosystolic distance, and two unbounded families |
+| `QECCertificates.Homology.DetectorDecomposition` | the detector-generating lemma, as combinatorics over an arbitrary labelled site set |
+| `QECCertificates.Homology.FaultComplex` | the four-term fault complex of a circuit and its Koszul construction |
+| `QECCertificates.Homology.FaultComplexKunneth` | Kunneth formulas for the fault complex, with the rank toolkit they rest on |
+| `QECCertificates.Homology.FaultDistance` | spacetime fault distance over an arbitrary detector map and readout set |
+| `QECCertificates.Homology.HypergraphSurgery` | the auxiliary hypergraph layer: gauging generalized from graphs to hypergraphs |
+| `QECCertificates.Homology.MappingCone` | the mapping cone of a cochain map over GF(2) |
+| `QECCertificates.Homology.MappingConeSnake` | the snake-lemma dimension formula for the mapping cone |
+| `QECCertificates.Homology.ModuleExpansion` | modular expansion and thickening, and the expansion-implies-distance-preservation interface |
+| `QECCertificates.Homology.PortFunction` | port functions, and the generation of the coupling space |
+| `QECCertificates.Homology.SubcodeChainMap` | the chain map realizing a subcode as an induced subcomplex |
+| `QECCertificates.Homology.SubcodeLayer` | the subcode as a genuine CSS code object, and its distance |
 | `QECCertificates.Pauli.Expr` | translation theorems between the operator algebra (operator trees) and the decision layer (GF(2) symplectic representation) |
 | `QECCertificates.Reflect.Certified` | a certificate is a lower bound: connecting the in-kernel replay to a code-distance theorem |
 | `QECCertificates.Reflect.Complete` | encoding faithfulness: the completeness direction |
@@ -418,6 +454,37 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.p5_pairwise_commute
 #print axioms QECCertificates.p5_k
 #print axioms QECCertificates.p5_d
+-- QECCertificates.Codes.ClosureTheorem
+#print axioms QECCertificates.ClosureTheorem.zeros_length
+#print axioms QECCertificates.ClosureTheorem.xor_nil_left
+#print axioms QECCertificates.ClosureTheorem.xor_nil_right
+#print axioms QECCertificates.ClosureTheorem.xor_cons
+#print axioms QECCertificates.ClosureTheorem.zeros_zero
+#print axioms QECCertificates.ClosureTheorem.zeros_succ
+#print axioms QECCertificates.ClosureTheorem.xor_comm
+#print axioms QECCertificates.ClosureTheorem.xor_length
+#print axioms QECCertificates.ClosureTheorem.xor_zeros_left
+#print axioms QECCertificates.ClosureTheorem.xor_zeros_right
+#print axioms QECCertificates.ClosureTheorem.xor_zeros_width_left
+#print axioms QECCertificates.ClosureTheorem.xor_zeros_width_right
+#print axioms QECCertificates.ClosureTheorem.xor_self
+#print axioms QECCertificates.ClosureTheorem.xor_assoc
+#print axioms QECCertificates.ClosureTheorem.xor_cancel
+#print axioms QECCertificates.ClosureTheorem.xor_eq_zeros
+#print axioms QECCertificates.ClosureTheorem.xor_eq_left_imp_zeros
+#print axioms QECCertificates.ClosureTheorem.xor_eq_right_imp_zeros
+#print axioms QECCertificates.ClosureTheorem.triple_xor_zero
+#print axioms QECCertificates.ClosureTheorem.closure_third_mem
+#print axioms QECCertificates.ClosureTheorem.decoder_information_limit
+#print axioms QECCertificates.ClosureTheorem.steiner_unique_third
+#print axioms QECCertificates.ClosureTheorem.span_pair_closed_mem
+#print axioms QECCertificates.ClosureTheorem.sharp_converse
+#print axioms QECCertificates.ClosureTheorem.detection
+#print axioms QECCertificates.ClosureTheorem.hamming_width
+#print axioms QECCertificates.ClosureTheorem.hamming_nonzero
+#print axioms QECCertificates.ClosureTheorem.hamming_exhaustive
+#print axioms QECCertificates.ClosureTheorem.hamming_closure_instance
+#print axioms QECCertificates.ClosureTheorem.hamming_steiner_instance
 -- QECCertificates.Codes.DistanceLabel
 #print axioms QECCertificates.libDX_eq_textbookDZ
 #print axioms QECCertificates.libDZ_eq_textbookDX
@@ -1073,6 +1140,693 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.minWeight_le_of_witness
 #print axioms QECCertificates.le_minWeight_of_lower
 #print axioms QECCertificates.eq_minWeight_of_bounds
+-- QECCertificates.Homology.AuxComplex
+#print axioms QECCertificates.Homology.even_iff_natCast_zmod_two_eq_zero
+#print axioms QECCertificates.Homology.surgeryD1_mul_surgeryD0_eq_zero
+#print axioms QECCertificates.Homology.surgeryD2_mul_surgeryD1_eq_zero
+#print axioms QECCertificates.Homology.surgery_four_term_complex
+#print axioms QECCertificates.Homology.transpose_surgeryD1_mulVec_indVec_apply
+#print axioms QECCertificates.Homology.isComponent_iff_mulVec_transpose
+#print axioms QECCertificates.Homology.surgeryD1_mulVec_indVec_apply
+#print axioms QECCertificates.Homology.isCycleSet_iff_mulVec_surgeryD1
+#print axioms QECCertificates.Homology.card_inter_pair
+#print axioms QECCertificates.Homology.even_indicator_iff
+#print axioms QECCertificates.Homology.isComponent_graphOf_iff_closed
+#print axioms QECCertificates.Homology.reachable_mem_of_isComponent
+#print axioms QECCertificates.Homology.isComponent_eq_empty_or_univ_of_reachable
+#print axioms QECCertificates.Homology.graphOf_components_eq
+#print axioms QECCertificates.Homology.eq_zero_of_hammingNorm_eq_zero
+#print axioms QECCertificates.Homology.one_le_hammingNorm_of_ne_zero
+#print axioms QECCertificates.Homology.sum_eq_natCast_hammingNorm
+#print axioms QECCertificates.Homology.even_hammingNorm_iff_sum_eq_zero
+#print axioms QECCertificates.Homology.even_hammingNorm_of_mulVec_surgeryD1
+#print axioms QECCertificates.Homology.hammingNorm_indVec_singleton
+#print axioms QECCertificates.Homology.surgeryD2_mulVec_indVec_singleton
+#print axioms QECCertificates.Homology.not_mem_im_surgeryD1_indVec_singleton
+#print axioms QECCertificates.Homology.isCosystolic_indVec_singleton
+#print axioms QECCertificates.Homology.isCosystolic_ne_zero
+#print axioms QECCertificates.Homology.gauging_cosystolicDistance_eq_one
+#print axioms QECCertificates.Homology.graphOf_cosystolicDistance_eq_one
+#print axioms QECCertificates.Homology.gauging_cosystolicDistance_eq_one_empty
+#print axioms QECCertificates.Homology.graphOf_not_high_cosystolic
+#print axioms QECCertificates.Homology.high_cosystolic_requires_cover
+#print axioms QECCertificates.Homology.rounds_ge_of_cosystolic_one
+#print axioms QECCertificates.Homology.gaussLawMat_apply_inr
+#print axioms QECCertificates.Homology.gaussLawMat_apply_inl
+#print axioms QECCertificates.Homology.transpose_surgeryD1_apply_eq_starOp
+#print axioms QECCertificates.Homology.surgeryD1_graphOf_eq_gaussOp
+#print axioms QECCertificates.Homology.graphOf_surgeryD1_col_card
+-- QECCertificates.Homology.BoundaryLinearCore
+#print axioms QECCertificates.Homology.betti_zero_iff_exact
+#print axioms QECCertificates.Homology.kernel_dim_zero_iff
+#print axioms QECCertificates.Homology.exact_iff_rank_sum
+#print axioms QECCertificates.Homology.cokernel_dim_zero_iff
+#print axioms QECCertificates.Homology.kunneth_zero_iff
+#print axioms QECCertificates.Homology.weight_add_le
+#print axioms QECCertificates.Homology.filter_add_ne_zero_card
+#print axioms QECCertificates.Homology.mem_suppOf
+#print axioms QECCertificates.Homology.indOf_ne_zero_iff
+#print axioms QECCertificates.Homology.modExpArgOf_eq_portWeight
+#print axioms QECCertificates.Homology.legal_couplings_agree_on_cycles
+#print axioms QECCertificates.Homology.distance_of_legal_coupling
+#print axioms QECCertificates.Homology.expansion_cases
+#print axioms QECCertificates.Homology.weight_incTranspose_eq_edgeDegOf
+#print axioms QECCertificates.Homology.expansionCriterion_of_modularExpansion
+#print axioms QECCertificates.Homology.inf'_image_indOf_eq_modExpMin
+-- QECCertificates.Homology.CosystolicCertificate
+#print axioms QECCertificates.Homology.surgeryD1_transpose_rowSpace
+#print axioms QECCertificates.Homology.isCosystolic_iff_matrix_logical
+#print axioms QECCertificates.Homology.isCosystolic_iff_undetectable
+#print axioms QECCertificates.Homology.cosystolicDistance_eq_of_lightCand
+-- QECCertificates.Homology.CosystolicCharacterization
+#print axioms QECCertificates.Homology.surgeryD2_mulVec_indVec_apply
+#print axioms QECCertificates.Homology.sum_indVec_mem
+#print axioms QECCertificates.Homology.isCosystolic_indVec_iff
+#print axioms QECCertificates.Homology.isCosystolic_iff_support
+#print axioms QECCertificates.Homology.le_cosystolicDistance_iff_finset
+#print axioms QECCertificates.Homology.cosystolicDistance_le_card_of_indVec
+#print axioms QECCertificates.Homology.three_le_cosystolicDistance_iff_no_small
+#print axioms QECCertificates.Homology.zmod2_eq_zero_or_eq_one
+#print axioms QECCertificates.Homology.surgeryD2_matRowSupport
+#print axioms QECCertificates.Homology.surgeryD1_hypergraphOfRows
+#print axioms QECCertificates.Homology.surgeryD2_mul_surgeryD1_hypergraphOfRows
+#print axioms QECCertificates.Homology.isCosystolic_hypergraphOfRows
+#print axioms QECCertificates.Homology.cosystolicDistance_hypergraphOfRows
+#print axioms QECCertificates.Homology.cosystolicDistance_eq_sInf_ker_ne_zero
+-- QECCertificates.Homology.CosystolicLowWeight
+#print axioms QECCertificates.Homology.natCast_hammingNorm_eq_sum
+#print axioms QECCertificates.Homology.le_cosystolicDistance_iff
+#print axioms QECCertificates.Homology.eq_zero_or_indVec_singleton_or_pair
+#print axioms QECCertificates.Homology.not_isCosystolic_zero
+#print axioms QECCertificates.Homology.three_le_cosystolicDistance_iff
+#print axioms QECCertificates.Homology.three_le_cosystolicDistance_of_pairExclusion
+#print axioms QECCertificates.Homology.even_hammingNorm_of_isCosystolic_univ
+-- QECCertificates.Homology.CosystolicLowerBound
+#print axioms QECCertificates.Homology.support_indVec
+#print axioms QECCertificates.Homology.hammingNorm_indVec
+#print axioms QECCertificates.Homology.eq_indVec_support
+#print axioms QECCertificates.Homology.surgeryD2_mulVec_sum
+#print axioms QECCertificates.Homology.surgeryD1_col_sum
+#print axioms QECCertificates.Homology.sum_mulVec_surgeryD1_eq_zero_of_isComponent
+#print axioms QECCertificates.Homology.notMem_image_surgeryD1_of_component_odd
+#print axioms QECCertificates.Homology.isCosystolic_of_component_odd
+#print axioms QECCertificates.Homology.isCosystolic_indVec_singleton_iff
+#print axioms QECCertificates.Homology.two_le_hammingNorm_of_isCosystolic
+#print axioms QECCertificates.Homology.pairEdgeHyper_isEven
+#print axioms QECCertificates.Homology.pairTripleW_isComponent
+#print axioms QECCertificates.Homology.pairTripleW_notMem
+#print axioms QECCertificates.Homology.mulVec_surgeryD2_pairTripleW
+#print axioms QECCertificates.Homology.ker_pairTripleW
+#print axioms QECCertificates.Homology.mulVec_surgeryD1_pairEdgeHyper
+#print axioms QECCertificates.Homology.mem_image_pairEdgeHyper
+#print axioms QECCertificates.Homology.mem_image_of_pair_support
+#print axioms QECCertificates.Homology.pairWitness_ker
+#print axioms QECCertificates.Homology.pairWitness_notMem_image
+#print axioms QECCertificates.Homology.pairWitness_iscosystolic
+#print axioms QECCertificates.Homology.cosystolicDistance_pair_le
+#print axioms QECCertificates.Homology.cosystolicDistance_pair_ge
+#print axioms QECCertificates.Homology.cosystolicDistance_pair_eq
+#print axioms QECCertificates.Homology.cosystolicDistance_pair_compl
+#print axioms QECCertificates.Homology.cosystolicDistance_pair_eq_card_sub_one
+#print axioms QECCertificates.Homology.connHyper_edge_zero
+#print axioms QECCertificates.Homology.connHyper_edge_one
+#print axioms QECCertificates.Homology.connHyper_isEven
+#print axioms QECCertificates.Homology.connW_isComponent
+#print axioms QECCertificates.Homology.connW_covers
+#print axioms QECCertificates.Homology.connExample_witness
+#print axioms QECCertificates.Homology.connExample_ge
+#print axioms QECCertificates.Homology.cosystolicDistance_connExample_eq_two
+#print axioms QECCertificates.Homology.wsame_refl
+#print axioms QECCertificates.Homology.wsame_symm
+#print axioms QECCertificates.Homology.wsame_trans
+#print axioms QECCertificates.Homology.indVec_pair_eq_add
+#print axioms QECCertificates.Homology.surgeryD2_mulVec_indVec_pair
+#print axioms QECCertificates.Homology.surgeryD2_mulVec_indVec_pair_apply
+#print axioms QECCertificates.Homology.surgeryD2_mulVec_indVec_pair_eq_zero_iff
+#print axioms QECCertificates.Homology.dotBilin_apply
+#print axioms QECCertificates.Homology.dotBilin_isRefl
+#print axioms QECCertificates.Homology.dotBilin_nondegenerate
+#print axioms QECCertificates.Homology.exists_mulVec_eq_iff_forall_dot_eq_zero
+#print axioms QECCertificates.Homology.dotProduct_indVec
+#print axioms QECCertificates.Homology.exists_surgeryD1_eq_iff_forall_component
+#print axioms QECCertificates.Homology.sum_indVec_pair
+#print axioms QECCertificates.Homology.mem_image_surgeryD1_indVec_pair_iff
+#print axioms QECCertificates.Homology.isCosystolic_indVec_pair_iff
+#print axioms QECCertificates.Homology.iff_of_not_not_iff
+#print axioms QECCertificates.Homology.not_not_iff_of_iff
+#print axioms QECCertificates.Homology.isCosystolic_indVec_pair_iff_component
+#print axioms QECCertificates.Homology.univEdgeHyper_edge
+#print axioms QECCertificates.Homology.univEdgeHyper_isEven
+#print axioms QECCertificates.Homology.univEdgeHyper_incidenceConnected
+#print axioms QECCertificates.Homology.mulVec_surgeryD1_univEdgeHyper
+#print axioms QECCertificates.Homology.mem_image_univEdgeHyper
+#print axioms QECCertificates.Homology.splitPairW_isComponent
+#print axioms QECCertificates.Homology.splitPairW_covers
+#print axioms QECCertificates.Homology.mulVec_surgeryD2_splitPairW_eq_zero_iff
+#print axioms QECCertificates.Homology.eq_smul_indVec_split
+#print axioms QECCertificates.Homology.indVec_ne_indVec_univ
+#print axioms QECCertificates.Homology.mem_compl_iff_notMem
+#print axioms QECCertificates.Homology.splitPairW_kernel
+#print axioms QECCertificates.Homology.splitPairW_notMem_image
+#print axioms QECCertificates.Homology.cosystolicDistance_univEdge_splitPairW_eq
+#print axioms QECCertificates.Homology.halfSet_card
+#print axioms QECCertificates.Homology.cosystolicDistance_univEdge_splitPairW_half
+#print axioms QECCertificates.Homology.exists_incidenceConnected_cosystolicDistance_ge
+-- QECCertificates.Homology.DetectorDecomposition
+#print axioms QECCertificates.Homology.siteVec_of_ne
+#print axioms QECCertificates.Homology.sum_adjPairVec_eq_windowVec
+#print axioms QECCertificates.Homology.windowVec_eq_zero_of_sum_eq_zero
+#print axioms QECCertificates.Homology.bsSyndromeNat_eq
+#print axioms QECCertificates.Homology.bsSyndromeNat_window_eq_sum_adjacent
+#print axioms QECCertificates.Homology.bsSyndrome_window_eq_sum_adjacent
+#print axioms QECCertificates.Homology.isDeterministic_zero
+#print axioms QECCertificates.Homology.isDeterministic_add
+#print axioms QECCertificates.Homology.classSum_zero_of_isDeterministic
+#print axioms QECCertificates.Homology.isDeterministic_iff
+#print axioms QECCertificates.Homology.isDeterministic_pairForm
+#print axioms QECCertificates.Homology.mem_span_pairForm_of_sum_eq_zero
+#print axioms QECCertificates.Homology.isDeterministic_iff_mem_span_pairForm
+#print axioms QECCertificates.Homology.classInd_const
+#print axioms QECCertificates.Homology.sees_pairForm
+#print axioms QECCertificates.Homology.stabilizer_iff_const_on_labels
+#print axioms QECCertificates.Homology.const_on_labels_iff_mem_span_classInd
+#print axioms QECCertificates.Homology.classSum_zero_of_isDetZ
+#print axioms QECCertificates.Homology.isDetZ_iff_mem_span
+-- QECCertificates.Homology.FaultComplex
+#print axioms QECCertificates.Homology.fd1_mul_fd2_of
+#print axioms QECCertificates.Homology.fd0_mul_fd1_of
+#print axioms QECCertificates.Homology.kron_mul
+#print axioms QECCertificates.Homology.kron_zero_left
+#print axioms QECCertificates.Homology.add_self_matrix
+#print axioms QECCertificates.Homology.koszul_is_complex
+#print axioms QECCertificates.Homology.koszulFaultComplex_d12_11
+#print axioms QECCertificates.Homology.koszulFaultComplex_d12_02
+#print axioms QECCertificates.Homology.koszulFaultComplex_d11_10
+#print axioms QECCertificates.Homology.koszulFaultComplex_d11_01
+#print axioms QECCertificates.Homology.koszulFaultComplex_d02_01
+#print axioms QECCertificates.Homology.koszulFaultComplex_d10_00
+#print axioms QECCertificates.Homology.koszulFaultComplex_d01_00
+#print axioms QECCertificates.Homology.timeLike34H_eq_reindex
+#print axioms QECCertificates.Homology.timeLikeFaultComplex_d11_01
+#print axioms QECCertificates.Homology.timeLikeFaultComplex_degenerate
+#print axioms QECCertificates.Homology.timeLikeFaultComplex_cycles_finrank
+#print axioms QECCertificates.Homology.timeLikeFaultComplex_minWeight
+#print axioms QECCertificates.Homology.shorD1_mul_shorD2
+#print axioms QECCertificates.Homology.shorFaultComplex_term_dims
+#print axioms QECCertificates.Homology.shorFaultComplex_blocks
+#print axioms QECCertificates.Homology.shorFaultComplex_block_equations
+#print axioms QECCertificates.Homology.koszulBlock11_eq_kronecker
+#print axioms QECCertificates.Homology.koszulBlock01_eq_kronecker
+#print axioms QECCertificates.Homology.koszulBlock02_eq_kronecker
+#print axioms QECCertificates.Homology.zmod2_ind
+#print axioms QECCertificates.Homology.fd1_par_apply_inl
+#print axioms QECCertificates.Homology.fd1_par_apply_inr
+#print axioms QECCertificates.Homology.conserved_parity
+-- QECCertificates.Homology.FaultComplexKunneth
+#print axioms QECCertificates.Homology.twoTermH1_add_matRank
+#print axioms QECCertificates.Homology.twoTermH0_add_matRank
+#print axioms QECCertificates.Homology.twoTermH0_eq_zero_of_surjective
+#print axioms QECCertificates.Homology.twoTermH1_eq_zero_of_injective
+#print axioms QECCertificates.Homology.timeLikeRepR_surjective
+#print axioms QECCertificates.Homology.timeLikeRepR_allOnes_mem_ker
+#print axioms QECCertificates.Homology.timeLikeRepR_twoTermH1
+#print axioms QECCertificates.Homology.repR_mulVec_apply
+#print axioms QECCertificates.Homology.repPreimage_castSucc
+#print axioms QECCertificates.Homology.repR_mulVec_repPreimage
+#print axioms QECCertificates.Homology.repR_surjective
+#print axioms QECCertificates.Homology.repR_matRank
+#print axioms QECCertificates.Homology.matRank_transpose
+#print axioms QECCertificates.Homology.repR_transpose_injective
+#print axioms QECCertificates.Homology.repR_twoTermH0
+#print axioms QECCertificates.Homology.repR_transpose_twoTermH1
+#print axioms QECCertificates.Homology.repR_allOnes_mem_ker
+#print axioms QECCertificates.Homology.repR_twoTermH1
+#print axioms QECCertificates.Homology.repR_ker_eq_span_allOnes
+#print axioms QECCertificates.Homology.timeLikeRepR_eq_repR
+#print axioms QECCertificates.Homology.kroneckerMap_one_mulVec_apply
+#print axioms QECCertificates.Homology.finrank_const_pi
+#print axioms QECCertificates.Homology.finrank_ker_kronecker_one
+#print axioms QECCertificates.Homology.matRank_kronecker_one
+#print axioms QECCertificates.Homology.fromBlocks_fin0_mulVec_apply_inl
+#print axioms QECCertificates.Homology.fromBlocks_fin0_mulVec_apply_inr
+#print axioms QECCertificates.Homology.finrank_ker_fromBlocks_fin0
+#print axioms QECCertificates.Homology.kunneth_H3_R_zero
+#print axioms QECCertificates.Homology.fromBlocks_diag_mulVec_apply_inl
+#print axioms QECCertificates.Homology.fromBlocks_diag_mulVec_apply_inr
+#print axioms QECCertificates.Homology.finrank_ker_fromBlocks_diag
+#print axioms QECCertificates.Homology.matRank_fromBlocks_diag
+#print axioms QECCertificates.Homology.fromBlocks_zeroLeft_mulVec_apply_inl
+#print axioms QECCertificates.Homology.fromBlocks_zeroLeft_mulVec_apply_inr
+#print axioms QECCertificates.Homology.matRank_fromBlocks_zeroLeft
+#print axioms QECCertificates.Homology.matRank_zero
+#print axioms QECCertificates.Homology.finrank_ker_eq_card_sub_matRank
+#print axioms QECCertificates.Homology.finrank_quotient_range_eq
+#print axioms QECCertificates.Homology.matRank_le_finrank_ker_of_mul_eq_zero
+#print axioms QECCertificates.Homology.fromBlocks_row_mulVec_apply_inl
+#print axioms QECCertificates.Homology.fromBlocks_row_mulVec_apply_inr
+#print axioms QECCertificates.Homology.matRank_fromBlocks_row_add
+#print axioms QECCertificates.Homology.finrank_inf_range_eq
+#print axioms QECCertificates.Homology.finrank_ker_fromBlocks_row
+#print axioms QECCertificates.Homology.arith_H0
+#print axioms QECCertificates.Homology.arith_H2
+#print axioms QECCertificates.Homology.arith_H1
+#print axioms QECCertificates.Homology.kunneth_H2_R_zero
+#print axioms QECCertificates.Homology.kunneth_H1_R_zero
+#print axioms QECCertificates.Homology.kunneth_H0_R_zero
+#print axioms QECCertificates.Homology.fromBlocks_col_mulVec_apply_inl
+#print axioms QECCertificates.Homology.fromBlocks_col_mulVec_apply_inr
+#print axioms QECCertificates.Homology.finrank_ker_fromBlocks_col
+#print axioms QECCertificates.Homology.kroneckerMap_one_left_mulVec_apply
+#print axioms QECCertificates.Homology.tensorVec_mulVec_kronecker_one_eq_zero
+#print axioms QECCertificates.Homology.tensorVec_mulVec_kronecker_one_left_eq_zero
+#print axioms QECCertificates.Homology.koszulTensorVec_fd2_eq_zero
+#print axioms QECCertificates.Homology.piMulVec_apply
+#print axioms QECCertificates.Homology.tupleTensor_mem_ker_piMulVec
+#print axioms QECCertificates.Homology.piCurry_piMulVec
+#print axioms QECCertificates.Homology.finrank_ker_piMulVec_coord
+#print axioms QECCertificates.Homology.piMapEquiv_piMulVec
+#print axioms QECCertificates.Homology.finrank_ker_piMulVec
+#print axioms QECCertificates.Homology.finrank_range_piMulVec
+#print axioms QECCertificates.Homology.kronecker_one_mulVec_eq_piMulVec
+#print axioms QECCertificates.Homology.kronecker_one_eq_zero_iff
+#print axioms QECCertificates.Homology.finrank_inf_ker_kronecker
+#print axioms QECCertificates.Homology.kunneth_H3
+#print axioms QECCertificates.Homology.finrank_ker_one_kronecker
+#print axioms QECCertificates.Homology.matRank_one_kronecker
+#print axioms QECCertificates.Homology.finrank_comap_add
+#print axioms QECCertificates.Homology.finrank_inf_range_add_finrank_range_mkQ
+#print axioms QECCertificates.Homology.finrank_inf_range_ker_sub
+#print axioms QECCertificates.Homology.ker_piMapQ
+#print axioms QECCertificates.Homology.range_piMapQ
+#print axioms QECCertificates.Homology.piMapQ_comp_piMulVec
+#print axioms QECCertificates.Homology.finrank_range_piMapQ_comp_piMulVec
+#print axioms QECCertificates.Homology.finrank_inf_range_piMulVec_pi
+#print axioms QECCertificates.Homology.finrank_comap_subtype_of_le
+#print axioms QECCertificates.Homology.range_mulVecLin_le_ker_mulVecLin
+#print axioms QECCertificates.Homology.finrank_inf_range_koszul_data
+#print axioms QECCertificates.Homology.piSubtypeIncl_injective
+#print axioms QECCertificates.Homology.finrank_map_eq_of_injective
+#print axioms QECCertificates.Homology.finrank_pi_submodule
+#print axioms QECCertificates.Homology.map_currySwap_range_kronecker_one
+#print axioms QECCertificates.Homology.map_piSubtypeIncl_inf_pi
+#print axioms QECCertificates.Homology.map_currySwap_range_domRestrict
+#print axioms QECCertificates.Homology.map_currySwap_range_one_kronecker
+#print axioms QECCertificates.Homology.finrank_inf_range_koszul
+#print axioms QECCertificates.Homology.finrank_inf_range_koszul_row
+#print axioms QECCertificates.Homology.fromBlocks_zeroRight_mulVec_apply_inl
+#print axioms QECCertificates.Homology.fromBlocks_zeroRight_mulVec_apply_inr
+#print axioms QECCertificates.Homology.finrank_ker_fromBlocks_row_col
+#print axioms QECCertificates.Homology.finrank_ker_fd1
+#print axioms QECCertificates.Homology.finrank_ker_fd0
+#print axioms QECCertificates.Homology.arith_H2_gen
+#print axioms QECCertificates.Homology.kunneth_H2
+#print axioms QECCertificates.Homology.arith_H1_gen
+#print axioms QECCertificates.Homology.kunneth_H1
+#print axioms QECCertificates.Homology.arith_H0_gen
+#print axioms QECCertificates.Homology.matRank_eq_card_sub_finrank_ker
+#print axioms QECCertificates.Homology.kunneth_H0
+#print axioms QECCertificates.Homology.repR_transpose_twoTermH0
+#print axioms QECCertificates.Homology.kunneth_H0_repR
+#print axioms QECCertificates.Homology.kunneth_H1_repR
+#print axioms QECCertificates.Homology.kunneth_H2_repR
+#print axioms QECCertificates.Homology.kunneth_H3_repR
+#print axioms QECCertificates.Homology.kunneth_H0_repR_transpose
+#print axioms QECCertificates.Homology.kunneth_H1_repR_transpose
+#print axioms QECCertificates.Homology.kunneth_H2_repR_transpose
+#print axioms QECCertificates.Homology.kunneth_H3_repR_transpose
+#print axioms QECCertificates.Homology.timelikeEmb_apply_inl
+#print axioms QECCertificates.Homology.timelikeEmb_apply_inr
+#print axioms QECCertificates.Homology.timelikeEmb_injective
+#print axioms QECCertificates.Homology.ker_timelikeEmb
+#print axioms QECCertificates.Homology.fd0_mulVec_apply_inl
+#print axioms QECCertificates.Homology.fd1_mulVec_inl
+#print axioms QECCertificates.Homology.fd1_mulVec_inr
+#print axioms QECCertificates.Homology.fd1_mulVec_sumElim_inl
+#print axioms QECCertificates.Homology.fd1_mulVec_sumElim_inr
+#print axioms QECCertificates.Homology.kron_one_mulVec_c
+#print axioms QECCertificates.Homology.kron_one_left_mulVec_c
+#print axioms QECCertificates.Homology.kron_one_left_mulVec_c0
+#print axioms QECCertificates.Homology.kron_one_left_mulVec_constC0
+#print axioms QECCertificates.Homology.kron_one_left_mulVec_constC1
+#print axioms QECCertificates.Homology.timelikeEmb_mem_ker
+#print axioms QECCertificates.Homology.timelikeEmb_dC1_eq
+#print axioms QECCertificates.Homology.mem_range_dC1_of_timelikeEmb_mem
+#print axioms QECCertificates.Homology.ker_koszulD0_eq_sup
+#print axioms QECCertificates.Homology.ker_koszulD0_repR_eq_sup
+#print axioms QECCertificates.Homology.dot_mulVec_transpose
+#print axioms QECCertificates.Homology.eq_zero_of_forall_dot_eq_zero
+#print axioms QECCertificates.Homology.mem_range_mulVecLin_iff_forall_dot_eq_zero
+#print axioms QECCertificates.Homology.spacelikeEmb_apply_inl
+#print axioms QECCertificates.Homology.spacelikeEmb_apply_inr
+#print axioms QECCertificates.Homology.spacelikeEmb_injective
+#print axioms QECCertificates.Homology.ker_spacelikeEmb
+#print axioms QECCertificates.Homology.mem_sliceKer
+#print axioms QECCertificates.Homology.mem_spacelikeSub
+#print axioms QECCertificates.Homology.fd0_mulVec_apply_inl_add
+#print axioms QECCertificates.Homology.spacelikeSub_le_ker
+#print axioms QECCertificates.Homology.spacelike_sup_le_ker
+#print axioms QECCertificates.Homology.eq_of_add_eq_zero
+#print axioms QECCertificates.Homology.ker_koszulD0_eq_sup_of_injective
+#print axioms QECCertificates.Homology.mem_timelikeSub
+#print axioms QECCertificates.Homology.timelikeSub_le_ker
+#print axioms QECCertificates.Homology.projLift_comp
+#print axioms QECCertificates.Homology.projLift_apply
+#print axioms QECCertificates.Homology.projToRange_mem
+#print axioms QECCertificates.Homology.projToRange_eq_self
+#print axioms QECCertificates.Homology.projMat_mulVec
+#print axioms QECCertificates.Homology.projMat_mul
+#print axioms QECCertificates.Homology.kron_right_one_mulVec
+#print axioms QECCertificates.Homology.ker_koszulD0_le_sup_general
+-- QECCertificates.Homology.FaultDistance
+#print axioms QECCertificates.Homology.faultDistance_eq_of_isLeast
+#print axioms QECCertificates.Homology.sInf_hammingNorm_image
+#print axioms QECCertificates.Homology.flipsReadout_readoutsOf_iff
+#print axioms QECCertificates.Homology.isUndetectedLogicalFaultR_iff_rowSpace
+#print axioms QECCertificates.Homology.isUndetectedLogicalFault_static
+#print axioms QECCertificates.Homology.sInf_image_undetectableSet_eq_minWeight
+#print axioms QECCertificates.Homology.faultDistance_static
+#print axioms QECCertificates.Homology.static_empty_divergence
+#print axioms QECCertificates.Homology.mem_ker_toLin'_iff_rows
+#print axioms QECCertificates.Homology.timeLikeDetector_row_dot
+#print axioms QECCertificates.Homology.isDetectorSilent_timeLike
+#print axioms QECCertificates.Homology.isTimeLikeFault_iff
+#print axioms QECCertificates.Homology.isUndetectedLogicalFault_timeLike
+#print axioms QECCertificates.Homology.faultDistance_timeLike
+#print axioms QECCertificates.Homology.repCheckMat_three_eq_timeLikeRepR
+#print axioms QECCertificates.Homology.timeLikeDetector_three_eq_faultComplex_d11_01
+#print axioms QECCertificates.Homology.faultDistance_timeLike_four
+#print axioms QECCertificates.Homology.range_fd1_le_ker_fd0
+#print axioms QECCertificates.Homology.faultComplexDistanceZ_eq_sInf
+#print axioms QECCertificates.Homology.faultComplexDistanceX_eq_sInf
+#print axioms QECCertificates.Homology.Matrix_row_eq_apply
+#print axioms QECCertificates.Homology.dotProduct_eq_zero_of_isEmpty
+#print axioms QECCertificates.Homology.forall_sum_inl_iff
+#print axioms QECCertificates.Homology.hammingNorm_comp_equiv
+#print axioms QECCertificates.Homology.hammingNorm_sum_inr
+#print axioms QECCertificates.Homology.hammingNorm_sliceEmbed
+#print axioms QECCertificates.Homology.hammingNorm_slice_le
+#print axioms QECCertificates.Homology.mem_rowSpace_iff_exists_transpose_mulVec
+#print axioms QECCertificates.Homology.fd0_row_dot
+#print axioms QECCertificates.Homology.fd1_row_dot
+#print axioms QECCertificates.Homology.kronecker_one_dot
+#print axioms QECCertificates.Homology.kronecker_one_mulVec_apply
+#print axioms QECCertificates.Homology.degenerateFaultComplex_d01_00
+#print axioms QECCertificates.Homology.degenerateFaultComplex_d02_01
+#print axioms QECCertificates.Homology.degenerateFaultComplex_d10_00
+#print axioms QECCertificates.Homology.degenerate_fd0_mem_ker
+#print axioms QECCertificates.Homology.degenerate_fd1_mem_range
+#print axioms QECCertificates.Homology.sliceFaultEmbed_slice_apply
+#print axioms QECCertificates.Homology.sliceFaultEmbed_slice
+#print axioms QECCertificates.Homology.hammingNorm_sliceFaultEmbed
+#print axioms QECCertificates.Homology.degenerate_sliceFaultEmbed_mem_ker
+#print axioms QECCertificates.Homology.degenerate_sliceFaultEmbed_notMem_range
+#print axioms QECCertificates.Homology.degenerate_exists_slice_notMem_rowSpace
+#print axioms QECCertificates.Homology.degenerate_slice_mem_ker
+#print axioms QECCertificates.Homology.faultComplexDistanceZ_degenerate
+#print axioms QECCertificates.Homology.hammingNorm_sum_inl
+#print axioms QECCertificates.Homology.hammingNorm_one_const
+#print axioms QECCertificates.Homology.hammingNorm_fin1_prod
+#print axioms QECCertificates.Homology.trivialCSS_mul
+#print axioms QECCertificates.Homology.koszulTimeLike_weight
+#print axioms QECCertificates.Homology.repR_ker_eq_zero_or_allOnes
+#print axioms QECCertificates.Homology.koszulTimeLike_fd0_apply
+#print axioms QECCertificates.Homology.koszulTimeLike_ker_reduce
+#print axioms QECCertificates.Homology.koszulTimeLikeAllOnes_ne_zero
+#print axioms QECCertificates.Homology.koszulTimeLikeAllOnes_weight
+#print axioms QECCertificates.Homology.koszulTimeLike_fd1_apply
+#print axioms QECCertificates.Homology.koszulTimeLikeAllOnes_silent
+#print axioms QECCertificates.Homology.koszulTimeLikeAllOnes_notMem
+#print axioms QECCertificates.Homology.faultComplexDistanceZ_koszulTimeLike
+#print axioms QECCertificates.Homology.koszulFaultComplex_fd0_apply
+#print axioms QECCertificates.Homology.koszulFaultComplex_fd1_apply
+#print axioms QECCertificates.Homology.liftFault_mem_ker
+#print axioms QECCertificates.Homology.range_fd1_le_sliceMod_ker
+#print axioms QECCertificates.Homology.sliceMod_liftFault
+#print axioms QECCertificates.Homology.sliceMod_surjective
+#print axioms QECCertificates.Homology.koszul_repR_slice_trivial
+#print axioms QECCertificates.Homology.hammingNorm_sumElim_zero
+#print axioms QECCertificates.Homology.hammingNorm_liftFault
+#print axioms QECCertificates.Homology.card_le_hammingNorm_of_slices
+#print axioms QECCertificates.Homology.exists_single_notMem
+#print axioms QECCertificates.Homology.hammingNorm_piSingle
+#print axioms QECCertificates.Homology.faultComplexDistanceZ_koszul_repR
+#print axioms QECCertificates.Homology.mem_codeZWeightSet
+#print axioms QECCertificates.Homology.repR_row_sum
+#print axioms QECCertificates.Homology.repRDual_col_sum
+#print axioms QECCertificates.Homology.koszulRepRDual_fd0_apply
+#print axioms QECCertificates.Homology.koszulRepRDual_fd1_apply_left
+#print axioms QECCertificates.Homology.koszulRepRDual_fd1_apply_right
+#print axioms QECCertificates.Homology.koszulRepRDual_timeSum_kron_one
+#print axioms QECCertificates.Homology.timeSum_kroneckerMap_one
+#print axioms QECCertificates.Homology.koszulRepRDual_dualTimeSum_mem_ker
+#print axioms QECCertificates.Homology.koszulRepRDual_dualTimeSum_mem_range
+#print axioms QECCertificates.Homology.singleSliceFault_inl
+#print axioms QECCertificates.Homology.singleSliceFault_inr
+#print axioms QECCertificates.Homology.dualTimeSum_singleSliceFault
+#print axioms QECCertificates.Homology.hammingNorm_singleSliceFault
+#print axioms QECCertificates.Homology.singleSliceFault_mem_ker
+#print axioms QECCertificates.Homology.singleSliceFault_notMem_range
+#print axioms QECCertificates.Homology.hammingNorm_dualTimeSum_le
+#print axioms QECCertificates.Homology.sumLin_surjective
+#print axioms QECCertificates.Homology.finrank_ker_sumLin
+#print axioms QECCertificates.Homology.repRDual_range_eq_ker_sumLin
+#print axioms QECCertificates.Homology.exists_kron_one_left_mulVec_eq_of_even
+#print axioms QECCertificates.Homology.singleSliceZ_inl
+#print axioms QECCertificates.Homology.singleSliceZ_inr
+#print axioms QECCertificates.Homology.timeSum_singleSliceZ
+#print axioms QECCertificates.Homology.dualTimeSum_fd1_singleSliceZ
+#print axioms QECCertificates.Homology.koszulRepRDual_mem_range_of_dualTimeSum_mem_range
+#print axioms QECCertificates.Homology.faultComplexDistanceZ_koszul_repRDual
+-- QECCertificates.Homology.HypergraphSurgery
+#print axioms QECCertificates.Homology.component_univ_iff_even
+#print axioms QECCertificates.Homology.component_univ_of_graph
+#print axioms QECCertificates.Homology.not_component_univ_of_odd
+#print axioms QECCertificates.Homology.graphOf_edge
+#print axioms QECCertificates.Homology.graphOf_card_two
+#print axioms QECCertificates.Homology.graphOf_isEven
+#print axioms QECCertificates.Homology.starOp_apply_inl
+#print axioms QECCertificates.Homology.starOp_apply_inr
+#print axioms QECCertificates.Homology.starOp_sum_apply_inr
+#print axioms QECCertificates.Homology.starOp_sum_apply_inl
+#print axioms QECCertificates.Homology.starOp_sum_eq_vertexOp_sum
+#print axioms QECCertificates.Homology.starOp_sum_apply_inr_eq_one_of_odd
+#print axioms QECCertificates.Homology.starOp_sum_eq_vertexOp_sum_iff
+#print axioms QECCertificates.Homology.starOp_graphOf
+#print axioms QECCertificates.Homology.gaussLawMat_graphOf
+#print axioms QECCertificates.Homology.graphOf_ancCol_card
+#print axioms QECCertificates.Homology.gauss_prod_eq_vertex_prod_of_hypergraph
+#print axioms QECCertificates.Homology.starOp_linearIndependent
+#print axioms QECCertificates.Homology.promotedOp_eq_allOnes
+#print axioms QECCertificates.Homology.promotedOp_aux_independent
+#print axioms QECCertificates.Homology.liftedOp_anc_eq_zero
+#print axioms QECCertificates.Homology.hypergraphSurgery_k
+#print axioms QECCertificates.Homology.timeFault_const
+#print axioms QECCertificates.Homology.timeFault_weight_ge
+#print axioms QECCertificates.Homology.timeWit_apply
+#print axioms QECCertificates.Homology.timeWit_apply_pair
+#print axioms QECCertificates.Homology.timeWit_isFault
+#print axioms QECCertificates.Homology.timeWit_ne_zero
+#print axioms QECCertificates.Homology.timeWit_weight
+#print axioms QECCertificates.Homology.protocolTime_minWeight
+#print axioms QECCertificates.Homology.timeComponent_aux_independent
+-- QECCertificates.Homology.MappingCone
+#print axioms QECCertificates.Homology.cone_d0_comp_dm1
+#print axioms QECCertificates.Homology.cone_d1_comp_d0
+#print axioms QECCertificates.Homology.cone_d2_comp_d1
+#print axioms QECCertificates.Homology.proj_comp_incl
+#print axioms QECCertificates.Homology.ker_projLin_eq_range_inclLin
+#print axioms QECCertificates.Homology.inclLin_injective
+#print axioms QECCertificates.Homology.projLin_surjective
+#print axioms QECCertificates.Homology.coneD0_incl
+#print axioms QECCertificates.Homology.coneD1_incl
+#print axioms QECCertificates.Homology.coneD2_incl
+#print axioms QECCertificates.Homology.coneD0_proj
+#print axioms QECCertificates.Homology.coneD1_proj
+#print axioms QECCertificates.Homology.connectingMap_coneD0
+#print axioms QECCertificates.Homology.connectingMap_coneD1
+#print axioms QECCertificates.Homology.bounds1_le_cycles1
+#print axioms QECCertificates.Homology.bounds2_le_cycles2
+#print axioms QECCertificates.Homology.finrank_cone0
+#print axioms QECCertificates.Homology.finrank_cone1
+#print axioms QECCertificates.Homology.finrank_cone2
+#print axioms QECCertificates.Homology.finrank_cone3
+#print axioms QECCertificates.Homology.finrank_comap_bounds1
+#print axioms QECCertificates.Homology.finrank_comap_bounds2
+#print axioms QECCertificates.Homology.finrank_H1
+#print axioms QECCertificates.Homology.finrank_H2
+#print axioms QECCertificates.Homology.finrank_H1_eq
+#print axioms QECCertificates.Homology.finrank_H2_eq
+-- QECCertificates.Homology.MappingConeSnake
+#print axioms QECCertificates.Homology.neg_eq_self_fun
+#print axioms QECCertificates.Homology.add_self_eq_zero_fun
+#print axioms QECCertificates.Homology.ker_mulVecLin_neg
+#print axioms QECCertificates.Homology.finrank_comap_subtype
+#print axioms QECCertificates.Homology.finrank_submodule_congr
+#print axioms QECCertificates.Homology.sumElim_comp_inl
+#print axioms QECCertificates.Homology.sumElim_comp_inr
+#print axioms QECCertificates.Homology.inclLin_comp_inl
+#print axioms QECCertificates.Homology.inclLin_comp_inr
+#print axioms QECCertificates.Homology.projLin_eq_comp_inr
+#print axioms QECCertificates.Homology.finrank_ker_blockTri
+#print axioms QECCertificates.Homology.cyclesMap_apply
+#print axioms QECCertificates.Homology.cohMap_comp_mkQ
+#print axioms QECCertificates.Homology.range_cohLift_eq_range_cohMap
+#print axioms QECCertificates.Homology.ker_cohLift
+#print axioms QECCertificates.Homology.finrank_inf_comap_add_finrank_range_cohMap
+#print axioms QECCertificates.Homology.cycles3_eq_top
+#print axioms QECCertificates.Homology.bounds0_eq_bot
+#print axioms QECCertificates.Homology.finrank_cycles0_mappingCone
+#print axioms QECCertificates.Homology.finrank_cycles1_mappingCone
+#print axioms QECCertificates.Homology.finrank_cycles2_mappingCone
+#print axioms QECCertificates.Homology.finrank_coneZm1
+#print axioms QECCertificates.Homology.finrank_coneSm1_add_range_cohMap0
+#print axioms QECCertificates.Homology.finrank_coneS0_add_range_cohMap1
+#print axioms QECCertificates.Homology.finrank_coneS1_add_range_cohMap2
+#print axioms QECCertificates.Homology.finrank_coneS2_add_range_cohMap3
+#print axioms QECCertificates.Homology.range_coneDm1_le_cycles0
+#print axioms QECCertificates.Homology.finrank_coneCoh0_add
+#print axioms QECCertificates.Homology.finrank_coneB0_add
+#print axioms QECCertificates.Homology.finrank_cycles3
+#print axioms QECCertificates.Homology.finrank_coh0_eq
+#print axioms QECCertificates.Homology.finrank_coh1_add
+#print axioms QECCertificates.Homology.finrank_coh2_add
+#print axioms QECCertificates.Homology.finrank_coh3_add
+#print axioms QECCertificates.Homology.finrank_bounds1_add_cycles0
+#print axioms QECCertificates.Homology.finrank_bounds2_add_cycles1
+#print axioms QECCertificates.Homology.finrank_bounds3_add_cycles2
+#print axioms QECCertificates.Homology.finrank_coneCoh0_add_range
+#print axioms QECCertificates.Homology.finrank_coh1_mappingCone_add_range
+#print axioms QECCertificates.Homology.finrank_coh2_mappingCone_add_range
+#print axioms QECCertificates.Homology.finrank_coh3_mappingCone_add_range
+#print axioms QECCertificates.Homology.finrank_coh0_mappingCone
+#print axioms QECCertificates.Homology.finrank_coh1_mappingCone
+#print axioms QECCertificates.Homology.finrank_coh2_mappingCone
+#print axioms QECCertificates.Homology.finrank_coh3_mappingCone
+-- QECCertificates.Homology.ModuleExpansion
+#print axioms QECCertificates.Homology.edgeDeg_eq_zero_iff_isComponent
+#print axioms QECCertificates.Homology.isComponent_iff_edgeDeg_eq_zero
+#print axioms QECCertificates.Homology.modExpMin_eq_min
+#print axioms QECCertificates.Homology.modExpArgOf_two_zero
+#print axioms QECCertificates.Homology.modExpArgOf_two_one
+#print axioms QECCertificates.Homology.modExpMin_two
+#print axioms QECCertificates.Homology.relativeExpansion_of_modular_two
+#print axioms QECCertificates.Homology.globalExpansion_of_modular_two
+#print axioms QECCertificates.Homology.modularExpansion_inv_of_component_mem
+#print axioms QECCertificates.Homology.thickenInc_inr_of_lt
+#print axioms QECCertificates.Homology.thickenInc_inr_of_not_lt
+#print axioms QECCertificates.Homology.levelNext_of_lt
+#print axioms QECCertificates.Homology.levelNext_of_not_lt
+#print axioms QECCertificates.Homology.symmDiffCard_eq_card_symmDiffSet
+#print axioms QECCertificates.Homology.odd_card_inter_pair
+#print axioms QECCertificates.Homology.card_inter_levelImage
+#print axioms QECCertificates.Homology.edgeDeg_thicken
+#print axioms QECCertificates.Homology.image_sdiff
+#print axioms QECCertificates.Homology.image_inter_sdiff
+#print axioms QECCertificates.Homology.modExpArg_level
+#print axioms QECCertificates.Homology.modExpMin_eq_of_forall_eq
+#print axioms QECCertificates.Homology.modExpMin_level
+#print axioms QECCertificates.Homology.level_mono_of_iff
+#print axioms QECCertificates.Homology.symmDiffCard_level_le_sum_levelCut
+#print axioms QECCertificates.Homology.min_le_min_left'
+#print axioms QECCertificates.Homology.symmDiffCard_inter_le
+#print axioms QECCertificates.Homology.modExpArgOf_le_add_symmDiffCard
+#print axioms QECCertificates.Homology.modularExpansion_thicken
+#print axioms QECCertificates.Homology.preservesDistance_of_thicken
+#print axioms QECCertificates.Homology.edgeDeg_univ_eq_zero_iff_starOp_sum_eq
+#print axioms QECCertificates.Homology.edgeDeg_univ_eq_zero_of_isEvenHyper
+#print axioms QECCertificates.Homology.edgeDeg_graphOf
+-- QECCertificates.Homology.PortFunction
+#print axioms QECCertificates.Homology.portImage_notMem_of_ne
+#print axioms QECCertificates.Homology.portImage_disjoint
+#print axioms QECCertificates.Homology.portImage_fiber_injective
+#print axioms QECCertificates.Homology.portImage_card
+#print axioms QECCertificates.Homology.portImage_nonempty
+#print axioms QECCertificates.Homology.portImage_subset_portUnion
+#print axioms QECCertificates.Homology.blockUnion_subset_portUnion
+#print axioms QECCertificates.Homology.W_eq_spanL_kappa
+#print axioms QECCertificates.Homology.indVec_apply
+#print axioms QECCertificates.Homology.indVec_apply_eq_one
+#print axioms QECCertificates.Homology.indVec_apply_eq_zero
+#print axioms QECCertificates.Homology.indVec_apply_ne_zero_iff
+#print axioms QECCertificates.Homology.indVec_injective
+#print axioms QECCertificates.Homology.indVec_ne_zero_of_nonempty
+#print axioms QECCertificates.Homology.indVec_add_of_disjoint
+#print axioms QECCertificates.Homology.kappa_apply
+#print axioms QECCertificates.Homology.kappa_ne_zero
+#print axioms QECCertificates.Homology.sum_mul_indVec_apply_of_mem
+#print axioms QECCertificates.Homology.sum_mul_indVec_apply_eq_zero
+#print axioms QECCertificates.Homology.coeffVec_apply
+#print axioms QECCertificates.Homology.coeffVec_eq_sum_smul
+#print axioms QECCertificates.Homology.coeffVec_mem
+#print axioms QECCertificates.Homology.mem_kappaSpan_iff_coeff
+#print axioms QECCertificates.Homology.coeffVec_indicator_eq_indVec
+#print axioms QECCertificates.Homology.mem_kappaSpan_iff_blockUnion
+#print axioms QECCertificates.Homology.mem_W_iff_blockUnion
+#print axioms QECCertificates.Homology.mem_W_iff_coeff
+#print axioms QECCertificates.Homology.kappa_linearIndependent
+#print axioms QECCertificates.Homology.finrank_kappaSpan
+#print axioms QECCertificates.Homology.finrank_W
+#print axioms QECCertificates.Homology.ker_subset_W_iff_blockUnion
+#print axioms QECCertificates.Homology.ker_subset_W_iff_isComponent
+#print axioms QECCertificates.Homology.portData_hkappaU
+#print axioms QECCertificates.Homology.preservesDistance_of_portData
+-- QECCertificates.Homology.SubcodeChainMap
+#print axioms QECCertificates.Homology.eq_zero_of_ne_one
+#print axioms QECCertificates.Homology.basisMap_apply
+#print axioms QECCertificates.Homology.basisMap_apply_self
+#print axioms QECCertificates.Homology.basisMap_apply_eq_zero
+#print axioms QECCertificates.Homology.basisMap_row_eq_zero_iff
+#print axioms QECCertificates.Homology.basisMap_mulVec_single
+#print axioms QECCertificates.Homology.basisMap_mulVec_apply_self
+#print axioms QECCertificates.Homology.basisMap_mulVec_eq_zero
+#print axioms QECCertificates.Homology.basisMap_ker_eq_bot
+#print axioms QECCertificates.Homology.hammingNorm_basisMap_mulVec_single
+#print axioms QECCertificates.Homology.basisMap_id
+#print axioms QECCertificates.Homology.SubcodeChainMap.cycles_map
+#print axioms QECCertificates.Homology.SubcodeChainMap.cycles2_map
+#print axioms QECCertificates.Homology.SubcodeChainMap.boundaries_map
+#print axioms QECCertificates.Homology.SubcodeChainMap.injective_on_cycles
+#print axioms QECCertificates.Homology.SubcodeChainMap.injective_on_cycles0
+#print axioms QECCertificates.Homology.auxChainD1_eq_transpose
+#print axioms QECCertificates.Homology.surgeryD1_eq_transpose_auxChainD1
+#print axioms QECCertificates.Homology.auxChainD2_eq_transpose
+#print axioms QECCertificates.Homology.surgeryD2_eq_transpose_auxChainD2
+#print axioms QECCertificates.Homology.auxChainD0_eq_transpose
+#print axioms QECCertificates.Homology.surgeryD0_eq_transpose_auxChainD0
+#print axioms QECCertificates.Homology.auxChainD1_mul_auxChainD2
+#print axioms QECCertificates.Homology.auxChainD0_mul_auxChainD1
+#print axioms QECCertificates.Homology.chainCodeX_eq_subcodeZChecks
+#print axioms QECCertificates.Homology.chainCodeZ_eq_subcodeXChecks
+#print axioms QECCertificates.Homology.chainCode_distanceX_eq_subcodeDistanceZ
+#print axioms QECCertificates.Homology.fullBlock_chainCondition_iff
+#print axioms QECCertificates.Homology.surgeryD1_inducedHyper_apply
+#print axioms QECCertificates.Homology.surgeryD1_inducedHyper
+#print axioms QECCertificates.Homology.inducedHyper_edge_card
+#print axioms QECCertificates.Homology.inducedHyper_isEven_iff
+#print axioms QECCertificates.Homology.inducedSubcode_comm1
+#print axioms QECCertificates.Homology.incidence_unique
+#print axioms QECCertificates.Homology.touching_of_chainCondition
+#print axioms QECCertificates.Homology.selfChainMap_phi2_apply
+#print axioms QECCertificates.Homology.gaugingSubcode_distanceZ_eq_one
+#print axioms QECCertificates.Homology.chainCode_distanceX_eq_one
+#print axioms QECCertificates.Homology.fullBlock_distanceZ_eq_one
+#print axioms QECCertificates.Homology.xWeightOn_id
+#print axioms QECCertificates.Homology.fullBlock_isEven_iff
+-- QECCertificates.Homology.SubcodeLayer
+#print axioms QECCertificates.Homology.subcode_css
+#print axioms QECCertificates.Homology.range_toLin'_eq_transpose_rowSpace
+#print axioms QECCertificates.Homology.isCosystolic_iff_subcode
+#print axioms QECCertificates.Homology.subcodeDistanceZ_eq_one
+#print axioms QECCertificates.Homology.subcodeDistanceZ_graphOf_eq_one
+#print axioms QECCertificates.Homology.subcodeDistanceZ_eq_one_empty
+#print axioms QECCertificates.Homology.indVec_support_eq
+#print axioms QECCertificates.Homology.support_zero
+#print axioms QECCertificates.Homology.support_indVec_univ
+#print axioms QECCertificates.Homology.hammingNorm_indVec_univ
+#print axioms QECCertificates.Homology.mem_ker_subcodeZChecks_graphOf_iff
+#print axioms QECCertificates.Homology.rowSpace_subcodeXChecks_empty
+#print axioms QECCertificates.Homology.subcodeDistanceX_graphOf_eq_card
+#print axioms QECCertificates.Homology.subcodeDistanceZ_ne_subcodeDistanceX_graphOf
 -- QECCertificates.Pauli.Expr
 #print axioms QECCertificates.Pauli.mul_I_left
 #print axioms QECCertificates.Pauli.mul_I_right

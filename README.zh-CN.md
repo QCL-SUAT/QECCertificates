@@ -45,7 +45,7 @@ QECCertificates形式化的是三样东西以及它们的复合：把码参数�
 | `QECCertificates/Codes/` | 码论层：稳定子码、CSS码与子系统码；gauging与测量协议的表示；共享实例族（Bacon–Shor、BB、HGP、提升乘积） |
 | [`tools/check_axioms.py`](tools/check_axioms.py) | 读构建日志，凡`#print axioms`一行点名了三条标准公理之外的公理的声明一律拒绝 |
 
-本包共**59个模块**，审计区覆盖其中**每一条**非私有`theorem`/`lemma`。
+本包共**77个模块**，审计区覆盖其中**每一条**非私有`theorem`/`lemma`。
 
 ## 保证
 
@@ -69,9 +69,9 @@ Lean `v4.34.0`（钉在`lean-toolchain`里）与`lakefile.toml`中钉住revision
 env -u LEAN_PATH lake build     # 按钉住的 revision 取 mathlib、Lean-QEC 与 QECLean
 ```
 
-本包自己有十一个模块的收尾是内核在一个大对象上的归约，单个进程要的内存超过托管runner给得起
+本包自己有十二个模块的收尾是内核在一个大对象上的归约，单个进程要的内存超过托管runner给得起
 的量；预算定在十个GiB，正好给16 GB的runner留出工具链与系统的余量，其中最重的那一个（分离
-实例）峰值**77 GiB**。所以持续集成只构建**59个模块里的26个**：凡实测峰值放得进预算的模块，
+实例）峰值**77 GiB**。所以持续集成只构建**77个模块里的40个**：凡实测峰值放得进预算的模块，
 加上它们import的全部（lake少了依赖就编不动）。它**按import顺序**一次只编一个：预算说的是
 **单个进程**的需要，而把一个模块的依赖先编好，编它那一次调用就没有别的东西可调度——否则
 lake会按runner的核数把一批模块同时放在飞，那正是内存被吃穿的方式，而那样死掉的作业连一行
