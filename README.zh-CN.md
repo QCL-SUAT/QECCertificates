@@ -50,7 +50,7 @@ QECCertificates形式化的是三样东西以及它们的复合：把码参数�
 | `QECCertificates/Homology/` | GF(2)上的链复形及它们承载的距离：映射锥与其蛇形引理公式、四项故障复形及其Künneth公式、时空故障距离、余弦距离、模扩张、探测器分解、端口函数、辅助超图与子码层 |
 | [`tools/check_axioms.py`](tools/check_axioms.py) | 读构建日志，凡`#print axioms`一行点名了三条标准公理之外的公理的声明一律拒绝 |
 
-本包共**77个模块**，审计区覆盖其中**每一条**非私有`theorem`/`lemma`。
+本包共**78个模块**，审计区覆盖其中**每一条**非私有`theorem`/`lemma`。
 
 ## 保证
 
@@ -76,7 +76,7 @@ env -u LEAN_PATH lake build     # 按钉住的 revision 取 mathlib、Lean-QEC �
 
 本包自己有十二个模块的收尾是内核在一个大对象上的归约，单个进程要的内存超过托管runner给得起
 的量；预算定在十个GiB，正好给16 GB的runner留出工具链与系统的余量，其中最重的那一个（分离
-实例）峰值**77 GiB**。所以持续集成只构建**77个模块里的40个**：凡实测峰值放得进预算的模块，
+实例）峰值**77 GiB**。所以持续集成只构建**78个模块里的41个**：凡实测峰值放得进预算的模块，
 加上它们import的全部（lake少了依赖就编不动）。它**按import顺序**一次只编一个：预算说的是
 **单个进程**的需要，而把一个模块的依赖先编好，编它那一次调用就没有别的东西可调度——否则
 lake会按runner的核数把一批模块同时放在飞，那正是内存被吃穿的方式，而那样死掉的作业连一行
@@ -107,10 +107,15 @@ python3 tools/check_axioms.py build.log   # 逐条受审计声明，不得超出
               error correction},
   author    = {An, Shuoming},
   year      = {2026},
+  publisher = {Zenodo},
   doi       = {10.5281/zenodo.23056679},
-  url       = {https://github.com/QCL-SUAT/QECCertificates}
+  url       = {https://doi.org/10.5281/zenodo.23056679}
 }
 ```
+
+字段取自沉积记录本身；DOI用的是它的**概念**DOI，解析因此永远指向最新沉积的版本。
+`url`字段被记下，但有些样式不打印它：REVTeX的`apsrev4-2.bst`就不打印，它改为把标题
+超链接到DOI——持久标识符仍到得了，所以不必为此改动条目。
 
 ## 贡献
 

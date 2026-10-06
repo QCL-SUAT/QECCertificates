@@ -86,7 +86,7 @@ variable {Q V E S : Type*} [Fintype Q] [Fintype V] [Fintype E] [Fintype S]
 
 /-- Hamming weight; definitionally the same weight used by the GF(2) library. -/
 def weight {ι : Type*} [Fintype ι] (x : ι → ZMod 2) : ℕ :=
-  (Finset.univ.filter (fun i => x i ≠ 0)).card
+  hammingNorm x
 
 /-- Restricted weight on port vertices. -/
 def portWeight [DecidableEq V] (U : Finset V) (v : V → ZMod 2) : ℕ :=
@@ -194,10 +194,6 @@ theorem modExpArgOf_eq_portWeight [DecidableEq V] (κ U : Finset V)
     · simp [suppOf, indOf, hxκ, and_comm]
   rw [modExpArgOf, portWeight, filter_add_ne_zero_card U v (indOf κ), hdiff, hinter]
 
-private theorem add_self_zero {ι : Type*} (v : ι → ZMod 2) : v + v = 0 := by
-  funext i
-  exact CharTwo.add_self_eq_zero (v i)
-
 omit [Fintype Q] [Fintype V] [Fintype E] [Fintype S] in
 /-- Full cycle checks restrict the auxiliary part to `range B`. On this range
 every legal coupling agrees. Thus changing a legal coupling changes neither
@@ -260,7 +256,7 @@ theorem distance_of_legal_coupling
           (q, B v) := by
         apply Prod.ext
         · change (q + P (v + w)) + P (v + w) = q
-          rw [add_assoc, add_self_zero, add_zero]
+          rw [add_assoc, add_self_fun, add_zero]
         · change 0 + B (v + w) = B v
           simp [map_add, hw]
       exact hlogical (heq ▸ hmem)
@@ -366,7 +362,7 @@ theorem weight_incTranspose_eq_edgeDegOf {V E : Type*} [Fintype V] [Fintype E] [
     (inc : E → Finset V) (v : V → ZMod 2) :
     weight (incTranspose inc v) = edgeDegOf inc (suppOf v) := by
   classical
-  rw [weight, edgeDegOf]
+  rw [weight, hammingNorm, edgeDegOf]
   congr 1
   refine Finset.filter_congr ?_
   intro e _

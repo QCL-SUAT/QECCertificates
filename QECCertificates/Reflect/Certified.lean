@@ -159,13 +159,9 @@ theorem dotS_eq_false_iff_dotProduct (σ : Assign) {n : ℕ} {r : List Nat}
 
 /-! ## Two facts about arithmetic in `ZMod 2` -/
 
-/-- In `ZMod 2` everything nonzero is one. -/
-theorem zmod2_eq_one_of_ne_zero {x : ZMod 2} (h : x ≠ 0) : x = 1 := by
-  have hv : x.val ≠ 0 := fun h0 => h ((ZMod.val_eq_zero x).mp h0)
-  have hlt : x.val < 2 := ZMod.val_lt x
-  have h1 : x.val = 1 := by omega
-  rw [← ZMod.natCast_zmod_val x, h1]
-  norm_num
+/-- In `ZMod 2` everything nonzero is one, an instance of the shared
+`QECCertificates.eq_one_of_ne_zero`. -/
+theorem zmod2_eq_one_of_ne_zero {x : ZMod 2} (h : x ≠ 0) : x = 1 := eq_one_of_ne_zero h
 
 /-- An element of `ZMod 2` is its own one-bit indicator. -/
 theorem zmod2_indicator (x : ZMod 2) : (if decide (x = 1) then (1 : ZMod 2) else 0) = x := by

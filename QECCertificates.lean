@@ -35,6 +35,7 @@ import QECCertificates.Codes.ToricFamilySpatial
 import QECCertificates.GF2.Basic
 import QECCertificates.GF2.Basis
 import QECCertificates.GF2.Canonical
+import QECCertificates.GF2.Duality
 import QECCertificates.GF2.HGP
 import QECCertificates.GF2.HGPCleaning
 import QECCertificates.GF2.HGPCleaningDual
@@ -126,6 +127,7 @@ rests on exactly the three standard axioms.
 | `QECCertificates.GF2.Basic` | GF(2) vector algebra primitives |
 | `QECCertificates.GF2.Basis` | basis-vector sums: a check-row comparison costs `\|A\|` terms, not `n` |
 | `QECCertificates.GF2.Canonical` | uniqueness of the canonical form: the row-reduction output of a row space is a canonical invariant |
+| `QECCertificates.GF2.Duality` | dot-product duality over GF(2): the transpose law, non-degeneracy, and the orthogonal-complement characterisation of a matrix range |
 | `QECCertificates.GF2.HGP` | the tensor decomposition of the hypergraph-product parity-check matrix |
 | `QECCertificates.GF2.HGPCleaning` | HGP, part three: the cleaning argument and the X-distance lower bound |
 | `QECCertificates.GF2.HGPCleaningDual` | HGP, part three, dual side: the Z-distance lower bound (transport through the transpose code) |
@@ -851,6 +853,7 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.addSmul_cancel
 #print axioms QECCertificates.addSmul_mem_span
 #print axioms QECCertificates.spanL_map_addSmul_append
+#print axioms QECCertificates.add_self_fun
 -- QECCertificates.GF2.Basis
 #print axioms QECCertificates.e_dotProduct
 #print axioms QECCertificates.dotProduct_e_sum
@@ -872,6 +875,10 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.pivRow_mem_iff_of_spanL_eq
 #print axioms QECCertificates.isEchelon_rowReduce
 #print axioms QECCertificates.rowReduce_mem_iff_of_spanL_eq
+-- QECCertificates.GF2.Duality
+#print axioms QECCertificates.dot_mulVec_transpose
+#print axioms QECCertificates.eq_zero_of_forall_dot_eq_zero
+#print axioms QECCertificates.mem_range_mulVecLin_iff_forall_dot_eq_zero
 -- QECCertificates.GF2.HGP
 #print axioms QECCertificates.hgpHX_inl
 #print axioms QECCertificates.hgpHX_inr
@@ -1263,9 +1270,6 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.Homology.surgeryD2_mulVec_indVec_pair
 #print axioms QECCertificates.Homology.surgeryD2_mulVec_indVec_pair_apply
 #print axioms QECCertificates.Homology.surgeryD2_mulVec_indVec_pair_eq_zero_iff
-#print axioms QECCertificates.Homology.dotBilin_apply
-#print axioms QECCertificates.Homology.dotBilin_isRefl
-#print axioms QECCertificates.Homology.dotBilin_nondegenerate
 #print axioms QECCertificates.Homology.exists_mulVec_eq_iff_forall_dot_eq_zero
 #print axioms QECCertificates.Homology.dotProduct_indVec
 #print axioms QECCertificates.Homology.exists_surgeryD1_eq_iff_forall_component
@@ -1312,6 +1316,9 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.Homology.const_on_labels_iff_mem_span_classInd
 #print axioms QECCertificates.Homology.classSum_zero_of_isDetZ
 #print axioms QECCertificates.Homology.isDetZ_iff_mem_span
+#print axioms QECCertificates.Homology.detVec_add_self
+#print axioms QECCertificates.Homology.siteVec_self
+#print axioms QECCertificates.Homology.form_add_self
 -- QECCertificates.Homology.FaultComplex
 #print axioms QECCertificates.Homology.fd1_mul_fd2_of
 #print axioms QECCertificates.Homology.fd0_mul_fd1_of
@@ -1473,8 +1480,6 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.Homology.mem_range_dC1_of_timelikeEmb_mem
 #print axioms QECCertificates.Homology.ker_koszulD0_eq_sup
 #print axioms QECCertificates.Homology.ker_koszulD0_repR_eq_sup
-#print axioms QECCertificates.Homology.dot_mulVec_transpose
-#print axioms QECCertificates.Homology.eq_zero_of_forall_dot_eq_zero
 #print axioms QECCertificates.Homology.mem_range_mulVecLin_iff_forall_dot_eq_zero
 #print axioms QECCertificates.Homology.spacelikeEmb_apply_inl
 #print axioms QECCertificates.Homology.spacelikeEmb_apply_inr
@@ -1497,6 +1502,7 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.Homology.projMat_mul
 #print axioms QECCertificates.Homology.kron_right_one_mulVec
 #print axioms QECCertificates.Homology.ker_koszulD0_le_sup_general
+#print axioms QECCertificates.Homology.piCurry_apply
 -- QECCertificates.Homology.FaultDistance
 #print axioms QECCertificates.Homology.faultDistance_eq_of_isLeast
 #print axioms QECCertificates.Homology.sInf_hammingNorm_image
@@ -1629,6 +1635,10 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.Homology.timeWit_weight
 #print axioms QECCertificates.Homology.protocolTime_minWeight
 #print axioms QECCertificates.Homology.timeComponent_aux_independent
+#print axioms QECCertificates.Homology.ancOp_apply_inl
+#print axioms QECCertificates.Homology.ancOp_apply_inr
+#print axioms QECCertificates.Homology.vertexOp_apply_inl
+#print axioms QECCertificates.Homology.vertexOp_apply_inr
 -- QECCertificates.Homology.MappingCone
 #print axioms QECCertificates.Homology.cone_d0_comp_dm1
 #print axioms QECCertificates.Homology.cone_d1_comp_d0
@@ -1657,8 +1667,6 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.Homology.finrank_H1_eq
 #print axioms QECCertificates.Homology.finrank_H2_eq
 -- QECCertificates.Homology.MappingConeSnake
-#print axioms QECCertificates.Homology.neg_eq_self_fun
-#print axioms QECCertificates.Homology.add_self_eq_zero_fun
 #print axioms QECCertificates.Homology.ker_mulVecLin_neg
 #print axioms QECCertificates.Homology.finrank_comap_subtype
 #print axioms QECCertificates.Homology.finrank_submodule_congr
@@ -1735,6 +1743,9 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.Homology.edgeDeg_univ_eq_zero_iff_starOp_sum_eq
 #print axioms QECCertificates.Homology.edgeDeg_univ_eq_zero_of_isEvenHyper
 #print axioms QECCertificates.Homology.edgeDeg_graphOf
+#print axioms QECCertificates.Homology.mem_level
+#print axioms QECCertificates.Homology.thickenInc_inl
+#print axioms QECCertificates.Homology.thickenInc_inr
 -- QECCertificates.Homology.PortFunction
 #print axioms QECCertificates.Homology.portImage_notMem_of_ne
 #print axioms QECCertificates.Homology.portImage_disjoint
@@ -1770,6 +1781,8 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.Homology.ker_subset_W_iff_isComponent
 #print axioms QECCertificates.Homology.portData_hkappaU
 #print axioms QECCertificates.Homology.preservesDistance_of_portData
+#print axioms QECCertificates.Homology.mem_portImage
+#print axioms QECCertificates.Homology.mem_portUnion
 -- QECCertificates.Homology.SubcodeChainMap
 #print axioms QECCertificates.Homology.eq_zero_of_ne_one
 #print axioms QECCertificates.Homology.basisMap_apply

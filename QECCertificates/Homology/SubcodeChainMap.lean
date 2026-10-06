@@ -242,11 +242,10 @@ basis of $A$ and the **row** index the basis of $C$. -/
 def basisMap {a c : ℕ} (φ : Fin a → Fin c) : Matrix (Fin c) (Fin a) (ZMod 2) :=
   fun j i => if φ i = j then 1 else 0
 
-/-- On `ZMod 2`, anything other than 1 is 0. -/
+/-- On `ZMod 2`, anything other than 1 is 0: the contrapositive of `eq_one_of_ne_zero`. -/
 theorem eq_zero_of_ne_one {x : ZMod 2} (h : x ≠ 1) : x = 0 := by
-  fin_cases x
-  · rfl
-  · exact absurd rfl h
+  by_contra h0
+  exact h (eq_one_of_ne_zero h0)
 
 /-- The value of the basis map (definition level). -/
 theorem basisMap_apply {a c : ℕ} (φ : Fin a → Fin c) (j : Fin c) (i : Fin a) :

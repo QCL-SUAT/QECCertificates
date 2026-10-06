@@ -3,6 +3,7 @@ Copyright (c) 2026 Shuoming An. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Shuoming An
 -/
+import QECCertificates.GF2.Duality
 import QECCertificates.Homology.AuxComplex
 
 open QECCertificates
@@ -781,66 +782,22 @@ theorem surgeryD2_mulVec_indVec_pair_eq_zero_iff {ι : Type*} (W : ι → Finset
 
 /-! ### Duality: `im δ₁` is completely characterized by the components -/
 
-/-- **The dot-product bilinear form** `B x y = x ⬝ᵥ y` (the vehicle of the duality argument). -/
-def dotBilin (k : ℕ) : LinearMap.BilinForm (ZMod 2) (Vec k) where
-  toFun x :=
-    { toFun := fun y => x ⬝ᵥ y
-      map_add' := fun y z => dotProduct_add x y z
-      map_smul' := fun c y => dotProduct_smul c x y }
-  map_add' := fun x y => LinearMap.ext fun z => add_dotProduct x y z
-  map_smul' := fun c x => LinearMap.ext fun z => smul_dotProduct c x z
-
-theorem dotBilin_apply (x y : Vec k) : dotBilin k x y = x ⬝ᵥ y := rfl
-
-theorem dotBilin_isRefl : (dotBilin k).IsRefl := by
-  intro x y h
-  rw [dotBilin_apply] at h ⊢
-  rwa [dotProduct_comm]
-
-theorem dotBilin_nondegenerate : (dotBilin k).Nondegenerate := by
-  constructor
-  · intro x hx
-    funext i
-    have h := hx (Pi.single i (1 : ZMod 2))
-    rw [dotBilin_apply, dotProduct_single, mul_one] at h
-    exact h
-  · intro y hy
-    funext i
-    have h := hy (Pi.single i (1 : ZMod 2))
-    rw [dotBilin_apply, single_dotProduct, one_mul] at h
-    exact h
-
 /-- **General duality**: `u` lies in the column space of `M` if and only if `u` is orthogonal
-to `ker Mᵀ` (under the standard dot product). -/
+to `ker Mᵀ` (under the standard dot product).  Proved from the single home of this statement,
+`QECCertificates.mem_range_mulVecLin_iff_forall_dot_eq_zero`. -/
 theorem exists_mulVec_eq_iff_forall_dot_eq_zero (M : Matrix (Fin k) (Fin m) (ZMod 2))
     (u : Vec k) :
     (∃ f : Vec m, M *ᵥ f = u) ↔ ∀ y : Vec k, Mᵀ *ᵥ y = 0 → u ⬝ᵥ y = 0 := by
+  have hrange : (∃ f : Vec m, M *ᵥ f = u) ↔ u ∈ LinearMap.range M.mulVecLin := by
+    simp only [LinearMap.mem_range, Matrix.mulVecLin_apply]
+  rw [hrange]
   constructor
-  · rintro ⟨f, rfl⟩ y hy
-    rw [dotProduct_comm, Matrix.dotProduct_mulVec, ← Matrix.mulVec_transpose, hy,
-      zero_dotProduct]
+  · intro hmem y hy
+    exact (dotProduct_comm u y).trans
+      ((mem_range_mulVecLin_iff_forall_dot_eq_zero (M := M) u).mp hmem y hy)
   · intro h
-    have horth : u ∈ (dotBilin k).orthogonal ((dotBilin k).orthogonal M.mulVecLin.range) := by
-      rw [LinearMap.BilinForm.mem_orthogonal_iff]
-      intro n hn
-      rw [LinearMap.BilinForm.mem_orthogonal_iff] at hn
-      have hcol : ∀ j : Fin m, (Mᵀ *ᵥ n) j = 0 := by
-        intro j
-        have hmem : M *ᵥ (Pi.single j (1 : ZMod 2)) ∈ M.mulVecLin.range :=
-          ⟨Pi.single j (1 : ZMod 2), by rw [Matrix.mulVecLin_apply]⟩
-        have hz : (M *ᵥ (Pi.single j (1 : ZMod 2))) ⬝ᵥ n = 0 := by
-          have h1 := hn _ hmem
-          rwa [dotBilin_apply] at h1
-        rw [← hz, dotProduct_comm, Matrix.dotProduct_mulVec, ← Matrix.mulVec_transpose,
-          dotProduct_single, mul_one]
-      have hMn : Mᵀ *ᵥ n = 0 := funext hcol
-      rw [dotBilin_apply, dotProduct_comm]
-      exact h n hMn
-    have hu : u ∈ M.mulVecLin.range := by
-      rwa [LinearMap.BilinForm.orthogonal_orthogonal dotBilin_nondegenerate dotBilin_isRefl]
-        at horth
-    obtain ⟨f, hf⟩ := LinearMap.mem_range.mp hu
-    exact ⟨f, by rwa [Matrix.mulVecLin_apply] at hf⟩
+    exact (mem_range_mulVecLin_iff_forall_dot_eq_zero (M := M) u).mpr
+      (fun y hy => (dotProduct_comm u y).symm.trans (h y hy))
 
 /-- `u ⬝ᵥ indVec S` is the coordinate sum of `u` over `S`. -/
 theorem dotProduct_indVec (u : Vec k) (S : Finset (Fin k)) :

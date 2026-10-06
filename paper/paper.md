@@ -35,7 +35,7 @@ translation from quantum-mechanical Pauli operators to bit-vectors, an in-kernel
 for the machine-readable format in which satisfiability solvers record their refutations,
 and proofs that the encoding connecting codes to formulas is faithful in both directions.
 A solver's verdict, once rendered as a certificate file, is then re-derived by the Lean
-kernel itself. The library has 58 modules; every non-private theorem and lemma is printed
+kernel itself. The library has 78 modules; every non-private theorem and lemma is printed
 in an audit region together with the axioms it depends on, and no declaration rests on
 any axiom beyond the three standard ones of Lean's logic.
 
@@ -91,8 +91,8 @@ measurement-protocol representations, and the shared instance families (Bacon-Sh
 
 Three trade-offs are worth naming. First, computation is kept in the kernel: statements
 close by kernel reduction, so no checker outside the kernel is ever trusted. The price
-is memory -- the largest module peaks at 77 GiB, so continuous integration builds the 25
-of 58 modules whose measured peak fits a hosted runner, from a table of measured peaks
+is memory -- the largest module peaks at 77 GiB, so continuous integration builds the 41
+of 78 modules whose measured peak fits a hosted runner, from a table of measured peaks
 that fails the build when tree and table disagree, which is how a module comes to be
 measured before it is built anywhere. Second, the proof format is standard rather than
 bespoke: LRAT certificates are emitted by several solvers, which keeps the search

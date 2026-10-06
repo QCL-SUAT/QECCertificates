@@ -59,7 +59,7 @@ the composition of the two are theorems.
 | `QECCertificates/Homology/` | chain complexes over GF(2) and the distances they carry: the mapping cone and its snake formula, the four-term fault complex with its Künneth formulas, spacetime fault distance, the cosystolic distance, modular expansion, detector decomposition, port functions, the auxiliary hypergraph and the subcode layer |
 | [`tools/check_axioms.py`](tools/check_axioms.py) | reads a build log and refuses any declaration whose `#print axioms` line names an axiom outside the three standard ones |
 
-The package is **77 modules**, and the audit region covers **every** non-private
+The package is **78 modules**, and the audit region covers **every** non-private
 `theorem`/`lemma` in it.
 
 ## Guarantees
@@ -93,7 +93,7 @@ Twelve of this package's own modules close their statements by kernel reduction 
 object large enough to need more memory than a runner can give one process. The budget is
 ten gigabytes, which leaves a 16 GB runner room for the toolchain and the system, and the
 largest module, the separation instances, peaks at **77 GiB**. Continuous integration
-therefore builds **40 of the 77 modules**: every module whose measured peak fits the
+therefore builds **41 of the 78 modules**: every module whose measured peak fits the
 budget, together with everything those modules import, since lake cannot build one without
 the other. It builds them one at a time and in import order, because the budget is what one
 process needs: with a module's imports already built, the call that builds it has nothing
@@ -129,10 +129,16 @@ carries the same information in machine-readable form.
               error correction},
   author    = {An, Shuoming},
   year      = {2026},
+  publisher = {Zenodo},
   doi       = {10.5281/zenodo.23056679},
-  url       = {https://github.com/QCL-SUAT/QECCertificates}
+  url       = {https://doi.org/10.5281/zenodo.23056679}
 }
 ```
+
+The fields are the deposit's own; the DOI is its **concept** DOI, so it always resolves to
+the newest deposited version. The `url` field is recorded but some styles do not print
+it: REVTeX's `apsrev4-2.bst` does not, and hyperlinks the title to the DOI instead, so the
+persistent identifier still reaches the reader and the entry needs no adjustment for it.
 
 ## Contributing
 

@@ -28,7 +28,11 @@ import subprocess
 import sys
 import tempfile
 
-DECL = re.compile(r"^(theorem|lemma)\s+([A-Za-z_][A-Za-z0-9_'.]*)", re.M)
+# A declaration may carry attributes on the same line -- `@[simp] theorem foo` is as
+# public as `theorem foo`, and an anchored `^(theorem|lemma)` cannot see it.  Every
+# attribute run is peeled off first, so the scan reaches the keyword that follows it.
+DECL = re.compile(
+    r"^(?:@\[[^\]]*\]\s*)*(theorem|lemma)\s+([A-Za-z_][A-Za-z0-9_'.]*)", re.M)
 AUDITED = re.compile(r"^#print axioms\s+([A-Za-z0-9_.']+)", re.M)
 ROOT_MODULE = "QECCertificates.lean"
 MODULE_DIR = "QECCertificates"

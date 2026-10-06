@@ -75,11 +75,9 @@ abbrev DetVec (m : ℕ) := DetSite m → ZMod 2
 /-- The unit vector: only one site is counted. -/
 def siteVec {m : ℕ} (x : DetSite m) : DetVec m := fun y => if y = x then 1 else 0
 
-/-- Characteristic 2: a site vector added to itself is zero (the `CharTwo` instance is
-taken pointwise on the image `ZMod 2`). -/
-@[simp] theorem detVec_add_self {m : ℕ} (v : DetVec m) : v + v = 0 := by
-  funext x
-  exact CharTwo.add_self_eq_zero (v x)
+/-- Characteristic 2: a site vector added to itself is zero, an instance of the shared
+`QECCertificates.add_self_fun`. -/
+@[simp] theorem detVec_add_self {m : ℕ} (v : DetVec m) : v + v = 0 := add_self_fun v
 
 @[simp] theorem siteVec_self {m : ℕ} (x : DetSite m) : siteVec x x = 1 := by
   simp [siteVec]
@@ -222,10 +220,9 @@ which this module does not cover). -/
 "round × check", or any finite set. -/
 abbrev Form (S : Type*) := S → ZMod 2
 
-/-- Characteristic 2: a form added to itself is zero. -/
-@[simp] theorem form_add_self {S : Type*} (v : Form S) : v + v = 0 := by
-  funext s
-  exact CharTwo.add_self_eq_zero (v s)
+/-- Characteristic 2: a form added to itself is zero, an instance of the shared
+`QECCertificates.add_self_fun`. -/
+@[simp] theorem form_add_self {S : Type*} (v : Form S) : v + v = 0 := add_self_fun v
 
 /-- The unit form: $1$ at a single site. -/
 def unitForm {S : Type*} [DecidableEq S] (a : S) : Form S := Pi.single a 1
@@ -464,6 +461,20 @@ def detSubmodule {S L : Type*} [Fintype S] [DecidableEq L] (lab : S → L) :
       ring
     rw [Finset.sum_congr rfl fun s _ => hpt s, ← Finset.mul_sum, hD o ho, mul_zero]
 
+/-- A form is the sum of its class slices, $\sum_c \mathbf 1_{\{\mathrm{lab} = c\}} D$.
+Both directions of the two generating-set theorems below start from this decomposition, so
+it is one lemma rather than a block copied into each. -/
+private lemma eq_sum_classSlices {S L : Type*} [Fintype L] [DecidableEq L]
+    (lab : S → L) (D : Form S) :
+    D = ∑ c : L, fun s => if lab s = c then D s else 0 := by
+  funext s
+  rw [Finset.sum_apply, Finset.sum_eq_single (lab s)]
+  · exact (ite_eq_left rfl).symm
+  · intro c _ hc
+    rw [ite_eq_right (fun hh : lab s = c => hc hh.symm)]
+  · intro h
+    exact absurd (Finset.mem_univ (lab s)) h
+
 /-- **Lemma 1 (middle segment)**: every deterministic form is exactly a linear
 combination of **pairs with the same operator**.
 
@@ -481,14 +492,8 @@ theorem isDeterministic_iff_mem_span_pairForm {S L : Type*} [Fintype S] [Fintype
   · intro hD
     have hcls : ∀ c : L, (∑ s ∈ Finset.univ.filter fun s => lab s = c, D s) = 0 :=
       fun c => classSum_zero_of_isDeterministic hD c
-    have hdecomp : D = ∑ c : L, fun s => if lab s = c then D s else 0 := by
-      funext s
-      rw [Finset.sum_apply, Finset.sum_eq_single (lab s)]
-      · exact (ite_eq_left rfl).symm
-      · intro c _ hc
-        rw [ite_eq_right (fun hh : lab s = c => hc hh.symm)]
-      · intro h
-        exact absurd (Finset.mem_univ (lab s)) h
+    have hdecomp : D = ∑ c : L, fun s => if lab s = c then D s else 0 :=
+      eq_sum_classSlices lab D
     rw [hdecomp]
     refine Submodule.sum_mem _ fun c _ => ?_
     refine Submodule.span_mono ?_ (mem_span_pairForm_of_sum_eq_zero
@@ -533,8 +538,10 @@ the readout form, which this module does not touch; the initialization / readout
 two ends is the same. -/
 
 /-- **Pairing a detector with a fault**: whether the form $D$ is seen by the fault $F$
-($=1$ means seen). -/
-def sees {S : Type*} [Fintype S] (D F : Form S) : ZMod 2 := ∑ s, D s * F s
+($=1$ means seen). This is mathlib's `Matrix.dotProduct` on `Form S`, which is the GF(2)
+pairing the package uses throughout, so the dot-product lemmas of
+`QECCertificates.GF2.Basis` apply to it directly. -/
+def sees {S : Type*} [Fintype S] (D F : Form S) : ZMod 2 := D ⬝ᵥ F
 
 /-- **The indicator form of a label class**: all the sites of one operator. -/
 def classInd {S L : Type*} [DecidableEq L] (lab : S → L) (c : L) : Form S :=
@@ -551,15 +558,8 @@ theorem classInd_const {S L : Type*} [DecidableEq L] {lab : S → L} (c : L) :
 /-- **The readout of a pair form**: $\langle e_a+e_b, F\rangle = F_a+F_b$. -/
 theorem sees_pairForm {S : Type*} [Fintype S] [DecidableEq S] (a b : S) (F : Form S) :
     sees (pairForm a b) F = F a + F b := by
-  rw [sees, pairForm, unitForm, unitForm]
-  simp only [Pi.add_apply, add_mul, Finset.sum_add_distrib]
-  congr 1
-  · rw [Finset.sum_eq_single a
-      (fun s _ hs => by rw [Pi.single_apply, ite_eq_right hs, zero_mul])
-      (fun hh => absurd (Finset.mem_univ a) hh), Pi.single_eq_same, one_mul]
-  · rw [Finset.sum_eq_single b
-      (fun s _ hs => by rw [Pi.single_apply, ite_eq_right hs, zero_mul])
-      (fun hh => absurd (Finset.mem_univ b) hh), Pi.single_eq_same, one_mul]
+  rw [sees, pairForm, unitForm, unitForm, add_dotProduct, single_dotProduct,
+    single_dotProduct, one_mul, one_mul]
 
 /-- The submodule of forms not seen by `F`. -/
 def zeroSeen {S : Type*} [Fintype S] (F : Form S) : Submodule (ZMod 2) (Form S) where
@@ -571,19 +571,13 @@ def zeroSeen {S : Type*} [Fintype S] (F : Form S) : Submodule (ZMod 2) (Form S) 
     have hy' : sees y F = 0 := hy
     show sees (x + y) F = 0
     rw [sees] at hx' hy' ⊢
-    simp only [Pi.add_apply, add_mul, Finset.sum_add_distrib]
-    rw [hx', hy', add_zero]
+    rw [add_dotProduct, hx', hy', add_zero]
   smul_mem' := by
     intro a x hx
     have hx' : sees x F = 0 := hx
     show sees (a • x) F = 0
     rw [sees] at hx' ⊢
-    have hfac : ∑ s, (a • x) s * F s = a * ∑ s, x s * F s := by
-      rw [Finset.mul_sum]
-      refine Finset.sum_congr rfl fun s _ => ?_
-      rw [Pi.smul_apply, smul_eq_mul]
-      ring
-    rw [hfac, hx', mul_zero]
+    rw [smul_dotProduct, hx', smul_zero]
 
 /-- The submodule of forms constant on each label. -/
 def constSubmodule {S L : Type*} [DecidableEq L] (lab : S → L) :
@@ -750,14 +744,8 @@ theorem isDetZ_iff_mem_span {S L : Type*} [Fintype S] [Fintype L]
   classical
   constructor
   · intro hD
-    have hdecomp : D = ∑ c : L, fun s => if lab s = c then D s else 0 := by
-      funext s
-      rw [Finset.sum_apply, Finset.sum_eq_single (lab s)]
-      · exact (ite_eq_left rfl).symm
-      · intro c _ hc
-        rw [ite_eq_right (fun hh : lab s = c => hc hh.symm)]
-      · intro h
-        exact absurd (Finset.mem_univ (lab s)) h
+    have hdecomp : D = ∑ c : L, fun s => if lab s = c then D s else 0 :=
+      eq_sum_classSlices lab D
     rw [hdecomp]
     refine Submodule.sum_mem _ fun c _ => ?_
     set Dc : Form S := (fun s => if lab s = c then D s else 0) with hDc
@@ -835,10 +823,7 @@ theorem isDetZ_iff_mem_span {S L : Type*} [Fintype S] [Fintype L]
       · show IsDetZ lab Z (unitForm a)
         intro o _ hz
         show sees (unitForm a) o = 0
-        rw [sees, Finset.sum_eq_single a
-          (fun s _ hs => by rw [unitForm, Pi.single_apply, ite_eq_right hs, zero_mul])
-          (fun hh => absurd (Finset.mem_univ a) hh)]
-        rw [unitForm, Pi.single_eq_same, one_mul]
+        rw [sees, unitForm, single_dotProduct, one_mul]
         exact hz a haZ
     exact Submodule.span_le.mpr hsub hD
 

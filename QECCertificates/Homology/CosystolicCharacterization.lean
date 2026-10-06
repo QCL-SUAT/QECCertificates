@@ -236,13 +236,11 @@ theorems: the two bridges are each a single `ext` (a GF(2) matrix entry is only 
 so "the indicator of a row support" is the row itself), and the main characterization is read
 off directly from the definitions of §2. -/
 
-/-- A GF(2) matrix entry is only $0$ or $1$. -/
+/-- A GF(2) matrix entry is only $0$ or $1$, from `eq_one_of_ne_zero`. -/
 theorem zmod2_eq_zero_or_eq_one (a : ZMod 2) : a = 0 ∨ a = 1 := by
-  have hlt : a.val < 2 := ZMod.val_lt a
-  have h : a.val = 0 ∨ a.val = 1 := by omega
-  rcases h with h | h
-  · exact Or.inl (ZMod.val_injective 2 (by rw [h, ZMod.val_zero]))
-  · exact Or.inr (ZMod.val_injective 2 (by rw [h, ZMod.val_one]))
+  by_cases h : a = 0
+  · exact Or.inl h
+  · exact Or.inr (eq_one_of_ne_zero h)
 
 /-- The support of the `w`-th row of a matrix (as a `Finset`). -/
 def matRowSupport {k : ℕ} {ι : Type*} (M : Matrix ι (Fin k) (ZMod 2)) (w : ι) :

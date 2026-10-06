@@ -82,9 +82,15 @@ def support (v : Vec n) : Finset (Fin n) := Finset.univ.filter (fun i => v i ≠
 lemma weight_eq_hammingNorm (v : Vec n) : (support v).card = hammingNorm v := by
   simp [support, hammingNorm]
 
-/-- Characteristic 2: a vector over GF(2) added to itself is zero. -/
-@[simp] lemma add_self (v : Vec n) : v + v = 0 := by
+/-- Characteristic 2: a function over GF(2) added to itself is zero.  Stated on an
+arbitrary index type, where the function space carries no `CharTwo` instance and the proof
+has to be pointwise. -/
+lemma add_self_fun {ι : Type*} (v : ι → ZMod 2) : v + v = 0 := by
   funext i; exact CharTwo.add_self_eq_zero (v i)
+
+/-- Characteristic 2: a vector over GF(2) added to itself is zero, an instance of
+`add_self_fun`. -/
+@[simp] lemma add_self (v : Vec n) : v + v = 0 := add_self_fun v
 
 /-- Over GF(2), nonzero means 1. -/
 lemma eq_one_of_ne_zero {a : ZMod 2} (h : a ≠ 0) : a = 1 := by

@@ -172,18 +172,6 @@ variable [Fintype D₀] [Fintype D₁] [Fintype D₂] [Fintype D₃]
 
 /-! ### 1.1 Three small blocks -/
 
-/-- Over characteristic $2$, negation does not change a function. -/
-theorem neg_eq_self_fun {ι : Type*} (v : ι → ZMod 2) : -v = v := by
-  funext i
-  exact ZMod.neg_eq_self_mod_two (v i)
-
-/-- Over characteristic $2$, a function added to itself is zero (pointwise via
-`CharTwo.add_self_eq_zero`; the function space itself yields no `CharP` instance, hence the
-pointwise proof). -/
-theorem add_self_eq_zero_fun {ι : Type*} (v : ι → ZMod 2) : v + v = 0 := by
-  funext i
-  exact CharTwo.add_self_eq_zero (v i)
-
 /-- Negation does not change the kernel (used on the $-d^C$ in the cone's differentials). -/
 theorem ker_mulVecLin_neg {m n : Type*} [Fintype n] (M : Matrix m n (ZMod 2)) :
     LinearMap.ker (-M).mulVecLin = LinearMap.ker M.mulVecLin := by
@@ -298,7 +286,7 @@ theorem finrank_ker_blockTri {P R Q S : Type*}
                 rw [add_comm (A *ᵥ (z.1 ∘ Sum.inl)) (B *ᵥ (z.1 ∘ Sum.inr))]
           _ = (B *ᵥ (z.1 ∘ Sum.inr) + B *ᵥ (z.1 ∘ Sum.inr))
               + A *ᵥ (z.1 ∘ Sum.inl) := by rw [← add_assoc]
-          _ = A *ᵥ (z.1 ∘ Sum.inl) := by rw [add_self_eq_zero_fun, zero_add]
+          _ = A *ᵥ (z.1 ∘ Sum.inl) := by rw [add_self_fun, zero_add]
       exact hBA.symm
     · intro hy
       rw [hWmem y] at hy
@@ -307,7 +295,7 @@ theorem finrank_ker_blockTri {P R Q S : Type*}
       have hx' : A *ᵥ x = B *ᵥ y := by simpa only [Matrix.mulVecLin_apply] using hx
       refine ⟨⟨Sum.elim x y, (hmem _).mpr ⟨?_, ?_⟩⟩, ?_⟩
       · rw [sumElim_comp_inl, sumElim_comp_inr, ← hx']
-        exact add_self_eq_zero_fun _
+        exact add_self_fun _
       · rw [sumElim_comp_inr]
         exact hD
       · change projLin P R (Sum.elim x y) = y

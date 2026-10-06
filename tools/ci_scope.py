@@ -84,6 +84,8 @@ PEAK_MIB = {
     "QECCertificates/Codes/BB144Symmetry.lean": 2965,
     "QECCertificates/Codes/BB144Witness.lean": 35327,
     "QECCertificates/Codes/BB18Anchor.lean": 8473,
+    # measured apart from the table's header: 2026-10-03, the 32 GB macOS host,
+    # quiet machine, the process sampled every 0.3 s of an 11 s compile
     "QECCertificates/Codes/BB18Symmetry.lean": 6498,
     "QECCertificates/Codes/BB24Gauged.lean": 40829,
     "QECCertificates/Codes/BB24Separation.lean": 3218,
@@ -92,6 +94,7 @@ PEAK_MIB = {
     "QECCertificates/Codes/BoundaryCollapse.lean": 3207,
     "QECCertificates/Codes/CSSPair.lean": 3100,
     "QECCertificates/Codes/CaseMatrix.lean": 28062,
+    # measured 2026-10-06 on this host, entered with the closure theorem
     "QECCertificates/Codes/ClosureTheorem.lean": 245,
     "QECCertificates/Codes/DistanceLabel.lean": 2934,
     "QECCertificates/Codes/FoldTransversal.lean": 4956,
@@ -107,8 +110,13 @@ PEAK_MIB = {
     "QECCertificates/Codes/TimeLikeInstance.lean": 3693,
     "QECCertificates/Codes/ToricFamilySpatial.lean": 2945,
     "QECCertificates/GF2/Basic.lean": 3171,
+    # measured 2026-10-03 on the table's host; the sampler was checked against a
+    # re-measurement of the entry above, GF2/Basic, which came out at 3245 MiB
+    # against the 3171 recorded there -- a 2% agreement that validates the sampler
     "QECCertificates/GF2/Basis.lean": 3230,
     "QECCertificates/GF2/Canonical.lean": 2933,
+    # measured 2026-10-06 on this host, entered with the duality module
+    "QECCertificates/GF2/Duality.lean": 3094,
     "QECCertificates/GF2/HGP.lean": 2936,
     "QECCertificates/GF2/HGPCleaning.lean": 3250,
     "QECCertificates/GF2/HGPCleaningDual.lean": 3181,
@@ -124,24 +132,7 @@ PEAK_MIB = {
     "QECCertificates/GF2/RowReduce.lean": 2937,
     "QECCertificates/GF2/WeightEnum.lean": 2945,
     "QECCertificates/GF2/Witness.lean": 2946,
-    "QECCertificates/Pauli/Expr.lean": 2943,
-    "QECCertificates/Reflect/Certified.lean": 2949,
-    "QECCertificates/Reflect/Complete.lean": 2938,
-    "QECCertificates/Reflect/Encode.lean": 2943,
-    "QECCertificates/Reflect/Faithful.lean": 2943,
-    "QECCertificates/Reflect/FaithfulCircuit.lean": 3527,
-    "QECCertificates/Reflect/LRAT.lean": 2932,
-    "QECCertificates/Reflect/LRATData.lean": 38738,
-    "QECCertificates/Reflect/LRATDataCircuit.lean": 5601,
-    "QECCertificates/Reflect/LexComplete.lean": 3300,
-    "QECCertificates/Reflect/LexLeader.lean": 3300,
-    "QECCertificates/Reflect/SBAssembly.lean": 2971,
-    "QECCertificates/Reflect/SymmetryBreak.lean": 2963,
-    # measured 2026-10-03 on the table's host, with the sampler checked against a
-    # measured 2026-10-06 on this host, the sampler naming the process
-    # measured apart from the table's header: 2026-10-03, the 32 GB macOS host,
-    # quiet machine, the process sampled every 0.3 s of an 11 s compile
-    # re-measurement of GF2/Basic (3245 MiB against the 3171 recorded here)
+    # measured 2026-10-06 on this host, entered with the homological layer
     "QECCertificates/Homology/AuxComplex.lean": 2942,
     "QECCertificates/Homology/BoundaryLinearCore.lean": 3212,
     "QECCertificates/Homology/CosystolicCertificate.lean": 3177,
@@ -159,6 +150,19 @@ PEAK_MIB = {
     "QECCertificates/Homology/PortFunction.lean": 2938,
     "QECCertificates/Homology/SubcodeChainMap.lean": 2937,
     "QECCertificates/Homology/SubcodeLayer.lean": 3263,
+    "QECCertificates/Pauli/Expr.lean": 2943,
+    "QECCertificates/Reflect/Certified.lean": 2949,
+    "QECCertificates/Reflect/Complete.lean": 2938,
+    "QECCertificates/Reflect/Encode.lean": 2943,
+    "QECCertificates/Reflect/Faithful.lean": 2943,
+    "QECCertificates/Reflect/FaithfulCircuit.lean": 3527,
+    "QECCertificates/Reflect/LRAT.lean": 2932,
+    "QECCertificates/Reflect/LRATData.lean": 38738,
+    "QECCertificates/Reflect/LRATDataCircuit.lean": 5601,
+    "QECCertificates/Reflect/LexComplete.lean": 3300,
+    "QECCertificates/Reflect/LexLeader.lean": 3300,
+    "QECCertificates/Reflect/SBAssembly.lean": 2971,
+    "QECCertificates/Reflect/SymmetryBreak.lean": 2963,
 }
 
 IMPORT = re.compile(r"^import\s+([A-Za-z0-9_.]+)", re.M)

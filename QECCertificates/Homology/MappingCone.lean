@@ -578,35 +578,40 @@ theorem bounds2_le_cycles2 (K : Cochain4 C₀ C₁ C₂ C₃) : bounds2 K ≤ cy
   rw [Matrix.mulVecLin_apply, Matrix.mulVecLin_apply, Matrix.mulVec_mulVec, K.comp_d2_d1,
     Matrix.zero_mulVec]
 
+/-- The dimension of a function space on a sum: one identity, which the four degree
+statements of the cone all instantiate. -/
+private theorem finrank_sum_fun (X Y : Type*) [Fintype X] [Fintype Y] :
+    Module.finrank (ZMod 2) (X ⊕ Y → ZMod 2)
+      = Module.finrank (ZMod 2) (X → ZMod 2) + Module.finrank (ZMod 2) (Y → ZMod 2) := by
+  rw [Module.finrank_fintype_fun_eq_card, Module.finrank_fintype_fun_eq_card,
+    Module.finrank_fintype_fun_eq_card, Fintype.card_sum]
+
 /-- **The dimension identity of the short exact sequence (degree $0$ of the cone)**:
 $\dim(D_0 \oplus C_1) = \dim D_0 + \dim C_1$. -/
 theorem finrank_cone0 :
     Module.finrank (ZMod 2) (D₀ ⊕ C₁ → ZMod 2)
-      = Module.finrank (ZMod 2) (D₀ → ZMod 2) + Module.finrank (ZMod 2) (C₁ → ZMod 2) := by
-  rw [Module.finrank_fintype_fun_eq_card, Module.finrank_fintype_fun_eq_card,
-    Module.finrank_fintype_fun_eq_card, Fintype.card_sum]
+      = Module.finrank (ZMod 2) (D₀ → ZMod 2) + Module.finrank (ZMod 2) (C₁ → ZMod 2) :=
+  finrank_sum_fun D₀ C₁
 
 /-- **The dimension identity of the short exact sequence (degree $1$ of the cone)**. -/
 theorem finrank_cone1 :
     Module.finrank (ZMod 2) (D₁ ⊕ C₂ → ZMod 2)
-      = Module.finrank (ZMod 2) (D₁ → ZMod 2) + Module.finrank (ZMod 2) (C₂ → ZMod 2) := by
-  rw [Module.finrank_fintype_fun_eq_card, Module.finrank_fintype_fun_eq_card,
-    Module.finrank_fintype_fun_eq_card, Fintype.card_sum]
+      = Module.finrank (ZMod 2) (D₁ → ZMod 2) + Module.finrank (ZMod 2) (C₂ → ZMod 2) :=
+  finrank_sum_fun D₁ C₂
 
 /-- **The dimension identity of the short exact sequence (degree $2$ of the cone)**. -/
 theorem finrank_cone2 :
     Module.finrank (ZMod 2) (D₂ ⊕ C₃ → ZMod 2)
-      = Module.finrank (ZMod 2) (D₂ → ZMod 2) + Module.finrank (ZMod 2) (C₃ → ZMod 2) := by
-  rw [Module.finrank_fintype_fun_eq_card, Module.finrank_fintype_fun_eq_card,
-    Module.finrank_fintype_fun_eq_card, Fintype.card_sum]
+      = Module.finrank (ZMod 2) (D₂ → ZMod 2) + Module.finrank (ZMod 2) (C₃ → ZMod 2) :=
+  finrank_sum_fun D₂ C₃
 
 /-- **The dimension identity of the short exact sequence (degree $3$ of the cone)**: the
 last term is written `D₃ ⊕ Fin 0`, `Fin 0` contributes no dimension, so this statement is
 just $\dim D_3$ itself. -/
 theorem finrank_cone3 :
     Module.finrank (ZMod 2) (D₃ ⊕ Fin 0 → ZMod 2) = Module.finrank (ZMod 2) (D₃ → ZMod 2) := by
-  rw [Module.finrank_fintype_fun_eq_card, Module.finrank_fintype_fun_eq_card, Fintype.card_sum,
-    Fintype.card_fin, add_zero]
+  rw [finrank_sum_fun D₃ (Fin 0)]
+  simp
 
 /-- **$B^1$ and its pullback in $Z^1$ have the same dimension**: the quotient in
 `Submodule.finrank_quotient_add_finrank` is taken over "a submodule of $Z^1$", so

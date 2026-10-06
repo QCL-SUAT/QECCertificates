@@ -436,11 +436,11 @@ lemma kron_zero_left {l m n p : Type*} (B : Matrix n p (ZMod 2)) :
   change Matrix.kroneckerMap (fun x1 x2 => x1 * x2) (0 : Matrix l m (ZMod 2)) B = 0
   exact Matrix.zero_kronecker B
 
-/-- Over GF(2) a matrix added to itself is zero (entrywise, avoiding instance synthesis
-for `CharTwo` on the matrix type). -/
+/-- Over GF(2) a matrix added to itself is zero: the shared `add_self_fun` of
+`GF2/Basic.lean`, applied to the rows. -/
 lemma add_self_matrix {l m : Type*} (M : Matrix l m (ZMod 2)) : M + M = 0 := by
-  ext i j
-  exact CharTwo.add_self_eq_zero (M i j)
+  funext i
+  exact add_self_fun (M i)
 
 /-- **The fault complex given by the total-complex (Koszul) differential**: given a
 timelike differential $R : \mathcal R_1 \to \mathcal R_0$ (`timeLikeRepR` of
