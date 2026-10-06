@@ -4,8 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Shuoming An
 -/
 
-import Mathlib
-
 /-!
 # The closure theorem for syndrome-exhaustive check matrices
 
@@ -44,6 +42,11 @@ import this library.
 Ported from the measurement-free QEC development, where this module is
 `QECFormal.ClosureTheorem`; the proof bodies are unchanged and only the
 namespace differs.
+
+**No imports.** This module elaborates against the core library alone, which
+is how the development it comes from keeps its artifact rebuildable offline;
+the port added an `import Mathlib` and the module does not need it, so it is
+gone.
 -/
 
 namespace QECCertificates.ClosureTheorem
