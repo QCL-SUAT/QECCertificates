@@ -5,9 +5,13 @@ abstract: >-
   A Lean 4 library for certified quantum error correction: the GF(2) and symplectic
   machinery that turns a code parameter into a checkable statement, an in-kernel checker
   for LRAT certificates together with its soundness theorem, and encoding faithfulness in
-  both directions, so that a model of the encoded CNF is a light logical operator. Every
-  load-bearing declaration is printed in an audit region and depends on no axioms beyond
-  the three standard ones.
+  both directions, so that a model of the encoded CNF is a light logical operator. Alongside
+  them it carries the layers in which a fault-tolerance statement is read: the cochain
+  complexes of a circuit with their mapping cones and Kunneth formulas, spacetime fault
+  distance, the cosystolic distance, the auxiliary hypergraph and the subcode layer, and the
+  abstract closure theorem for syndrome-exhaustive check matrices. Every load-bearing
+  declaration is printed in an audit region and depends on no axioms beyond the three
+  standard ones.
 type: software
 authors:
   - family-names: "An"

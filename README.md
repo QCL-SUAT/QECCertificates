@@ -23,6 +23,13 @@ symplectic descriptions of a Pauli operator that the encoding rests on. Every lo
 declaration is printed in an audit region, so a reader can see which axioms it depends on
 rather than having to trust the tool that printed a number.
 
+Around that spine the library carries the layers in which a fault-tolerance statement is
+read: the cochain complexes of a circuit with their mapping cones and Künneth formulas,
+spacetime fault distance, the cosystolic distance, the auxiliary hypergraph that gauging
+generalizes to, and the subcode layer between them. It also carries the abstract closure
+theorem for syndrome-exhaustive check matrices, which is the dichotomy every weight-1
+decoder lives in.
+
 The library is developed alongside the two companion developments that import it. It is a
 self-contained Lake package: its dependencies are fetched at pinned revisions, and none of
 them is vendored.
@@ -48,7 +55,8 @@ the composition of the two are theorems.
 | `QECCertificates/GF2/` | GF(2) linear algebra: trusted row reduction, kernel bases, rank certificates, dual witnesses, exact-distance bracketing, certificate sizes, hypergraph and lifted products, the Künneth formulas |
 | `QECCertificates/Pauli/` | the operator-tree ↔ symplectic-representation translation |
 | `QECCertificates/Reflect/` | the certificate framework: a kernel-checked LRAT/RUP checker with its soundness theorem, encoding faithfulness in both directions, where a model of the CNF **is** a light logical operator, symmetry breaking that preserves unsatisfiability, and the worked replays of the solver certificates used here |
-| `QECCertificates/Codes/` | the code-theoretic layer: stabilizer, CSS and subsystem codes; gauging and measurement-protocol representations; the shared instance families (Bacon–Shor, BB, HGP, lifted product) |
+| `QECCertificates/Codes/` | the code-theoretic layer: stabilizer, CSS and subsystem codes; gauging and measurement-protocol representations; the shared instance families (Bacon–Shor, BB, HGP, lifted product); the abstract closure theorem for syndrome-exhaustive check matrices |
+| `QECCertificates/Homology/` | chain complexes over GF(2) and the distances they carry: the mapping cone and its snake formula, the four-term fault complex with its Künneth formulas, spacetime fault distance, the cosystolic distance, modular expansion, detector decomposition, port functions, the auxiliary hypergraph and the subcode layer |
 | [`tools/check_axioms.py`](tools/check_axioms.py) | reads a build log and refuses any declaration whose `#print axioms` line names an axiom outside the three standard ones |
 
 The package is **77 modules**, and the audit region covers **every** non-private
