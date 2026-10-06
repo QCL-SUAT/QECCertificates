@@ -552,11 +552,15 @@ theorem rank_cycMat {m : ℕ} (hm : 2 ≤ m) : (cycMat m).rank = m - 1 := by
   omega
 
 /-- **The all-$m$ toric family theorem**: for every $m \ge 2$,
-$\mathrm{HGP}(\mathrm{cyc}_m,\mathrm{cyc}_m)$ is $[[\,2m^2,\,2,\,m\,]]$. The dimension
-comes from the Künneth formula and the two distance lower bounds from the cleaning
-theorem, while all the seed facts (even row sums, rank $=m-1$, kernel minimum weight $=m$
-in both directions) are given structurally by **kernel constancy**: **no enumeration, and
-it holds for every $m$**.
+$\mathrm{HGP}(\mathrm{cyc}_m,\mathrm{cyc}_m)$ has $k = 2$, and both of its distances are at
+least $m$. The dimension comes from the Künneth formula and the two distance lower bounds
+from the cleaning theorem, while all the seed facts (even row sums, rank $=m-1$, kernel
+minimum weight $=m$ in both directions) are given structurally by **kernel constancy**:
+**no enumeration, and it holds for every $m$**.
+
+**Boundary.** The distance conjuncts are the lower bounds $d_X \ge m$ and $d_Z \ge m$; the
+upper bounds $d_X, d_Z \le m$ are proved at $m = 9, 12, 16$ by the witness theorems above,
+not at general $m$, so this theorem does not state the equality $d = m$.
 
 This is the extreme form of the contrast between structural evidence and per-instance
 enumeration: for arbitrarily large $m$ the seed side needs no computation over $2^m$ at
