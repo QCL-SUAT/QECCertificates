@@ -1,0 +1,6 @@
+GF2/CertSize 2915
+GF2/BlockRank 2941
+Codes/C1Census 2907
+Codes/C1Optimal 2949
+Codes/C1CycleRank 2935
+Codes/CutCycleDuality 2940

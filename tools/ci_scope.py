@@ -92,16 +92,23 @@ PEAK_MIB = {
     "QECCertificates/Codes/BaconShor.lean": 11248,
     "QECCertificates/Codes/BaconShorMeasurement.lean": 3936,
     "QECCertificates/Codes/BoundaryCollapse.lean": 3207,
+    # the C1 cluster, measured 2026-10-06 on this host
+    "QECCertificates/Codes/C1Census.lean": 2907,
+    "QECCertificates/Codes/C1CycleRank.lean": 2935,
+    "QECCertificates/Codes/C1Optimal.lean": 2949,
     "QECCertificates/Codes/CSSPair.lean": 3100,
     "QECCertificates/Codes/CaseMatrix.lean": 28062,
     # measured 2026-10-06 on this host, entered with the closure theorem
     "QECCertificates/Codes/ClosureTheorem.lean": 245,
+    "QECCertificates/Codes/CutCycleDuality.lean": 2940,
     "QECCertificates/Codes/DistanceLabel.lean": 2934,
     "QECCertificates/Codes/FoldTransversal.lean": 4956,
     "QECCertificates/Codes/FullProtocolFaults.lean": 18931,
     "QECCertificates/Codes/GaugeMeasurementInstance.lean": 5004,
     "QECCertificates/Codes/Gauging.lean": 3247,
     "QECCertificates/Codes/HGPToricFamily.lean": 29051,
+    # measured 2026-10-06 on this host, entered with the decoder-latitude module
+    "QECCertificates/Codes/HammingLatitude.lean": 59,
     "QECCertificates/Codes/LPAnchor.lean": 8424,
     "QECCertificates/Codes/MeasurementProtocol.lean": 2947,
     "QECCertificates/Codes/Separation.lean": 2939,
@@ -114,7 +121,12 @@ PEAK_MIB = {
     # re-measurement of the entry above, GF2/Basic, which came out at 3245 MiB
     # against the 3171 recorded there -- a 2% agreement that validates the sampler
     "QECCertificates/GF2/Basis.lean": 3230,
+    "QECCertificates/GF2/BlockRank.lean": 2941,
     "QECCertificates/GF2/Canonical.lean": 2933,
+    # measured 2026-10-06 on this host, entered with the certificate-kernel module
+    "QECCertificates/GF2/CertKernelMin.lean": 2946,
+    # the certificate-size and block-rank modules, measured 2026-10-06 on this host
+    "QECCertificates/GF2/CertSize.lean": 2915,
     # measured 2026-10-06 on this host, entered with the duality module
     "QECCertificates/GF2/Duality.lean": 3094,
     "QECCertificates/GF2/HGP.lean": 2936,

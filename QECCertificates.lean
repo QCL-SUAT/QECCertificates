@@ -16,15 +16,20 @@ import QECCertificates.Codes.BB24Separation
 import QECCertificates.Codes.BaconShor
 import QECCertificates.Codes.BaconShorMeasurement
 import QECCertificates.Codes.BoundaryCollapse
+import QECCertificates.Codes.C1Census
+import QECCertificates.Codes.C1CycleRank
+import QECCertificates.Codes.C1Optimal
 import QECCertificates.Codes.CSSPair
 import QECCertificates.Codes.CaseMatrix
 import QECCertificates.Codes.ClosureTheorem
+import QECCertificates.Codes.CutCycleDuality
 import QECCertificates.Codes.DistanceLabel
 import QECCertificates.Codes.FoldTransversal
 import QECCertificates.Codes.FullProtocolFaults
 import QECCertificates.Codes.GaugeMeasurementInstance
 import QECCertificates.Codes.Gauging
 import QECCertificates.Codes.HGPToricFamily
+import QECCertificates.Codes.HammingLatitude
 import QECCertificates.Codes.LPAnchor
 import QECCertificates.Codes.MeasurementProtocol
 import QECCertificates.Codes.Separation
@@ -34,7 +39,10 @@ import QECCertificates.Codes.TimeLikeInstance
 import QECCertificates.Codes.ToricFamilySpatial
 import QECCertificates.GF2.Basic
 import QECCertificates.GF2.Basis
+import QECCertificates.GF2.BlockRank
 import QECCertificates.GF2.Canonical
+import QECCertificates.GF2.CertKernelMin
+import QECCertificates.GF2.CertSize
 import QECCertificates.GF2.Duality
 import QECCertificates.GF2.HGP
 import QECCertificates.GF2.HGPCleaning
@@ -108,15 +116,20 @@ rests on exactly the three standard axioms.
 | `QECCertificates.Codes.BaconShor` | Bacon–Shor $[[9,1,3]]$: the structure and distance of a **subsystem code** (in-kernel) |
 | `QECCertificates.Codes.BaconShorMeasurement` | the two components of transversal measurement for Bacon–Shor $[[9,1,3]]$ (in-kernel instance) |
 | `QECCertificates.Codes.BoundaryCollapse` | removing the boundary detectors collapses the distance to $1$ for **every** code (family-level form) |
+| `QECCertificates.Codes.C1Census` | the C1 expansion census: a star graph satisfies C1, and adding edges preserves it |
+| `QECCertificates.Codes.C1CycleRank` | the cycle-rank lower bound on the C1 edge count, and the cycle space it rests on |
+| `QECCertificates.Codes.C1Optimal` | C1 on k vertices needs at least k-1 edges, by linear algebra over ZMod 2 |
 | `QECCertificates.Codes.CSSPair` | feeding into LeanQEC's `CSS_pair`: the distance conclusions of the case matrix meet the upstream interface |
 | `QECCertificates.Codes.CaseMatrix` | the case matrix: machine-checked assertions of code parameters (end to end) |
 | `QECCertificates.Codes.ClosureTheorem` | the syndrome-closure dichotomy for an abstract check matrix: closure and its sharp converse, the Steiner structure, detection, and the $[[7,1,3]]$ instance |
+| `QECCertificates.Codes.CutCycleDuality` | the incidence matrix, and the cut space as the orthogonal complement of the even-subgraph space |
 | `QECCertificates.Codes.DistanceLabel` | the X/Z distance labels: fixing the convention, and machine-checking that the two sides agree |
 | `QECCertificates.Codes.FoldTransversal` | fold-transversal gates: an in-kernel instance for BB $[[18,4,4]]$ |
 | `QECCertificates.Codes.FullProtocolFaults` | the fault model of the full protocol: data, ancilla and measurement errors (a Bacon–Shor instance) |
 | `QECCertificates.Codes.GaugeMeasurementInstance` | the timelike detector code of the BB gauging measurement circuit: $\lvert V\rvert = 4$ Gauss laws, $T = 4 = d$ rounds |
 | `QECCertificates.Codes.Gauging` | the formal statement of the two gauging components (representation layer) |
 | `QECCertificates.Codes.HGPToricFamily` | an HGP instance at $n\ge144$, and a whole-family theorem for the toric family |
+| `QECCertificates.Codes.HammingLatitude` | the latitude a decoder keeps at an exhaustive check matrix: the three weight-2 readings of a cross-type syndrome, and the three weight-3 separators between them |
 | `QECCertificates.Codes.LPAnchor` | the lifted-product anchor: a 2BGA instance over $D_6$ |
 | `QECCertificates.Codes.MeasurementProtocol` | the representation layer of the measurement protocol (spacetime fault model, and the time axis of the two components) |
 | `QECCertificates.Codes.Separation` | the decision layer for the C1–C4 separation conditions (fault-tolerant distance under logical measurement) |
@@ -126,7 +139,10 @@ rests on exactly the three standard axioms.
 | `QECCertificates.Codes.ToricFamilySpatial` | the **spacelike side** of the toric family (both distances of the deformed code are $m$, with a surviving witness of weight $m$) |
 | `QECCertificates.GF2.Basic` | GF(2) vector algebra primitives |
 | `QECCertificates.GF2.Basis` | basis-vector sums: a check-row comparison costs `\|A\|` terms, not `n` |
+| `QECCertificates.GF2.BlockRank` | arrays of permutation blocks: rows with equal block-row sums span at most J*P - (J-1) |
 | `QECCertificates.GF2.Canonical` | uniqueness of the canonical form: the row-reduction output of a row space is a canonical invariant |
+| `QECCertificates.GF2.CertKernelMin` | a spanning certificate gives the kernel's minimum weight, the kernel's dimension and the rank, without a row reduction |
+| `QECCertificates.GF2.CertSize` | the certificate-size bound: the candidate count is at most a degree-(d-1) polynomial in n, and the binomial bound is sharp to within one vector |
 | `QECCertificates.GF2.Duality` | dot-product duality over GF(2): the transpose law, non-degeneracy, and the orthogonal-complement characterisation of a matrix range |
 | `QECCertificates.GF2.HGP` | the tensor decomposition of the hypergraph-product parity-check matrix |
 | `QECCertificates.GF2.HGPCleaning` | HGP, part three: the cleaning argument and the X-distance lower bound |
@@ -413,6 +429,31 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.boundaryRemoved_witness
 #print axioms QECCertificates.one_le_faultWeight_of_readout
 #print axioms QECCertificates.boundaryRemoved_distance_eq_one
+-- QECCertificates.Codes.C1Census
+#print axioms QECCertificates.cutSize_append_le
+#print axioms QECCertificates.expansionOne_append
+#print axioms QECCertificates.expansionOne_append_list
+#print axioms QECCertificates.expansionOne_star_two
+#print axioms QECCertificates.expansionOne_star_three
+#print axioms QECCertificates.expansionOne_star_four
+#print axioms QECCertificates.expansionOne_star_five
+#print axioms QECCertificates.expansionOne_star_six
+#print axioms QECCertificates.expansionOne_seven_edges_nine
+#print axioms QECCertificates.starEdges_mem_of_ne_zero
+#print axioms QECCertificates.expansionOne_star_gen
+-- QECCertificates.Codes.C1CycleRank
+#print axioms QECCertificates.stdDot_comm
+#print axioms QECCertificates.stdDot_nondegenerate
+#print axioms QECCertificates.const_mem_ker_edgeDiff
+#print axioms QECCertificates.finrank_ker_edgeDiff_eq_one
+#print axioms QECCertificates.card_ge_of_finrank_cycleSpace
+-- QECCertificates.Codes.C1Optimal
+#print axioms QECCertificates.zmod2_add_eq_zero_iff
+#print axioms QECCertificates.zmod2_eq_zero_or_one
+#print axioms QECCertificates.mem_ker_edgeDiff_iff
+#print axioms QECCertificates.cutSize_eq_zero_of_agree
+#print axioms QECCertificates.ker_edgeDiff_le_span_one
+#print axioms QECCertificates.card_sub_one_le_length_of_hasExpansionOne
 -- QECCertificates.Codes.CSSPair
 #print axioms QECCertificates.mutually_orth_rows_iff
 #print axioms QECCertificates.steanePair_dX
@@ -487,6 +528,17 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.ClosureTheorem.hamming_exhaustive
 #print axioms QECCertificates.ClosureTheorem.hamming_closure_instance
 #print axioms QECCertificates.ClosureTheorem.hamming_steiner_instance
+-- QECCertificates.Codes.CutCycleDuality
+#print axioms QECCertificates.incidMatOf_apply
+#print axioms QECCertificates.incidMatOf_mulVec_apply
+#print axioms QECCertificates.incidMatOf_transpose_mulVec_apply
+#print axioms QECCertificates.cut_iff_forall_dot_evenSubgraph
+#print axioms QECCertificates.support_mulVec_indVec
+#print axioms QECCertificates.incidMat_apply
+#print axioms QECCertificates.card_filter_get_eq_length_filter
+#print axioms QECCertificates.hammingNorm_mulVec_indVec_eq_cutSize
+#print axioms QECCertificates.indVec_sdiff_eq_add
+#print axioms QECCertificates.evenSubgraphSpace_eq_span_minCycle
 -- QECCertificates.Codes.DistanceLabel
 #print axioms QECCertificates.libDX_eq_textbookDZ
 #print axioms QECCertificates.libDZ_eq_textbookDX
@@ -689,6 +741,17 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.hgp_toric16_dz_lb
 #print axioms QECCertificates.hgp_toric16_X_logical
 #print axioms QECCertificates.hgp_toric16_Z_logical
+-- QECCertificates.Codes.HammingLatitude
+#print axioms QECCertificates.HammingLatitude.suppXor_singleton
+#print axioms QECCertificates.HammingLatitude.suppXor_pair
+#print axioms QECCertificates.HammingLatitude.third_width
+#print axioms QECCertificates.HammingLatitude.third_nonzero
+#print axioms QECCertificates.HammingLatitude.third_ne_left
+#print axioms QECCertificates.HammingLatitude.third_ne_right
+#print axioms QECCertificates.HammingLatitude.readings_share_syndrome
+#print axioms QECCertificates.HammingLatitude.separators_trivial
+#print axioms QECCertificates.HammingLatitude.triple_nodup
+#print axioms QECCertificates.HammingLatitude.latitude
 -- QECCertificates.Codes.LPAnchor
 #print axioms QECCertificates.d6Index_code
 #print axioms QECCertificates.d6Code_index
@@ -860,6 +923,8 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.sum_e_apply
 #print axioms QECCertificates.dot_map_e
 #print axioms QECCertificates.dotProduct_e
+-- QECCertificates.GF2.BlockRank
+#print axioms QECCertificates.finrank_blockRow_le
 -- QECCertificates.GF2.Canonical
 #print axioms QECCertificates.readOff_nil
 #print axioms QECCertificates.readOff_apply
@@ -875,6 +940,30 @@ rests on exactly the three standard axioms.
 #print axioms QECCertificates.pivRow_mem_iff_of_spanL_eq
 #print axioms QECCertificates.isEchelon_rowReduce
 #print axioms QECCertificates.rowReduce_mem_iff_of_spanL_eq
+-- QECCertificates.GF2.CertKernelMin
+#print axioms QECCertificates.eq_smul_of_cert
+#print axioms QECCertificates.ker_min_of_cert
+#print axioms QECCertificates.finrank_ker_eq_of_cert
+#print axioms QECCertificates.rank_eq_sub_of_cert
+-- QECCertificates.GF2.CertSize
+#print axioms QECCertificates.snocV_inj
+#print axioms QECCertificates.nodup_lightVecs
+#print axioms QECCertificates.zero_mem_lightVecs
+#print axioms QECCertificates.inSpanB_nil_iff
+#print axioms QECCertificates.inSpanB_nil_eq_false_iff
+#print axioms QECCertificates.hammingNorm_pos_iff
+#print axioms QECCertificates.isLightUndetectable_zero_rows_iff
+#print axioms QECCertificates.lightCand_zero_rows_eq_filter
+#print axioms QECCertificates.lightCand_zero_rows_length
+#print axioms QECCertificates.lightSet_zero_rows_card
+#print axioms QECCertificates.lightCand_length_bound_sharp
+#print axioms QECCertificates.no_uniform_bound_lt_sum_sub_one
+#print axioms QECCertificates.two_le_sum_choose
+#print axioms QECCertificates.no_uniform_bound_le_sum_sub_two
+#print axioms QECCertificates.no_uniform_bound_two_below_sum
+#print axioms QECCertificates.certificate_size_sum_sharp
+#print axioms QECCertificates.lightCand_length_le_poly
+#print axioms QECCertificates.inKerB_zero_rows
 -- QECCertificates.GF2.Duality
 #print axioms QECCertificates.dot_mulVec_transpose
 #print axioms QECCertificates.eq_zero_of_forall_dot_eq_zero

@@ -128,7 +128,7 @@ like, because everything beyond the wall is checked, and both rooms stand on the
 
 \section{What is in the library}
 
-\package{QECCertificates} is a Lean~4 development of 78 modules, written for
+\package{QECCertificates} is a Lean~4 development of 86 modules, written for
 Lean~4.34~\cite{lean4}, built against mathlib~\cite{mathlib} at a pinned revision, on the
 same toolchain as the two developments that consume it.
 
@@ -201,7 +201,7 @@ most $w$. The library spends its machinery on the left-hand side.}
 \paragraph{The trusted base.} No declaration in the library uses \package{sorry}, a custom
 axiom, or \package{native\_decide}; the computations that matter are carried out by the
 kernel itself, so a proof that leans on such a computation is a proof the kernel has
-already performed. The root module carries an audit region of 1{,}796 lines, each a
+already performed. The root module carries an audit region of 1{,}861 lines, each a
 request that the kernel print the axioms one load-bearing declaration depends on, and the
 region covers every non-private theorem and lemma in the package. A script in
 \package{tools/} reads those lines out of a build log and fails on any axiom outside
@@ -212,7 +212,7 @@ when the log carries no output at all, so a clone that was never built is not a 
 holds the result to zero error lines and zero warnings from this package's own files. Not
 all of it fits. Twelve modules close their statements by kernel reduction over an object
 large enough to need tens of gigabytes, and the largest of them needs 77 GiB, so the job
-builds the 41 modules whose measured peak fits a runner, together with everything those
+builds the 49 modules whose measured peak fits a runner, together with everything those
 modules import. A table in the repository records the peak of every module and fails the
 build when the tree and the table disagree, so a new module is measured before it is built
 anywhere. The audit region is the root module, which imports the whole library, so the
